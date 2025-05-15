@@ -5,7 +5,7 @@ import main.visitor.IVisitor;
 public class Identifier extends Expr{
     private String name;
 
-    public Identifier(String _name) {name = _name;}
+    public Identifier(String _name, Integer line) {name = _name; this.setLine(line);}
     public void setName(String name) {this.name = name;}
     public String getName(){return this.name;}
     @Override

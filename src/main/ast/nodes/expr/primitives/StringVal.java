@@ -5,9 +5,9 @@ import main.visitor.IVisitor;
 
 public class StringVal extends Expr {
     private String string_val;
-    public StringVal(String string_val){this.string_val =  string_val.substring(1, string_val.length() - 1);;}
+    public StringVal(String string_val){this.string_val =  string_val;}
 
-    public String get_string_val() {
+    public String getName() {
         return string_val;
     }
 
@@ -15,7 +15,7 @@ public class StringVal extends Expr {
         this.string_val = string_val;
     }
     @Override
-    public String toString(){return "StringValue:" +this.string_val;}
+    public String toString(){return this.string_val;}
     @Override
     public <T> T accept(IVisitor<T> visitor){return visitor.visit(this);}
 }

@@ -1,142 +1,552 @@
 grammar SimpleLang;
-
 @header{
+    import java.util.List;
+     import java.util.ArrayList;
     import main.ast.nodes.*;
     import main.ast.nodes.declaration.*;
-    import main.ast.nodes.Stmt.*;
+    import main.ast.nodes.Statement.*;
     import main.ast.nodes.expr.*;
     import main.ast.nodes.expr.primitives.*;
     import main.ast.nodes.expr.operator.*;
 }
 
-// Parser rules
-program returns [Program programRet]:
+compilationUnit returns [Program programRet]:
     {$programRet = new Program();}
-    (f = func_dec{ $programRet.addFuncDec($f.funcDecRet); } )*
-     m = main { $programRet.setMain($m.mainRet); }
-     ;
-
-func_dec returns [FuncDec funcDecRet]:
-    'FuncDec' i = ID { $funcDecRet = new FuncDec($i.text); } LPAR RPAR LBRACE
-     (s = stmt { $funcDecRet.addStmt($s.stmtRet); })* RBRACE
-     { $funcDecRet.setLine($i.line); };
-
-
-main  returns [Main mainRet]:
-    {$mainRet = new Main();}
-    m = MAIN LPAR RPAR LBRACE { $mainRet.setLine($m.line); }
-    (s = stmt { $mainRet.addStmt($s.stmtRet); })*
-     RBRACE;
-
-
-stmt returns [Stmt stmtRet]:
-    a = assign { $stmtRet = $a.assignRet; }
-    | i = if_stmt { $stmtRet = $i.ifStmtRet; }
-    | v = var_dec { $stmtRet = $v.varDecRet; }
-    | f = func_call { $stmtRet = new FuncCallStmt($f.func_call_ret); $stmtRet.setLine($f.func_call_ret.getLine());} SEMI
-    | r = return_stmt { $stmtRet = $r.returnRet; }
+    {$programRet.setLine($ctx.start.getLine());}
+    (tu=translationUnit{$programRet.addExternalDeclarations($tu.list);})? EOF
     ;
 
-return_stmt returns [Return returnRet]:
-    r = RETURN e = expr SEMI
-    {
-        $returnRet = new Return($e.exprRet);
-        $returnRet.setLine($r.line);
-    };
-
-
-var_dec returns [VarDec varDecRet]:
-    t=TYPE id=ID SEMI
-     {
-        $varDecRet = new VarDec($id.text);
-        $varDecRet.setLine($id.line);
-        $varDecRet.setTypeName($t.text);
-     };
-
-
-assign returns [Assign assignRet]:
-    id = ID ASSIGN e = expr SEMI
-    {
-        $assignRet = new Assign($id.text, $e.exprRet);
-        $assignRet.setLine($id.line);
-    };
-
-
-if_stmt returns [IfStmt ifStmtRet]:
-    i = IF LPAR e = expr { $ifStmtRet = new IfStmt($e.exprRet); } RPAR
-    s1 = stmt { $ifStmtRet.setIfBody($s1.stmtRet); }
-    (ELSE s2 = stmt { $ifStmtRet.setElseBody($s2.stmtRet); } )?
-    { $ifStmtRet.setLine($i.line); };
-
-
-expr returns [Expr exprRet]:
-    e1=expr op1=('++' | '--')
-        {
-            UnaryOperator  op = ($op1.text.equals("--")) ? UnaryOperator.POST_DEC :  UnaryOperator.POST_INC;
-            $exprRet = new UnaryExpr($e1.exprRet, op);
-            $exprRet.setLine($op1.line);
-        }
-    |  e2=expr op2 = ('*' | '/') e3=expr
-        {
-            BinaryOperator op = ($op2.text.equals("*")) ? BinaryOperator.MULT :  BinaryOperator.DIVIDE;
-            $exprRet = new BinaryExpr($e2.exprRet, op, $e3.exprRet);
-            $exprRet.setLine($op1.line);
-        }
-    |  e4=expr op3 = ('+' | '-') e5=expr
-        {
-            BinaryOperator op = ($op3.text.equals("+")) ? BinaryOperator.PLUS :  BinaryOperator.MINUS;
-            $exprRet = new BinaryExpr($e4.exprRet, op, $e5.exprRet);
-            $exprRet.setLine($op1.line);
-        }
-    |  f=func_call {$exprRet = $f.func_call_ret;}
-    | p=primary_expr {$exprRet = $p.primary_expr_ret;};
-
-func_call returns [FuncCallExpr func_call_ret]:
-    id=ID LPAR RPAR
-    {
-        $func_call_ret = new FuncCallExpr($id.text);
-        $func_call_ret.setLine($id.line);
-    };
-
-primary_expr returns [Expr primary_expr_ret]:
-    id=ID {$primary_expr_ret = new Identifier($id.text); $primary_expr_ret.setLine($id.line);}
-    | i=INT_VAL     { $primary_expr_ret = new IntVal($i.int); $primary_expr_ret.setLine($i.line);}
-    | b=BOOL_VAL      { $primary_expr_ret = new BoolVal($b.text); $primary_expr_ret.setLine($b.line);}
-    | s=STR_VAL       { $primary_expr_ret = new StringVal($s.text); $primary_expr_ret.setLine($s.line);}
-    | d=DOUBLE_VAL   { $primary_expr_ret = new DoubleVal($d.text); $primary_expr_ret.setLine($d.line);}
+translationUnit returns [List<ExternalDeclaration> list]:
+    {$list = new ArrayList<>();}
+    (ed=externalDeclaration{if ($ed.externalDecRet != null) $list.add($ed.externalDecRet);})+
     ;
 
+externalDeclaration returns [ExternalDeclaration externalDecRet]:
+    fd = functionDefinition {$externalDecRet = $fd.funcDefRet;}
+    | dec = declaration {$externalDecRet = $dec.decRet;}
+    | Semi { $externalDecRet = null;}
+    ;
 
+functionDefinition returns [FunctionDefinition funcDefRet]:
+    specs=declarationSpecifiers? dec=declarator declist=declarationList? cstmt=compoundStatement
+    {
+        $funcDefRet = new FunctionDefinition($specs.ctx != null ? $specs.list: null, $dec.declaratorRet, $declist.ctx != null? $declist.list: null, $cstmt.cstmtRet);
+        $funcDefRet.setLine($ctx.start.getLine());
+    };
 
-// Lexer rules
+declarationList returns [List<Declaration> list]:
+    {$list = new ArrayList<>();}
+    (dec=declaration{$list.add($dec.decRet);})+ ;
 
-// 1- General structure
-MAIN : 'main';
-TYPE : 'int' | 'string' | 'double' | 'bool';
-IF : 'if';
-ELSE : 'else';
-RETURN : 'return';
+expression returns [Expr expRet]
+  : id=Identifier   {$expRet = new Identifier($id.text, $id.getLine());}
+  | c=Constant        {$expRet = new ConstantExpr(new StringVal($c.text));  $expRet.setLine($c.getLine());}
+  | {List<StringVal> list = new ArrayList<>();}(str=StringLiteral{list.add(new StringVal($str.text));})+  {$expRet = new StringExpr(list); $expRet.setLine($ctx.start.getLine());}
+  | LeftParen e=expression RightParen {$expRet = $e.expRet; $expRet.setLine($ctx.start.getLine());}
+  | LeftParen t=typeName RightParen LeftBrace i=initializerList Comma? RightBrace {$expRet = new IniListExpr($t.typeRet, $i.list); $expRet.setLine($ctx.start.getLine());}
+  | e1=expression LeftBracket e2=expression RightBracket { $expRet = new ArrayExpr($e1.expRet, $e2.expRet); $expRet.setLine($ctx.start.getLine());}
+  | e=expression LeftParen l=argumentExpressionList? RightParen {$expRet = new FunctionExpr($e.expRet, $l.ctx!=null? $l.list: null); $expRet.setLine($ctx.start.getLine());}
+  | e=expression PlusPlus    {$expRet = new UnaryExpr($e.expRet, UnaryOperator.POST_INC); $expRet.setLine($ctx.start.getLine());}
+  | e=expression MinusMinus    {$expRet = new UnaryExpr($e.expRet, UnaryOperator.POST_DEC); $expRet.setLine($ctx.start.getLine());}
+  | { List<Token> ops = new ArrayList<>(); }
+       (op=(PlusPlus  | MinusMinus | Sizeof) {ops.add($op);})* (                                          // Prefix operators (zero or more)
+         id=Identifier     {$expRet = new Identifier($id.text, $id.getLine()); }
+       | c=Constant       {$expRet = new ConstantExpr(new StringVal($c.text));}
+       | {List<StringVal> list = new ArrayList<>();}(str=StringLiteral{list.add(new StringVal($str.text));})+  {$expRet = new StringExpr(list);}
+       | LeftParen e=expression RightParen {$expRet = $e.expRet;}
+       | LeftParen t=typeName RightParen LeftBrace i=initializerList Comma? RightBrace {$expRet = new IniListExpr($t.typeRet, $i.list);}
+       | u=unaryOperator ce=castExpression { $expRet = new UnaryExpr($ce.expRet, UnaryOperator.fromString($u.stringRet.getName())); }
+       | Sizeof LeftParen t=typeName RightParen { $expRet = new SizeofTypeExpr($t.typeRet);}
+    )
+    {
+      for (int i = ops.size() - 1; i >= 0; i--) {
+        Token op = ops.get(i);
+        switch (op.getType()) {
+          case PlusPlus:
+            $expRet = new UnaryExpr($expRet, UnaryOperator.PRE_INC);
+            break;
+          case MinusMinus:
+            $expRet = new UnaryExpr($expRet, UnaryOperator.PRE_DEC);
+            break;
+          case Sizeof:
+            $expRet = new UnaryExpr($expRet, UnaryOperator.SIZEOF);
+            break;
+        }
+      }
+      $expRet.setLine($ctx.start.getLine());
+    }
+  | LeftParen tn=typeName RightParen ce=castExpression { $expRet = new CastExpr($tn.typeRet, $ce.expRet); $expRet.setLine($ctx.start.getLine());}
+  | e1=expression op=(Star | Div | Mod) e2=expression
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=(Plus | Minus) e2=expression                                          // Additive
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=(LeftShift | RightShift) e2=expression                                // Shift
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+        $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+        $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=(Less | Greater | LessEqual | GreaterEqual) e2=expression             // Relational
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+        $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+        $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=(Equal | NotEqual) e2=expression                                      // Equality
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=And e2=expression                                                     // Bitwise AND
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=Xor e2=expression                                                     // Bitwise XOR
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=Or e2=expression                                                      // Bitwise OR
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=AndAnd e2=expression                                                  // Logical AND
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op=OrOr e2=expression                                                    // Logical OR
+        {BinaryOperator op = BinaryOperator.fromString($op.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression Question e2=expression Colon e3=expression                               // Conditional operator
+        { $expRet = new TernaryExpr($e1.expRet, $e2.expRet, $e3.expRet);
+          $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression op2=assignmentOperator e2=expression                                        // Assignment
+        {BinaryOperator op = BinaryOperator.fromString($op2.text);
+         $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
+         $expRet.setLine($ctx.start.getLine());
+        }
+  | e1=expression (Comma es+=expression)+                                                 // Comma operator
+        {
+            List<Expr> result = new ArrayList<>();
+                result.add($e1.expRet);
+                for (ExpressionContext ctx : $es) {
+                    result.add(ctx.expRet);
+                }
+            $expRet = new CommaExpr(result);
+            $expRet.setLine($ctx.start.getLine());
+        }
+    ;
 
-//2- premitive values
-INT_VAL : [0] | [1-9][0-9]*;
-STR_VAL : '"' ( ~["\\] | '\\' . )* '"' ;
-BOOL_VAL: 'true' | 'false';
-DOUBLE_VAL: ([0] | [1-9][0-9]*)'.'[0-9]+;
+argumentExpressionList returns [List<Expr> list]:
+    {$list = new ArrayList<>();}
+  e=expression{$list.add($e.expRet);} (Comma e2=expression{$list.add($e2.expRet);})* ;
 
-// 3- Symbols
-LBRACE : '{';
-RBRACE : '}';
-SEMI : ';';
-ASSIGN : '=';
-PLUS : '+';
-LPAR : '(';
-RPAR : ')';
+unaryOperator returns [StringVal stringRet]:
+  cm=(And | Star | Plus | Minus | Tilde | Not){$stringRet = new StringVal($cm.text);} ;
 
-// 4- Identifiers
-ID : [a-zA-Z_][a-zA-Z0-9_]*;
+castExpression  returns [Expr expRet]
+  : LeftParen tn=typeName RightParen ce=castExpression { $expRet = new CastExpr($tn.typeRet, $ce.expRet); }
+  | e=expression { $expRet = $e.expRet; }
+  | d=DigitSequence {$expRet = new IntVal(Integer.parseInt($d.text));}
+  ;
 
+assignmentOperator returns [String text]
+  : cm=(Assign | StarAssign | DivAssign | ModAssign | PlusAssign | MinusAssign | LeftShiftAssign | RightShiftAssign | AndAssign | XorAssign | OrAssign)
+   {$text = $cm.getText();}
+   ;
 
-// 5- Whitespace and comments
-WHITE_SPACE : [ \t\r\n]+ -> skip;
-LINE_COMMENT : '//' ~[\r\n]* -> skip;
-BLOCK_COMMENT : '/*' .*? '*/' -> skip;
+declaration returns [Declaration decRet]
+    : specs=declarationSpecifiers decl=initDeclaratorList? Semi
+    {
+        $decRet = new Declaration($specs.list, $decl.ctx != null ? $decl.list : null);
+        $decRet.setLine($ctx.start.getLine());
+    }
+    ;
+
+declarationSpecifiers returns [List<StringVal> list]:
+    {$list = new ArrayList<>();}
+    (spec = declarationSpecifier{$list.add($spec.specRet);})+ ;
+
+declarationSpecifier returns [StringVal specRet]
+    : td=Typedef {$specRet = new StringVal($td.text);}
+    | ts=typeSpecifier {$specRet = $ts.typeSpecRet;}
+    | c =Const {$specRet = new StringVal($c.text);}
+    ;
+
+initDeclaratorList returns [List<InitDeclarator> list]:
+    {$list = new ArrayList<>();}
+    i0 = initDeclarator {$list.add($i0.initDecRet);} (Comma ii = initDeclarator{$list.add($ii.initDecRet);})* ;
+
+initDeclarator returns [InitDeclarator initDecRet]
+    : dec=declarator {$initDecRet = new InitDeclarator($dec.declaratorRet);}
+    (Assign ini = initializer {$initDecRet.addInitializer($ini.iniRet);})? ;
+
+typeSpecifier returns [StringVal typeSpecRet]
+    : Void {$typeSpecRet = new StringVal($Void.text);}
+    | Char {$typeSpecRet = new StringVal($Char.text);}
+    | Short {$typeSpecRet = new StringVal($Short.text);}
+    | Int {$typeSpecRet = new StringVal($Int.text);}
+    | Long {$typeSpecRet = new StringVal($Long.text);}
+    | Float {$typeSpecRet = new StringVal($Float.text);}
+    | Double {$typeSpecRet = new StringVal($Double.text);}
+    | Signed {$typeSpecRet = new StringVal($Signed.text);}
+    | Unsigned {$typeSpecRet = new StringVal($Unsigned.text);}
+    | Bool {$typeSpecRet = new StringVal($Bool.text);}
+    | id=Identifier {$typeSpecRet = new StringVal($id.text);}
+    ;
+
+specifierQualifierList returns [List<StringVal> list]:
+    {$list = new ArrayList<>();}
+    (ts = typeSpecifier{$list.add($ts.typeSpecRet);} | Const{$list.add(new StringVal($Const.text));})
+    (sq = specifierQualifierList{$list.addAll($sq.list);})?
+    ;
+
+declarator returns [Declarator declaratorRet]:
+    {$declaratorRet = new Declarator(); $declaratorRet.setLine($ctx.start.getLine());}
+    (p=pointer{$declaratorRet.setPointer($p.ptrRet);})?
+    d=directDeclarator{$declaratorRet.setDirectDeclarator($d.ddRet);}
+    ;
+
+directDeclarator returns [DirectDeclarator ddRet]
+    @init {$ddRet = new DirectDeclarator();}
+    :id=Identifier{$ddRet.setIdentifier(new Identifier($id.text, $id.getLine()));}
+    | LeftParen d=declarator RightParen{$ddRet.setInnerDeclarator($d.declaratorRet);}
+    | dd=directDeclarator{$ddRet = $dd.ddRet;} LeftBracket exp=expression? RightBracket {$ddRet.addArrExpr($exp.expRet);}
+    | dd=directDeclarator{$ddRet = $dd.ddRet;} LeftParen  (pl=parameterList{$ddRet.addFuncParams($pl.list);}
+                                                           | (idl=identifierList{$ddRet.addFuncIdentifiers($idl.list);})?) RightParen
+    ;
+
+pointer returns [Pointer ptrRet]:
+    {
+        $ptrRet = new Pointer();
+        int stars = 0;
+        List<Integer> constCounts = new ArrayList<>();
+    }
+    ((Star c+=Const* {stars++; constCounts.add($c.size());}))+
+    {
+        $ptrRet.setStarCount(stars);
+        $ptrRet.setConstCounts(constCounts);
+    }
+    ;
+
+parameterList returns [List<Parameter> list]:
+    {$list = new ArrayList<>();}
+    p=parameterDeclaration{$list.add($p.paramRet);} (Comma p2=parameterDeclaration{$list.add($p2.paramRet);})* ;
+
+parameterDeclaration returns [Parameter paramRet]:
+    ds=declarationSpecifiers{$paramRet = new Parameter($ds.list);} (d=declarator{$paramRet.setDeclarator($d.declaratorRet);}
+            | (d2=abstractDeclarator{$paramRet.setDeclarator($d2.declaratorRet);})?)
+    ;
+
+identifierList returns [List<Identifier> list]:
+    {$list = new ArrayList<>();}
+    id=Identifier{$list.add(new Identifier($id.text, $id.getLine()));} (Comma id2=Identifier{$list.add(new Identifier($id.text, $id.getLine()));})* ;
+
+typeName returns [Typename typeRet]:
+    {$typeRet = new Typename();}
+    spl=specifierQualifierList{$typeRet.setSpecifierQualifiers($spl.list);}
+    (d=abstractDeclarator{$typeRet.setDeclarator($d.declaratorRet);})?
+    ;
+
+abstractDeclarator returns [Declarator declaratorRet]
+    @init {$declaratorRet = new Declarator();}:
+    p=pointer{$declaratorRet.setPointer($p.ptrRet);} | (p=pointer{$declaratorRet.setPointer($p.ptrRet);})? dd=directAbstractDeclarator{$declaratorRet.setDirectDeclarator($dd.ddRet);}
+    ;
+
+directAbstractDeclarator returns [DirectDeclarator ddRet]
+    @init {$ddRet = new DirectDeclarator();}:
+    LeftBracket expression? RightBracket {$ddRet.addArrExpr($exp.expRet);}
+    | LeftParen  (d=abstractDeclarator{$ddRet.setInnerDeclarator($d.declaratorRet);} | (pl=parameterList?{$ddRet.addFuncParams($pl.list);})) RightParen
+    | dd=directAbstractDeclarator{$ddRet = $dd.ddRet;} LeftBracket exp=expression? RightBracket {$ddRet.addArrExpr($exp.expRet);}
+    | dd=directAbstractDeclarator{$ddRet = $dd.ddRet;} LeftParen pl=parameterList? RightParen  {$ddRet.addFuncParams($pl.list);}
+    ;
+
+initializer returns [Initializer iniRet]
+    @init {$iniRet = new Initializer();}:
+    exp=expression{$iniRet.setExpr($exp.expRet);} | LeftBrace i=initializerList{$iniRet.setInitializerlist($i.list);} Comma? RightBrace ;
+
+initializerList returns [InitializerList list]
+    @init {$list = new InitializerList();}:
+    d=designation? i=initializer{$list.add($d.ctx!=null? $d.dRet : null, $i.iniRet);} (Comma d2=designation? i2=initializer{$list.add($d2.ctx!=null? $d2.dRet : null, $i2.iniRet);})* ;
+
+designation returns [Designation dRet]:
+    {$dRet = new Designation();}
+    (d=designator{$dRet.addDesignator($d.dRet);})+ Assign ;
+
+designator returns [Designator dRet]
+    @init {$dRet = new Designator(); }:
+    LeftBracket exp=expression{$dRet.setExpr($exp.expRet);} RightBracket | Dot id=Identifier{ $dRet.setIdentifier(new Identifier($id.text, $id.getLine()));}
+    ;
+
+statement returns [Statement stRet]:
+    c=compoundStatement{$stRet = $c.cstmtRet; $stRet.setLine($ctx.start.getLine());}
+    | e=expressionStatement{$stRet = $e.stRet;$stRet.setLine($ctx.start.getLine());}
+    | s=selectionStatement{$stRet = $s.stRet; $stRet.setLine($ctx.start.getLine());}
+    | i=iterationStatement{$stRet = $i.stRet; $stRet.setLine($ctx.start.getLine());}
+    | j=jumpStatement{$stRet = $j.stRet;      $stRet.setLine($ctx.start.getLine());}
+    ;
+
+compoundStatement returns [CompoundStatement cstmtRet]:
+    {$cstmtRet = new CompoundStatement(); $cstmtRet.setLine($ctx.start.getLine());}
+    LeftBrace (b = blockItem{$cstmtRet.addBlockItem($b.blockRet);})* RightBrace ;
+
+blockItem returns [BlockItem blockRet]:
+    st = statement{$blockRet = new BlockItem($st.stRet);}
+    | dec = declaration {$blockRet = new BlockItem($dec.decRet);}
+    ;
+
+expressionStatement returns [ExpressionStatement stRet]:
+    (exp=expression{$stRet = new ExpressionStatement($exp.expRet);})? Semi;
+
+selectionStatement returns [SelectionStatement stRet]
+    : If LeftParen exp = expression RightParen ifst=statement {$stRet= new SelectionStatement($exp.expRet, $ifst.stRet);}
+    (Else elsest=statement {$stRet.addElse($elsest.stRet);})?;
+
+iterationStatement returns [IterationStatement stRet]
+    @init {$stRet = new IterationStatement();}
+    :While LeftParen e=expression RightParen s=statement {$stRet.setWhileLoop($e.expRet, $s.stRet);}
+    | Do s=statement While LeftParen e=expression RightParen Semi{$stRet.setDoWhileLoop($s.stRet, $e.expRet);}
+    | For LeftParen f=forCondition RightParen s=statement {$stRet.setForLoop($f.forconRet, $s.stRet);};
+
+forCondition returns [ForCondition forconRet]:
+    {$forconRet = new ForCondition();}
+    (fd=forDeclaration{$forconRet.setForDeclaration($fd.forRet);} | (e=expression{$forconRet.setExpr($e.expRet);})?)
+    Semi (f1=forExpression{$forconRet.setConditions($f1.list);})? Semi (f2=forExpression{$forconRet.setSteps($f2.list);})? ;
+
+forDeclaration returns [ForDeclaration forRet]:
+    d=declarationSpecifiers{$forRet = new ForDeclaration($d.list);} (i=initDeclaratorList{$forRet.addInitDeclarators($i.list);})?
+    ;
+
+forExpression returns [List<Expr> list]:
+    {$list = new ArrayList<>();}
+    e=expression{$list.add($e.expRet);} (Comma e2=expression{$list.add($e2.expRet);})*;
+
+jumpStatement returns [JumpStatement stRet]:
+    {$stRet = new JumpStatement();}
+    ( c=Continue | c=Break | c=Return (e=expression{$stRet.setExpr($e.expRet);})? ){$stRet.setCommand(new StringVal($c.text));} Semi ;
+
+Break                 : 'break'                 ;
+Char                  : 'char'                  ;
+Const                 : 'const'                 ;
+Continue              : 'continue'              ;
+Do                    : 'do'                    ;
+Double                : 'double'                ;
+Else                  : 'else'                  ;
+Float                 : 'float'                 ;
+For                   : 'for'                   ;
+If                    : 'if'                    ;
+Int                   : 'int'                   ;
+Long                  : 'long'                  ;
+Return                : 'return'                ;
+Short                 : 'short'                 ;
+Signed                : 'signed'                ;
+Sizeof                : 'sizeof'                ;
+Switch                : 'switch'                ;
+Typedef               : 'typedef'               ;
+Unsigned              : 'unsigned'              ;
+Void                  : 'void'                  ;
+While                 : 'while'                 ;
+Bool                  : 'bool'                  ;
+LeftParen             : '('                     ;
+RightParen            : ')'                     ;
+LeftBracket           : '['                     ;
+RightBracket          : ']'                     ;
+LeftBrace             : '{'                     ;
+RightBrace            : '}'                     ;
+Less                  : '<'                     ;
+LessEqual             : '<='                    ;
+Greater               : '>'                     ;
+GreaterEqual          : '>='                    ;
+LeftShift             : '<<'                    ;
+RightShift            : '>>'                    ;
+Plus                  : '+'                     ;
+PlusPlus              : '++'                    ;
+Minus                 : '-'                     ;
+MinusMinus            : '--'                    ;
+Star                  : '*'                     ;
+Div                   : '/'                     ;
+Mod                   : '%'                     ;
+And                   : '&'                     ;
+Or                    : '|'                     ;
+AndAnd                : '&&'                    ;
+OrOr                  : '||'                    ;
+Xor                   : '^'                     ;
+Not                   : '!'                     ;
+Tilde                 : '~'                     ;
+Question              : '?'                     ;
+Colon                 : ':'                     ;
+Semi                  : ';'                     ;
+Comma                 : ','                     ;
+Assign                : '='                     ;
+StarAssign            : '*='                    ;
+DivAssign             : '/='                    ;
+ModAssign             : '%='                    ;
+PlusAssign            : '+='                    ;
+MinusAssign           : '-='                    ;
+LeftShiftAssign       : '<<='                   ;
+RightShiftAssign      : '>>='                   ;
+AndAssign             : '&='                    ;
+XorAssign             : '^='                    ;
+OrAssign              : '|='                    ;
+Equal                 : '=='                    ;
+NotEqual              : '!='                    ;
+Arrow                 : '->'                    ;
+Dot                   : '.'                     ;
+
+Identifier
+    : IdentifierNondigit (IdentifierNondigit | Digit)* ;
+
+fragment IdentifierNondigit
+    : Nondigit | UniversalCharacterName ;
+
+fragment Nondigit
+    : [a-zA-Z_] ;
+
+fragment Digit
+    : [0-9] ;
+
+fragment UniversalCharacterName
+    : '\\u' HexQuad | '\\U' HexQuad HexQuad ;
+
+fragment HexQuad
+    : HexadecimalDigit HexadecimalDigit HexadecimalDigit HexadecimalDigit ;
+
+Constant
+    : IntegerConstant | FloatingConstant | CharacterConstant ;
+
+fragment IntegerConstant
+    : DecimalConstant IntegerSuffix?
+    | OctalConstant IntegerSuffix?
+    | HexadecimalConstant IntegerSuffix?
+    | BinaryConstant ;
+
+fragment BinaryConstant
+    : '0' [bB] [0-1]+ ;
+
+fragment DecimalConstant
+    : NonzeroDigit Digit* ;
+
+fragment OctalConstant
+    : '0' OctalDigit* ;
+
+fragment HexadecimalConstant
+    : HexadecimalPrefix HexadecimalDigit+ ;
+
+fragment HexadecimalPrefix
+    : '0' [xX] ;
+
+fragment NonzeroDigit
+    : [1-9] ;
+
+fragment OctalDigit
+    : [0-7] ;
+
+fragment HexadecimalDigit
+    : [0-9a-fA-F] ;
+
+fragment IntegerSuffix
+    : UnsignedSuffix LongSuffix? | UnsignedSuffix LongLongSuffix | LongSuffix UnsignedSuffix? | LongLongSuffix UnsignedSuffix? ;
+
+fragment UnsignedSuffix
+    : [uU] ;
+
+fragment LongSuffix
+    : [lL] ;
+
+fragment LongLongSuffix
+    : 'll' | 'LL' ;
+
+fragment FloatingConstant
+    : DecimalFloatingConstant | HexadecimalFloatingConstant ;
+
+fragment DecimalFloatingConstant
+    : FractionalConstant ExponentPart? FloatingSuffix? | DigitSequence ExponentPart FloatingSuffix? ;
+
+fragment HexadecimalFloatingConstant
+    : HexadecimalPrefix (HexadecimalFractionalConstant | HexadecimalDigitSequence) BinaryExponentPart FloatingSuffix? ;
+
+fragment FractionalConstant
+    : DigitSequence? Dot DigitSequence | DigitSequence Dot ;
+
+fragment ExponentPart
+    : [eE] Sign? DigitSequence ;
+
+fragment Sign
+    : [+-] ;
+
+DigitSequence
+    : Digit+ ;
+
+fragment HexadecimalFractionalConstant
+    : HexadecimalDigitSequence? Dot HexadecimalDigitSequence | HexadecimalDigitSequence Dot ;
+
+fragment BinaryExponentPart
+    : [pP] Sign? DigitSequence ;
+
+fragment HexadecimalDigitSequence
+    : HexadecimalDigit+ ;
+
+fragment FloatingSuffix
+    : [flFL] ;
+
+fragment CharacterConstant
+    : '\'' CCharSequence '\'' | 'L\'' CCharSequence '\''| 'u\'' CCharSequence '\'' | 'U\'' CCharSequence '\''
+    ;
+
+fragment CCharSequence
+    : CChar+ ;
+
+fragment CChar
+    : ~['\\\r\n] | EscapeSequence ;
+
+fragment EscapeSequence
+    : SimpleEscapeSequence | OctalEscapeSequence | HexadecimalEscapeSequence | UniversalCharacterName ;
+
+fragment SimpleEscapeSequence
+    : '\\' ['"?abfnrtv\\] ;
+
+fragment OctalEscapeSequence
+    : '\\' OctalDigit OctalDigit? OctalDigit? ;
+
+fragment HexadecimalEscapeSequence
+    : '\\x' HexadecimalDigit+ ;
+
+StringLiteral
+    : EncodingPrefix? '"' SCharSequence? '"' ;
+
+fragment EncodingPrefix
+    : 'u8' | 'u' | 'U' | 'L' ;
+
+fragment SCharSequence
+    : SChar+ ;
+
+fragment SChar
+    : ~["\\\r\n] | EscapeSequence | '\\\n' | '\\\r\n' ;
+
+MultiLineMacro
+    : '#' (~[\n]*? '\\' '\r'? '\n')+ ~ [\n]+ -> channel(HIDDEN) ;
+
+Directive
+    : '#' ~[\n]* -> channel(HIDDEN) ;
+
+Whitespace
+    : [ \t]+ -> channel(HIDDEN) ;
+
+Newline
+    : ('\r' '\n'? | '\n') -> channel(HIDDEN) ;
+
+BlockComment
+    : '/*' .*? '*/' -> channel(HIDDEN) ;
+
+LineComment
+    : '//' ~[\r\n]* -> channel(HIDDEN) ;
