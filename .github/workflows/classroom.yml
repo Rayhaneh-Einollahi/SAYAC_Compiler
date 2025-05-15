@@ -54,13 +54,74 @@ jobs:
         setup-command: ''
         command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
           -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
-          "tests/Optimization/1-opt-Unused Variables and Function Parameters.cpy"
-          | sort -t':' -k1.6n -k2
+          "tests/Optimization/1-Unused Variables and Function Parameters.cpy" | sort
+          -t':' -k1.6n -k2
         input: ''
         expected-output: |-
           Line 1: Stmt function process = 1 1
           Line 7: Stmt function f2 = 1 0
           Line 10: Stmt function f1 = 1 0
+          Line 13: Stmt function main = 1 0
+        comparison-method: contains
+        timeout: 10
+        max-score: 1
+    - name: 'Opt: Statements After Return'
+      id: opt-statements-after-return
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: 'Opt: Statements After Return'
+        setup-command: ''
+        command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
+          -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
+          "tests/Optimization/2-Statements After return.cpy" | sort -t':' -k1.6n -k2
+        input: ''
+        expected-output: 'Line 1: Stmt function main = 1 0'
+        comparison-method: contains
+        timeout: 10
+        max-score: 1
+    - name: 'Opt: No Effect Statements'
+      id: opt-no-effect-statements
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: 'Opt: No Effect Statements'
+        setup-command: ''
+        command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
+          -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
+          "tests/Optimization/3-No-Effect Statements.cpy" | sort -t':' -k1.6n -k2
+        input: ''
+        expected-output: 'Line 1: Stmt function main = 1 0'
+        comparison-method: contains
+        timeout: 10
+        max-score: 1
+    - name: 'Opt: Typedef, Constant Replacement'
+      id: opt-typedef-constant-replacement
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: 'Opt: Typedef, Constant Replacement'
+        setup-command: ''
+        command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
+          -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
+          "tests/Optimization/5-Typedef, Constant Replacement.cpy" | sort -t':' -k1.6n
+          -k2
+        input: ''
+        expected-output: |-
+          Line 3: Stmt function main = 2 0
+          Line 5: Stmt iteration for = 1
+        comparison-method: contains
+        timeout: 10
+        max-score: 1
+    - name: 'Opt: Main Access'
+      id: opt-main-access
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: 'Opt: Main Access'
+        setup-command: ''
+        command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
+          -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
+          "tests/Optimization/6-Main Access.cpy" | sort -t':' -k1.6n -k2
+        input: ''
+        expected-output: |-
+          Line 1: Stmt function startEngine = 1 0
           Line 13: Stmt function main = 1 0
         comparison-method: contains
         timeout: 10
@@ -71,5 +132,9 @@ jobs:
         NAME-VARIABLE-UNDEFINED_RESULTS: "${{steps.name-variable-undefined.outputs.result}}"
         NAME-FUNCTION-UNDEFINED_RESULTS: "${{steps.name-function-undefined.outputs.result}}"
         OPT-UNUSED-VARIABLES-AND-FUNCTION-PARAMETERS_RESULTS: "${{steps.opt-unused-variables-and-function-parameters.outputs.result}}"
+        OPT-STATEMENTS-AFTER-RETURN_RESULTS: "${{steps.opt-statements-after-return.outputs.result}}"
+        OPT-NO-EFFECT-STATEMENTS_RESULTS: "${{steps.opt-no-effect-statements.outputs.result}}"
+        OPT-TYPEDEF-CONSTANT-REPLACEMENT_RESULTS: "${{steps.opt-typedef-constant-replacement.outputs.result}}"
+        OPT-MAIN-ACCESS_RESULTS: "${{steps.opt-main-access.outputs.result}}"
       with:
-        runners: name-variable-undefined,name-function-undefined,opt-unused-variables-and-function-parameters
+        runners: name-variable-undefined,name-function-undefined,opt-unused-variables-and-function-parameters,opt-statements-after-return,opt-no-effect-statements,opt-typedef-constant-replacement,opt-main-access
