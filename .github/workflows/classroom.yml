@@ -1,0 +1,75 @@
+name: Autograding Tests
+'on':
+- push
+- repository_dispatch
+permissions:
+  checks: write
+  actions: read
+  contents: read
+jobs:
+  run-autograding-tests:
+    runs-on: ubuntu-latest
+    if: github.actor != 'github-classroom[bot]'
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: 'Name: Variable Undefined'
+      id: name-variable-undefined
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: 'Name: Variable Undefined'
+        setup-command: ''
+        command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
+          -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
+          "tests/NameAnalysis/1-Variable Undefined.cpy" | sort -t':' -k1.6n -k2
+        input: ''
+        expected-output: |-
+          Line:6-> b not declared
+          Line:9-> b not declared
+          Line:14-> c not declared
+        comparison-method: contains
+        timeout: 10
+        max-score: 1
+    - name: 'Name: Function Undefined'
+      id: name-function-undefined
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: 'Name: Function Undefined'
+        setup-command: ''
+        command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
+          -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
+          "tests/NameAnalysis/2-Function Undefined.cpy" | sort -t':' -k1.6n -k2
+        input: ''
+        expected-output: |-
+          Line:12-> moo not declared
+          Line:17-> moo not declared
+        comparison-method: contains
+        timeout: 10
+        max-score: 1
+    - name: 'Opt: Unused Variables and Function Parameters'
+      id: opt-unused-variables-and-function-parameters
+      uses: classroom-resources/autograding-io-grader@v1
+      with:
+        test-name: 'Opt: Unused Variables and Function Parameters'
+        setup-command: ''
+        command: javac -cp utilities/antlr-4.13.1-complete.jar -d out $(find src gen
+          -name "*.java") && java -cp out:utilities/antlr-4.13.1-complete.jar SimpleLang
+          "tests/Optimization/1-opt-Unused Variables and Function Parameters.cpy"
+          | sort -t':' -k1.6n -k2
+        input: ''
+        expected-output: |-
+          Line 1: Stmt function process = 1 1
+          Line 7: Stmt function f2 = 1 0
+          Line 10: Stmt function f1 = 1 0
+          Line 13: Stmt function main = 1 0
+        comparison-method: contains
+        timeout: 10
+        max-score: 1
+    - name: Autograding Reporter
+      uses: classroom-resources/autograding-grading-reporter@v1
+      env:
+        NAME-VARIABLE-UNDEFINED_RESULTS: "${{steps.name-variable-undefined.outputs.result}}"
+        NAME-FUNCTION-UNDEFINED_RESULTS: "${{steps.name-function-undefined.outputs.result}}"
+        OPT-UNUSED-VARIABLES-AND-FUNCTION-PARAMETERS_RESULTS: "${{steps.opt-unused-variables-and-function-parameters.outputs.result}}"
+      with:
+        runners: name-variable-undefined,name-function-undefined,opt-unused-variables-and-function-parameters
