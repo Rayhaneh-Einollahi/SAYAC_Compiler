@@ -23,26 +23,29 @@ import main.symbolTable.utils.Key;
 
 
 
-public class NameAnalyzer extends Visitor<Void>{
+public class NameAnalyzer extends Visitor<Boolean>{
 
     @Override
-    public Void visit(Program program) {
+    public Boolean visit(Program program) {
         SymbolTable.top = new SymbolTable();
         SymbolTable.root = SymbolTable.top;
 
         program.set_symbol_table(SymbolTable.top);
+        Boolean ans = true;
         for (ExternalDeclaration ed : program.getExternalDeclarations()){
-            ed.accept(this);
+            ans &= ed.accept(this);
         }
-        return null;
+        return ans;
     }
 
     @Override
-    public Void visit(FunctionDefinition functionDefinition) {
+    public Boolean visit(FunctionDefinition functionDefinition) {
+        Boolean ans = true;
         FuncDecSymbolTableItem func_dec_item = new FuncDecSymbolTableItem(functionDefinition);
         try {
             SymbolTable.top.put(func_dec_item);
         } catch (ItemAlreadyExistsException e) {
+            ans = false;
             System.out.println("Redefinition of function \"" + functionDefinition.getName() +"\" in line " + functionDefinition.getLine());
         }
 
@@ -55,6 +58,7 @@ public class NameAnalyzer extends Visitor<Void>{
                 try {
                     SymbolTable.top.put(var_dec_item);
                 } catch (ItemAlreadyExistsException e) {
+                    ans = false;
                     System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
                 }
             }
@@ -64,183 +68,184 @@ public class NameAnalyzer extends Visitor<Void>{
 //        if (functionDefinition.getDeclarator() != null){
 //            functionDefinition.getDeclarator().accept(this);
 //        }
+
         if (functionDefinition.getDeclarations() != null){
             for (Declaration ds: functionDefinition.getDeclarations()){
-                ds.accept(this);
+                ans &= ds.accept(this);
             }
         }
         if (functionDefinition.getBody() != null){
-            functionDefinition.getBody().accept(this);
+            ans &= functionDefinition.getBody().accept(this);
         }
         SymbolTable.pop();
-        return null;
+        return ans;
     }
 
 
     @Override
-    public Void visit(FunctionExpr functionExpr) {
+    public Boolean visit(FunctionExpr functionExpr) {
+        Boolean ans = true;
         try {
             if (!SymbolTable.isBuiltIn(functionExpr.getName())) {
-                SymbolTable.top.getItem(new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount()) );
+                SymbolTable.top.getItem(new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount()));
             }
         } catch (ItemNotFoundException e) {
-            System.out.printf("Line:%d-> %s not declared\n",functionExpr.getLine(),functionExpr.getName());
+            ans = false;
+            System.out.printf("Line:%d-> %s not declared\n", functionExpr.getLine(), functionExpr.getName());
         }
 
-//        if (functionExpr.getOutside() != null) {
-//            functionExpr.getOutside().accept(this);
-//        }
         if (functionExpr.getArguments() != null) {
             for (Expr arg : functionExpr.getArguments()) {
-                arg.accept(this);
+                ans &= arg.accept(this);
             }
         }
-
-        return null;
+        return ans;
     }
 
-
     @Override
-    public Void visit(Declaration declaration) {
-
-
+    public Boolean visit(Declaration declaration) {
+        Boolean ans = true;
         DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
         try {
             SymbolTable.top.put(var_dec_item);
         } catch (ItemAlreadyExistsException e) {
-            System.out.println("Redeclaration of variable \"" + declaration.getName() +"\" in line " + declaration.getLine());
+            ans = false;
+            System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
         }
-        if (declaration.getDeclarationSpecifiers() != null){
-            for (StringVal ds: declaration.getDeclarationSpecifiers()){
-                ds.accept(this);
+        if (declaration.getDeclarationSpecifiers() != null) {
+            for (StringVal ds : declaration.getDeclarationSpecifiers()) {
+                ans &= ds.accept(this);
             }
         }
-        if (declaration.getInitDeclarators() != null){
-            for (InitDeclarator id: declaration.getInitDeclarators()){
-                id.accept(this);
+        if (declaration.getInitDeclarators() != null) {
+            for (InitDeclarator id : declaration.getInitDeclarators()) {
+                ans &= id.accept(this);
             }
         }
-
-        return null;
+        return ans;
     }
 
     @Override
-    public Void visit(BinaryExpr binaryExpr) {
-
+    public Boolean visit(BinaryExpr binaryExpr) {
+        Boolean ans = true;
         if (binaryExpr.getFirstOperand() != null) {
-            binaryExpr.getFirstOperand().accept(this);
+            ans &= binaryExpr.getFirstOperand().accept(this);
         }
         if (binaryExpr.getSecondOperand() != null) {
-            binaryExpr.getSecondOperand().accept(this);
+            ans &= binaryExpr.getSecondOperand().accept(this);
         }
-        return null;
+        return ans;
     }
 
     @Override
-    public Void visit(Identifier identifier) {
+    public Boolean visit(Identifier identifier) {
+        Boolean ans = true;
         try {
-            SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY , identifier.getName()));
+            SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()));
         } catch (ItemNotFoundException e) {
+            ans = false;
             System.out.printf("Line:%d-> %s not declared\n", identifier.getLine(), identifier.getName() );
         }
-        return null;
+        return ans;
     }
 
-
-
-    public Void visit(BlockItem blockItem) {
+    public Boolean visit(BlockItem blockItem) {
+        Boolean ans = true;
         if (blockItem.getStatement() != null) {
-            blockItem.getStatement().accept(this);
+            ans &= blockItem.getStatement().accept(this);
         }
         if (blockItem.getDeclaration() != null) {
-            blockItem.getDeclaration().accept(this);
+            ans &= blockItem.getDeclaration().accept(this);
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(CompoundStatement compoundStatement) {
-        SymbolTable  new_symbol_table = new SymbolTable(SymbolTable.top);
+    public Boolean visit(CompoundStatement compoundStatement) {
+        Boolean ans = true;
+        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
         compoundStatement.set_symbol_table(new_symbol_table);
         SymbolTable.push(new_symbol_table);
 
         if (compoundStatement.getBlockItems() != null) {
             for (BlockItem bi : compoundStatement.getBlockItems()) {
-                bi.accept(this);
+                ans &= bi.accept(this);
             }
         }
-//        System.out.println(compoundStatement.getBlockItems().size());
         SymbolTable.pop();
-        return null;
+        return ans;
     }
 
-    public Void visit(ExpressionStatement expressionStatement) {
+    public Boolean visit(ExpressionStatement expressionStatement) {
+        Boolean ans = true;
         if (expressionStatement.getExpr() != null) {
-            expressionStatement.getExpr().accept(this);
+            ans &= expressionStatement.getExpr().accept(this);
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(ForCondition forCondition) {
+    public Boolean visit(ForCondition forCondition) {
+        Boolean ans = true;
         if (forCondition.getForDeclaration() != null) {
-            forCondition.getForDeclaration().accept(this);
+            ans &= forCondition.getForDeclaration().accept(this);
         }
         if (forCondition.getExpr() != null) {
-            forCondition.getExpr().accept(this);
+            ans &= forCondition.getExpr().accept(this);
         }
         if (forCondition.getConditions() != null) {
             for (Expr condition : forCondition.getConditions()) {
-                condition.accept(this);
+                ans &= condition.accept(this);
             }
         }
         if (forCondition.getSteps() != null) {
             for (Expr step : forCondition.getSteps()) {
-                step.accept(this);
+                ans &= step.accept(this);
             }
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(ForDeclaration forDeclaration) {
+    public Boolean visit(ForDeclaration forDeclaration) {
+        Boolean ans = true;
         if (forDeclaration.getDeclarationSpecifiers() != null) {
             for (StringVal ds : forDeclaration.getDeclarationSpecifiers()) {
-                ds.accept(this);
+                ans &= ds.accept(this);
             }
         }
         if (forDeclaration.getInitDeclarators() != null) {
             for (InitDeclarator id : forDeclaration.getInitDeclarators()) {
-                id.accept(this);
+                ans &= id.accept(this);
             }
         }
-        return null;
+        return ans;
     }
 
-
-    public Void visit(IterationStatement iterationStatement) {
-
+    public Boolean visit(IterationStatement iterationStatement) {
+        Boolean ans = true;
         if (iterationStatement.getCondition() != null) {
-            iterationStatement.getCondition().accept(this);
+            ans &= iterationStatement.getCondition().accept(this);
         }
         if (iterationStatement.getBody() != null) {
-            iterationStatement.getBody().accept(this);
+            ans &= iterationStatement.getBody().accept(this);
         }
         if (iterationStatement.getForCondition() != null) {
-            iterationStatement.getForCondition().accept(this);
+            ans &= iterationStatement.getForCondition().accept(this);
         }
-
-        return null;
+        return ans;
     }
 
-    public Void visit(JumpStatement jumpStatement) {
+
+    public Boolean visit(JumpStatement jumpStatement) {
+        Boolean ans = true;
         if (jumpStatement.getExpr() != null) {
-            jumpStatement.getExpr().accept(this);
+            ans &= jumpStatement.getExpr().accept(this);
         }
         if (jumpStatement.getCommand() != null) {
-            jumpStatement.getCommand().accept(this);
+            ans &= jumpStatement.getCommand().accept(this);
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(SelectionStatement selectionStatement) {
+    public Boolean visit(SelectionStatement selectionStatement) {
 //        System.out.print("Line ");
 //        System.out.print(selectionStatement.getLine());
 //        System.out.print(": Stmt selection = ");
@@ -252,80 +257,85 @@ public class NameAnalyzer extends Visitor<Void>{
 //            System.out.print(": Stmt selection = ");
 //            System.out.println(selectionStatement.getElseStatement().getStatementCount());
 //        }
-
+        Boolean ans = true;
         if (selectionStatement.getCondition() != null) {
-            selectionStatement.getCondition().accept(this);
+            ans &= selectionStatement.getCondition().accept(this);
         }
         if (selectionStatement.getIfStatement() != null) {
-            selectionStatement.getIfStatement().accept(this);
+            ans &= selectionStatement.getIfStatement().accept(this);
         }
         if (selectionStatement.getElseStatement() != null) {
-            selectionStatement.getElseStatement().accept(this);
+            ans &= selectionStatement.getElseStatement().accept(this);
         }
-        return null;
+        return ans;
     }
 
 
 
-    public Void visit(ArrayExpr arrayExpr) {
+    public Boolean visit(ArrayExpr arrayExpr) {
+        Boolean ans = true;
         if (arrayExpr.getOutside() != null) {
-            arrayExpr.getOutside().accept(this);
+            ans &= arrayExpr.getOutside().accept(this);
         }
         if (arrayExpr.getInside() != null) {
-            arrayExpr.getInside().accept(this);
+            ans &= arrayExpr.getInside().accept(this);
         }
-        return null;
+        return ans;
     }
 
 
-    public Void visit(CastExpr castExpr) {
+    public Boolean visit(CastExpr castExpr) {
+        Boolean ans = true;
         if (castExpr.getTypename() != null) {
-            castExpr.getTypename().accept(this);
+            ans &= castExpr.getTypename().accept(this);
         }
         if (castExpr.getCastExpr() != null) {
-            castExpr.getCastExpr().accept(this);
+            ans &= castExpr.getCastExpr().accept(this);
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(CommaExpr commaExpr) {
+    public Boolean visit(CommaExpr commaExpr) {
+        Boolean ans = true;
         if (commaExpr.getExpressions() != null) {
             for (Expr expr : commaExpr.getExpressions()) {
-                expr.accept(this);
+                ans &= expr.accept(this);
             }
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(ConstantExpr constantExpr) {
+    public Boolean visit(ConstantExpr constantExpr) {
+        Boolean ans = true;
         if (constantExpr.getStr() != null) {
-            constantExpr.getStr().accept(this);
+            ans &= constantExpr.getStr().accept(this);
         }
-        return null;
+        return ans;
     }
 
 
 
 
-    public Void visit(IniListExpr iniListExpr) {
+    public Boolean visit(IniListExpr iniListExpr) {
+        Boolean ans = true;
         if (iniListExpr.getTypename() != null) {
-            iniListExpr.getTypename().accept(this);
+            ans &= iniListExpr.getTypename().accept(this);
         }
         if (iniListExpr.getInitializerList() != null) {
-            iniListExpr.getInitializerList().accept(this);
+            ans &= iniListExpr.getInitializerList().accept(this);
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(SizeofTypeExpr sizeofTypeExpr) {
-
+    public Boolean visit(SizeofTypeExpr sizeofTypeExpr) {
+        Boolean ans = true;
         if (sizeofTypeExpr.getTypename() != null) {
-            sizeofTypeExpr.getTypename().accept(this);
+            ans &= sizeofTypeExpr.getTypename().accept(this);
         }
-        return null;
+        return ans;
     }
 
-    public Void visit(StringExpr stringExpr) {
+    public Boolean visit(StringExpr stringExpr) {
 //        System.out.print("Line ");
 //        System.out.print(stringExpr.getLine());
 //        System.out.println(": Expr string" );
@@ -339,7 +349,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(TernaryExpr ternaryExpr) {
+    public Boolean visit(TernaryExpr ternaryExpr) {
 
         if (ternaryExpr.getFirstOperand() != null) {
             ternaryExpr.getFirstOperand().accept(this);
@@ -353,7 +363,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(UnaryExpr unaryExpr) {
+    public Boolean visit(UnaryExpr unaryExpr) {
 
         unaryExpr.getOperand().accept(this);
         return null;
@@ -362,7 +372,7 @@ public class NameAnalyzer extends Visitor<Void>{
 
 
 
-    public Void visit(Declarator declarator) {
+    public Boolean visit(Declarator declarator) {
         if (declarator.getPointer() != null) {
             declarator.getPointer().accept(this);
         }
@@ -372,7 +382,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(Designation designation) {
+    public Boolean visit(Designation designation) {
         if (designation.getDesignators() != null) {
             for (Designator designator : designation.getDesignators()) {
                 if (designator != null) {
@@ -383,7 +393,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(Designator designator) {
+    public Boolean visit(Designator designator) {
         if (designator.getExpr() != null) {
             designator.getExpr().accept(this);
         }
@@ -393,7 +403,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(DirectDeclarator directDeclarator) {
+    public Boolean visit(DirectDeclarator directDeclarator) {
         if (directDeclarator.getIdentifier() != null) {
             directDeclarator.getIdentifier().accept(this);
         }
@@ -434,7 +444,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(InitDeclarator initDeclarator) {
+    public Boolean visit(InitDeclarator initDeclarator) {
         if (initDeclarator.getDeclarator() != null) {
             initDeclarator.getDeclarator().accept(this);
         }
@@ -444,7 +454,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(Initializer initializer) {
+    public Boolean visit(Initializer initializer) {
         if (initializer.getExpr() != null) {
             initializer.getExpr().accept(this);
         }
@@ -457,7 +467,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(InitializerList initializerList) {
+    public Boolean visit(InitializerList initializerList) {
         if (initializerList.getList() != null) {
             for (InitializerList.Pair p : initializerList.getList()) {
                 if (p != null) {
@@ -473,7 +483,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(Parameter parameter) {
+    public Boolean visit(Parameter parameter) {
         if (parameter.getDeclarationSpecifiers() != null) {
             for (StringVal specifier : parameter.getDeclarationSpecifiers()) {
                 if (specifier != null) {
@@ -487,7 +497,7 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(Typename typename) {
+    public Boolean visit(Typename typename) {
         if (typename.getSpecifierQualifiers() != null) {
             for (StringVal specQual : typename.getSpecifierQualifiers()) {
                 if (specQual != null) {
