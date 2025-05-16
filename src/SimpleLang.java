@@ -11,10 +11,49 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
 public class SimpleLang {
+
+    public static String removeComments(String code) {
+        StringBuilder result = new StringBuilder();
+        boolean inBlockComment = false;
+        StringBuilder lineBuffer = new StringBuilder();
+
+        String[] lines = code.split("\\r?\\n");
+
+        for (String line : lines) {
+            if (!inBlockComment) lineBuffer.setLength(0);
+            int i = 0;
+            int n = line.length();
+
+            while (i < n) {
+                if (!inBlockComment && i + 1 < n && line.charAt(i) == '/' && line.charAt(i + 1) == '*') {
+                    inBlockComment = true;
+                    i += 2;
+                } else if (inBlockComment && i + 1 < n && line.charAt(i) == '*' && line.charAt(i + 1) == '/') {
+                    inBlockComment = false;
+                    i += 2;
+                } else if (!inBlockComment && i + 1 < n && line.charAt(i) == '/' && line.charAt(i + 1) == '/') {
+                    break; // Skip rest of the line
+                } else if (!inBlockComment) {
+                    lineBuffer.append(line.charAt(i));
+                    i++;
+                } else {
+                    i++;
+                }
+            }
+
+            if (!inBlockComment) {
+                result.append(lineBuffer.toString());
+            }
+            result.append("\n"); // Preserve original line breaks
+        }
+
+        return result.toString();
+    }
     public static String preprocess(String code) {
         String[] lines = code.split("\\R");
         StringBuilder result = new StringBuilder();
@@ -52,7 +91,7 @@ public class SimpleLang {
 
     public static void main(String[] args) throws IOException {
         String code = Files.readString(Paths.get(args[0]));
-        String transformedCode = preprocess(code);
+        String transformedCode = preprocess(removeComments(code));
 //        System.out.println(transformedCode);
         CharStream reader = CharStreams.fromString(transformedCode);
 

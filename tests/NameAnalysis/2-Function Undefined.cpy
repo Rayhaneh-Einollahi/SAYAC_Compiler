@@ -18,6 +18,6 @@ void shoo():
 end
 int main():
     foo(3)
-    foo(3, 5)
+    foo(3, 5) // amdan ro in error nazashtam ke dar nazar begirid ba esm va tedad argoman bayad tashkhis bedid
     moo("Hello", "World")
 end
