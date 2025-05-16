@@ -11,6 +11,10 @@ jobs:
     runs-on: ubuntu-latest
     if: github.actor != 'github-classroom[bot]'
     steps:
+    - name: Check Java version
+      run: |
+        java -version
+        javac -version
     - name: Checkout code
       uses: actions/checkout@v4
     - name: 'Name: Variable Undefined'
