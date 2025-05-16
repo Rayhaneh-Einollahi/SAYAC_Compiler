@@ -53,7 +53,7 @@ public class SimpleLang {
     public static void main(String[] args) throws IOException {
         String code = Files.readString(Paths.get(args[0]));
         String transformedCode = preprocess(code);
-        System.out.println(transformedCode);
+//        System.out.println(transformedCode);
         CharStream reader = CharStreams.fromString(transformedCode);
 
         SimpleLangLexer SimpleLangLexer = new SimpleLangLexer(reader);

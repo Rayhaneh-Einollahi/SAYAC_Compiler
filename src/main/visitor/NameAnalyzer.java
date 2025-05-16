@@ -46,10 +46,6 @@ public class NameAnalyzer extends Visitor<Void>{
         }
 
 
-        SymbolTable func_dec_symbol_table = new SymbolTable(SymbolTable.top);
-        functionDefinition.set_symbol_table(func_dec_symbol_table);
-        SymbolTable.push(func_dec_symbol_table);
-
 //        if (functionDefinition.getDeclarator() != null){
 //            functionDefinition.getDeclarator().accept(this);
 //        }
@@ -62,8 +58,6 @@ public class NameAnalyzer extends Visitor<Void>{
             functionDefinition.getBody().accept(this);
         }
 
-        SymbolTable.pop();
-
         return null;
     }
 
@@ -71,9 +65,11 @@ public class NameAnalyzer extends Visitor<Void>{
     @Override
     public Void visit(FunctionExpr functionExpr) {
         try {
-            SymbolTable.top.getItem(FuncDecSymbolTableItem.START_KEY + functionExpr.getName());
+            if (!SymbolTable.isBuiltIn(functionExpr.getName())) {
+                SymbolTable.top.getItem(FuncDecSymbolTableItem.START_KEY + functionExpr.getName());
+            }
         } catch (ItemNotFoundException e) {
-            System.out.println("Function \"" +functionExpr.getName() + "\" not declared in line : " + functionExpr.getLine());
+            System.out.printf("Line:%d-> %s not declared\n",functionExpr.getLine(),functionExpr.getName());
         }
 
 //        if (functionExpr.getOutside() != null) {
@@ -116,15 +112,6 @@ public class NameAnalyzer extends Visitor<Void>{
     @Override
     public Void visit(BinaryExpr binaryExpr) {
 
-        if (binaryExpr.getOperator() == BinaryOperator.ASSIGN){
-            try {
-                SymbolTable.top.getItem(DecSymbolTableItem.START_KEY + binaryExpr.getFirstOperand().getName());
-            } catch (ItemNotFoundException e) {
-                System.out.println("Variable \"" + binaryExpr.getFirstOperand().getName() + "\" not declared in line : " + binaryExpr.getLine());
-            }
-        }
-
-
         if (binaryExpr.getFirstOperand() != null) {
             binaryExpr.getFirstOperand().accept(this);
         }
@@ -139,7 +126,7 @@ public class NameAnalyzer extends Visitor<Void>{
         try {
             SymbolTable.top.getItem(DecSymbolTableItem.START_KEY + identifier.getName());
         } catch (ItemNotFoundException e) {
-            System.out.println("Variable \"" + identifier.getName() + "\" not declared in line : " + identifier.getLine());
+            System.out.printf("Line:%d-> %s not declared\n", identifier.getLine(), identifier.getName() );
         }
         return null;
     }
@@ -157,12 +144,17 @@ public class NameAnalyzer extends Visitor<Void>{
     }
 
     public Void visit(CompoundStatement compoundStatement) {
+        SymbolTable  new_symbol_table = new SymbolTable(SymbolTable.top);
+        compoundStatement.set_symbol_table(new_symbol_table);
+        SymbolTable.push(new_symbol_table);
+
         if (compoundStatement.getBlockItems() != null) {
             for (BlockItem bi : compoundStatement.getBlockItems()) {
                 bi.accept(this);
             }
         }
 //        System.out.println(compoundStatement.getBlockItems().size());
+        SymbolTable.pop();
         return null;
     }
 
@@ -209,18 +201,6 @@ public class NameAnalyzer extends Visitor<Void>{
 
 
     public Void visit(IterationStatement iterationStatement) {
-//        System.out.print("Line ");
-//        System.out.print(iterationStatement.getLine());
-//        String kind;
-//        if(iterationStatement.getKind() == IterationStatement.Kind.FOR)
-//            kind = "for";
-//        else if(iterationStatement.getKind() == IterationStatement.Kind.WHILE)
-//            kind = "while";
-//        else
-//            kind = "do-while";
-//
-//        System.out.print(": Stmt " + kind + " = ");
-//        System.out.println(iterationStatement.getBody().getStatementCount());
 
         if (iterationStatement.getCondition() != null) {
             iterationStatement.getCondition().accept(this);
@@ -231,6 +211,7 @@ public class NameAnalyzer extends Visitor<Void>{
         if (iterationStatement.getForCondition() != null) {
             iterationStatement.getForCondition().accept(this);
         }
+
         return null;
     }
 
@@ -293,18 +274,18 @@ public class NameAnalyzer extends Visitor<Void>{
     }
 
     public Void visit(CommaExpr commaExpr) {
-//        if (commaExpr.getExpressions() != null) {
-//            for (Expr expr : commaExpr.getExpressions()) {
-//                expr.accept(this);
-//            }
-//        }
+        if (commaExpr.getExpressions() != null) {
+            for (Expr expr : commaExpr.getExpressions()) {
+                expr.accept(this);
+            }
+        }
         return null;
     }
 
     public Void visit(ConstantExpr constantExpr) {
-//        if (constantExpr.getStr() != null) {
-//            constantExpr.getStr().accept(this);
-//        }
+        if (constantExpr.getStr() != null) {
+            constantExpr.getStr().accept(this);
+        }
         return null;
     }
 
@@ -312,20 +293,20 @@ public class NameAnalyzer extends Visitor<Void>{
 
 
     public Void visit(IniListExpr iniListExpr) {
-//        if (iniListExpr.getTypename() != null) {
-//            iniListExpr.getTypename().accept(this);
-//        }
-//        if (iniListExpr.getInitializerList() != null) {
-//            iniListExpr.getInitializerList().accept(this);
-//        }
+        if (iniListExpr.getTypename() != null) {
+            iniListExpr.getTypename().accept(this);
+        }
+        if (iniListExpr.getInitializerList() != null) {
+            iniListExpr.getInitializerList().accept(this);
+        }
         return null;
     }
 
     public Void visit(SizeofTypeExpr sizeofTypeExpr) {
 
-//        if (sizeofTypeExpr.getTypename() != null) {
-//            sizeofTypeExpr.getTypename().accept(this);
-//        }
+        if (sizeofTypeExpr.getTypename() != null) {
+            sizeofTypeExpr.getTypename().accept(this);
+        }
         return null;
     }
 
@@ -333,33 +314,33 @@ public class NameAnalyzer extends Visitor<Void>{
 //        System.out.print("Line ");
 //        System.out.print(stringExpr.getLine());
 //        System.out.println(": Expr string" );
-//        if (stringExpr.getStrings() != null) {
-//            for (StringVal str : stringExpr.getStrings()) {
-//                if (str != null) {
-//                    str.accept(this);
-//                }
-//            }
-//        }
+        if (stringExpr.getStrings() != null) {
+            for (StringVal str : stringExpr.getStrings()) {
+                if (str != null) {
+                    str.accept(this);
+                }
+            }
+        }
         return null;
     }
 
     public Void visit(TernaryExpr ternaryExpr) {
 
-//        if (ternaryExpr.getFirstOperand() != null) {
-//            ternaryExpr.getFirstOperand().accept(this);
-//        }
-//        if (ternaryExpr.getSecondOperand() != null) {
-//            ternaryExpr.getSecondOperand().accept(this);
-//        }
-//        if (ternaryExpr.getThirdOperand() != null) {
-//            ternaryExpr.getThirdOperand().accept(this);
-//        }
+        if (ternaryExpr.getFirstOperand() != null) {
+            ternaryExpr.getFirstOperand().accept(this);
+        }
+        if (ternaryExpr.getSecondOperand() != null) {
+            ternaryExpr.getSecondOperand().accept(this);
+        }
+        if (ternaryExpr.getThirdOperand() != null) {
+            ternaryExpr.getThirdOperand().accept(this);
+        }
         return null;
     }
 
     public Void visit(UnaryExpr unaryExpr) {
 
-//        unaryExpr.getOperand().accept(this);
+        unaryExpr.getOperand().accept(this);
         return null;
     }
 

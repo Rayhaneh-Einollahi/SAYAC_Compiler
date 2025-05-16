@@ -5,9 +5,7 @@ import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.item.SymbolTableItem;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Stack;
+import java.util.*;
 
 
 public class SymbolTable {
@@ -17,7 +15,11 @@ public class SymbolTable {
     public static SymbolTable top;
     public static SymbolTable root;
     private static Stack<SymbolTable> stack = new Stack<>();
+    private static Set<String> built_in_funcs  = new HashSet<>(Arrays.asList("printf", "scanf"));
 
+    public static Boolean isBuiltIn(String name){
+        return built_in_funcs.contains(name);
+    }
     public static void push(SymbolTable symbolTable) {
         if (top != null)
             stack.push(top);

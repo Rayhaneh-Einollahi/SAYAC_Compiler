@@ -1,6 +1,7 @@
 package main.ast.nodes.Statement;
 
 import main.ast.nodes.expr.Expr;
+import main.symbolTable.SymbolTable;
 import main.visitor.IVisitor;
 
 public class IterationStatement extends Statement{
@@ -11,7 +12,10 @@ public class IterationStatement extends Statement{
     private Statement body;
 
     private ForCondition forCondition;
+    private SymbolTable symbol_table;
 
+    public SymbolTable get_symbol_table() {return symbol_table;}
+    public void set_symbol_table(SymbolTable symbol_table) {this.symbol_table = symbol_table;}
 
 
     public void setWhileLoop(Expr condition, Statement body) {

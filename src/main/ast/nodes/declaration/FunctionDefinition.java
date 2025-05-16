@@ -17,7 +17,6 @@ public class FunctionDefinition extends ExternalDeclaration {
 
     public SymbolTable get_symbol_table() {return symbol_table;}
     public void set_symbol_table(SymbolTable symbol_table) {this.symbol_table = symbol_table;}
-
     public FunctionDefinition(
             List<StringVal> declarationSpecifiers,
             Declarator declarator,
