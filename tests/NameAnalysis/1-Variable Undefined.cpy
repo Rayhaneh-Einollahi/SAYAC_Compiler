@@ -12,3 +12,4 @@ end
 int main():
     int b
     printf(b + c)
+end
