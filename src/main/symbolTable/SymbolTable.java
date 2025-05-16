@@ -4,6 +4,7 @@ package main.symbolTable;
 import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.item.SymbolTableItem;
+import main.symbolTable.utils.Key;
 
 import java.util.*;
 
@@ -31,7 +32,7 @@ public class SymbolTable {
     }
 
     public SymbolTable pre;
-    public Map<String, SymbolTableItem> items;
+    public Map<Key, SymbolTableItem> items;
 
     public SymbolTable() {
         this(null);
@@ -52,7 +53,7 @@ public class SymbolTable {
         items.put(item.getKey(), item);
     }
 
-    public SymbolTableItem getItem(String key) throws ItemNotFoundException {
+    public SymbolTableItem getItem(Key key) throws ItemNotFoundException {
         SymbolTable currentSymbolTable = this;
 
         while(currentSymbolTable != null) {

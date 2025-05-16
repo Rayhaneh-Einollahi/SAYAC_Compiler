@@ -5,6 +5,7 @@ import main.ast.nodes.expr.primitives.StringVal;
 import main.symbolTable.SymbolTable;
 import main.visitor.IVisitor;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class FunctionDefinition extends ExternalDeclaration {
@@ -51,6 +52,15 @@ public class FunctionDefinition extends ExternalDeclaration {
         return declarations;
     }
 
+    public List<List<String>> getParameterDeclarations() {
+        if (declarator == null)
+            return new ArrayList<>();
+        if (declarator.getDirectDeclarator() == null)
+            return new ArrayList<>();
+        if (declarator.getDirectDeclarator().getSteps().isEmpty())
+            return new ArrayList<>();
+        return declarator.getDirectDeclarator().getSteps().getFirst().getParamsTypeNames();
+    }
 
     @Override
     public <T> T accept(IVisitor<T> visitor) {

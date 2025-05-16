@@ -23,6 +23,13 @@ public class DirectDeclarator extends Node {
         public List<Identifier> identifiers;
 
         public DDStep(){}
+        public List<List<String>> getParamsTypeNames(){
+            List<List<String>> paramsTypes = new ArrayList<>();
+            for (Parameter parameter: params){
+                paramsTypes.add(parameter.getTypeName());
+            }
+            return paramsTypes;
+        }
     }
     public DirectDeclarator() {}
 

@@ -1,5 +1,7 @@
 package main.symbolTable.item;
 
+import main.symbolTable.utils.Key;
+
 public abstract class SymbolTableItem {
-    public abstract String getKey();
+    public abstract Key getKey();
 }

@@ -11,6 +11,7 @@ import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.item.FuncDecSymbolTableItem;
 import main.symbolTable.item.DecSymbolTableItem;
+import main.symbolTable.utils.Key;
 
 /*
  *   Main Changes:
@@ -45,6 +46,20 @@ public class NameAnalyzer extends Visitor<Void>{
             System.out.println("Redefinition of function \"" + functionDefinition.getName() +"\" in line " + functionDefinition.getLine());
         }
 
+        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
+        functionDefinition.set_symbol_table(new_symbol_table);
+        SymbolTable.push(new_symbol_table);
+        if (functionDefinition.getDeclarations() != null) {
+            for (Declaration declaration : functionDefinition.getDeclarations()) {
+                DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
+                try {
+                    SymbolTable.top.put(var_dec_item);
+                } catch (ItemAlreadyExistsException e) {
+                    System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
+                }
+            }
+        }
+
 
 //        if (functionDefinition.getDeclarator() != null){
 //            functionDefinition.getDeclarator().accept(this);
@@ -57,7 +72,7 @@ public class NameAnalyzer extends Visitor<Void>{
         if (functionDefinition.getBody() != null){
             functionDefinition.getBody().accept(this);
         }
-
+        SymbolTable.pop();
         return null;
     }
 
@@ -66,7 +81,7 @@ public class NameAnalyzer extends Visitor<Void>{
     public Void visit(FunctionExpr functionExpr) {
         try {
             if (!SymbolTable.isBuiltIn(functionExpr.getName())) {
-                SymbolTable.top.getItem(FuncDecSymbolTableItem.START_KEY + functionExpr.getName());
+                SymbolTable.top.getItem(new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount()) );
             }
         } catch (ItemNotFoundException e) {
             System.out.printf("Line:%d-> %s not declared\n",functionExpr.getLine(),functionExpr.getName());
@@ -124,7 +139,7 @@ public class NameAnalyzer extends Visitor<Void>{
     @Override
     public Void visit(Identifier identifier) {
         try {
-            SymbolTable.top.getItem(DecSymbolTableItem.START_KEY + identifier.getName());
+            SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY , identifier.getName()));
         } catch (ItemNotFoundException e) {
             System.out.printf("Line:%d-> %s not declared\n", identifier.getLine(), identifier.getName() );
         }

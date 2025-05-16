@@ -4,6 +4,8 @@ import main.ast.nodes.Node;
 import main.ast.nodes.expr.primitives.StringVal;
 import main.visitor.IVisitor;
 
+import java.util.ArrayList;
+import java.util.LinkedList;
 import java.util.List;
 
 public class Parameter extends Node {
@@ -20,6 +22,16 @@ public class Parameter extends Node {
         return declarator;
     }
 
+    public List<String> getTypeName(){
+        List<String> TypeNames = new LinkedList<>();
+        for (StringVal ds:declarationSpecifiers){
+            TypeNames.add(ds.getName());
+        }
+        if (declarator == null){
+            TypeNames.removeLast();
+        }
+        return TypeNames;
+    }
     public List<StringVal> getDeclarationSpecifiers() {
         return declarationSpecifiers;
     }

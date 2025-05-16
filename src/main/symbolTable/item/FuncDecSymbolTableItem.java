@@ -1,6 +1,7 @@
 package main.symbolTable.item;
 
 import main.ast.nodes.declaration.FunctionDefinition;
+import main.symbolTable.utils.Key;
 
 public class FuncDecSymbolTableItem extends SymbolTableItem {
     public static final String START_KEY = "FuncDef_";
@@ -20,7 +21,7 @@ public class FuncDecSymbolTableItem extends SymbolTableItem {
     }
 
     @Override
-    public String getKey() {
-        return START_KEY + this.functionDefinition.getName();
+    public Key getKey() {
+        return new Key(START_KEY, functionDefinition.getName(), functionDefinition.getParameterDeclarations().size());
     }
 }

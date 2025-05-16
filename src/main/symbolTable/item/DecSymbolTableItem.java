@@ -1,6 +1,7 @@
 package main.symbolTable.item;
 
 import main.ast.nodes.declaration.*;
+import main.symbolTable.utils.Key;
 
 public class DecSymbolTableItem extends SymbolTableItem{
     public static final String START_KEY = "VarDec_";
@@ -20,8 +21,8 @@ public class DecSymbolTableItem extends SymbolTableItem{
     }
 
     @Override
-    public String getKey() {
-        return START_KEY + this.declaration.getName();
+    public Key getKey() {
+        return new Key(START_KEY , this.declaration.getName());
     }
 
 }

@@ -24,6 +24,19 @@ public class FunctionExpr extends Expr{
         return arguments;
     }
 
+    public Integer getArgumentCount() {
+        int cnt= 0;
+        for (Expr expr : arguments){
+            if (expr instanceof CommaExpr){
+                cnt += ((CommaExpr) expr).getExpressions().size();
+            }
+            else{
+                cnt++;
+            }
+        }
+        return cnt;
+    }
+
     @Override
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
