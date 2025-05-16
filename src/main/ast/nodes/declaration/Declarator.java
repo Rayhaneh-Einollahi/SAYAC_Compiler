@@ -3,6 +3,9 @@ package main.ast.nodes.declaration;
 import main.ast.nodes.Node;
 import main.visitor.IVisitor;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class Declarator extends Node {
 
     private Pointer pointer;
@@ -21,6 +24,14 @@ public class Declarator extends Node {
         }
         return null;
     }
+    public List<Declaration> getParamsDeclarations() {
+        if (directDeclarator == null)
+            return new ArrayList<>();
+        return directDeclarator.getParamsDeclarations();
+
+    }
+
+
 
     public void setPointer(Pointer pointer) {
         this.pointer = pointer;

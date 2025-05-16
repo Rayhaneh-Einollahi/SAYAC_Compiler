@@ -25,7 +25,7 @@ public class FunctionDefinition extends ExternalDeclaration {
             CompoundStatement body) {
         this.declarationSpecifiers = declarationSpecifiers;
         this.declarator = declarator;
-        this.declarations = declarations;
+        this.declarations = (declarations!= null)? declarations: new ArrayList<>();
         this.body = body;
     }
 
@@ -52,14 +52,13 @@ public class FunctionDefinition extends ExternalDeclaration {
         return declarations;
     }
 
-    public List<List<String>> getParameterDeclarations() {
+    public List<Declaration> getArgDeclarations() {
+        List<Declaration> allDeclarations = new ArrayList<>();
+        allDeclarations.addAll(declarations);
         if (declarator == null)
             return new ArrayList<>();
-        if (declarator.getDirectDeclarator() == null)
-            return new ArrayList<>();
-        if (declarator.getDirectDeclarator().getSteps().isEmpty())
-            return new ArrayList<>();
-        return declarator.getDirectDeclarator().getSteps().getFirst().getParamsTypeNames();
+        allDeclarations.addAll(declarator.getParamsDeclarations());
+        return  allDeclarations;
     }
 
     @Override

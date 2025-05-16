@@ -17,7 +17,7 @@ public class Declaration extends ExternalDeclaration {
     }
 
     public String getName(){
-        if (initDeclarators==null){
+        if (initDeclarators==null || initDeclarators.isEmpty()){
             return this.declarationSpecifiers.getLast().getName();
         }
         return initDeclarators.getLast().getDeclarator().getName();

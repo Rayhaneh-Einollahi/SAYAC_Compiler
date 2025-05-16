@@ -22,6 +22,6 @@ public class FuncDecSymbolTableItem extends SymbolTableItem {
 
     @Override
     public Key getKey() {
-        return new Key(START_KEY, functionDefinition.getName(), functionDefinition.getParameterDeclarations().size());
+        return new Key(START_KEY, functionDefinition.getName(), functionDefinition.getArgDeclarations().size());
     }
 }

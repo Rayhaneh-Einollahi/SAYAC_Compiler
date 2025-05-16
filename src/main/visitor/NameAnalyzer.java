@@ -50,7 +50,7 @@ public class NameAnalyzer extends Visitor<Void>{
         functionDefinition.set_symbol_table(new_symbol_table);
         SymbolTable.push(new_symbol_table);
         if (functionDefinition.getDeclarations() != null) {
-            for (Declaration declaration : functionDefinition.getDeclarations()) {
+            for (Declaration declaration : functionDefinition.getArgDeclarations()) {
                 DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
                 try {
                     SymbolTable.top.put(var_dec_item);

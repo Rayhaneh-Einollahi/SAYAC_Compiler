@@ -4,7 +4,6 @@ package main.ast.nodes.declaration;
 import main.ast.nodes.Node;
 import main.ast.nodes.expr.Expr;
 import main.ast.nodes.expr.Identifier;
-import main.ast.nodes.expr.primitives.StringVal;
 import main.visitor.IVisitor;
 
 import java.util.ArrayList;
@@ -23,16 +22,22 @@ public class DirectDeclarator extends Node {
         public List<Identifier> identifiers;
 
         public DDStep(){}
-        public List<List<String>> getParamsTypeNames(){
-            List<List<String>> paramsTypes = new ArrayList<>();
+        public List<Declaration> getParamsDeclarations(){
+            List<Declaration> paramsTypes = new ArrayList<>();
             for (Parameter parameter: params){
-                paramsTypes.add(parameter.getTypeName());
+                paramsTypes.add(parameter.extractDeclaration());
             }
             return paramsTypes;
         }
     }
     public DirectDeclarator() {}
 
+    public List<Declaration> getParamsDeclarations(){
+        if (steps.isEmpty())
+            return new ArrayList<>();
+        return steps.getFirst().getParamsDeclarations();
+
+    }
     public void setIdentifier(Identifier identifier){
         this.identifier = identifier;
     }
