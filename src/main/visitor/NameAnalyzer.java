@@ -339,76 +339,81 @@ public class NameAnalyzer extends Visitor<Boolean>{
 //        System.out.print("Line ");
 //        System.out.print(stringExpr.getLine());
 //        System.out.println(": Expr string" );
+        Boolean ans = true;
         if (stringExpr.getStrings() != null) {
             for (StringVal str : stringExpr.getStrings()) {
                 if (str != null) {
-                    str.accept(this);
+                    ans &= str.accept(this);
                 }
             }
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(TernaryExpr ternaryExpr) {
-
+        Boolean ans = true;
         if (ternaryExpr.getFirstOperand() != null) {
-            ternaryExpr.getFirstOperand().accept(this);
+            ans &= ternaryExpr.getFirstOperand().accept(this);
         }
         if (ternaryExpr.getSecondOperand() != null) {
-            ternaryExpr.getSecondOperand().accept(this);
+            ans &= ternaryExpr.getSecondOperand().accept(this);
         }
         if (ternaryExpr.getThirdOperand() != null) {
-            ternaryExpr.getThirdOperand().accept(this);
+            ans &= ternaryExpr.getThirdOperand().accept(this);
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(UnaryExpr unaryExpr) {
-
-        unaryExpr.getOperand().accept(this);
-        return null;
+        Boolean ans = true;
+        ans &= unaryExpr.getOperand().accept(this);
+        return ans;
     }
 
 
 
 
     public Boolean visit(Declarator declarator) {
+        Boolean ans = true;
         if (declarator.getPointer() != null) {
-            declarator.getPointer().accept(this);
+            ans &= declarator.getPointer().accept(this);
         }
         if (declarator.getDirectDeclarator() != null) {
-            declarator.getDirectDeclarator().accept(this);
+            ans &= declarator.getDirectDeclarator().accept(this);
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(Designation designation) {
+        Boolean ans = true;
         if (designation.getDesignators() != null) {
             for (Designator designator : designation.getDesignators()) {
                 if (designator != null) {
-                    designator.accept(this);
+                    ans &= designator.accept(this);
                 }
             }
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(Designator designator) {
+        Boolean ans = true;
         if (designator.getExpr() != null) {
-            designator.getExpr().accept(this);
+            ans &= designator.getExpr().accept(this);
         }
         if (designator.getIdentifier() != null) {
-            designator.getIdentifier().accept(this);
+            ans &= designator.getIdentifier().accept(this);
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(DirectDeclarator directDeclarator) {
+        Boolean ans = true;
         if (directDeclarator.getIdentifier() != null) {
-            directDeclarator.getIdentifier().accept(this);
+            ans &= directDeclarator.getIdentifier().accept(this);
         }
         if (directDeclarator.getInnerDeclarator() != null) {
-            directDeclarator.getInnerDeclarator().accept(this);
+            ans &= directDeclarator.getInnerDeclarator().accept(this);
         }
         if (directDeclarator.getSteps() != null) {
             for (DirectDeclarator.DDStep step : directDeclarator.getSteps()) {
@@ -416,14 +421,14 @@ public class NameAnalyzer extends Visitor<Boolean>{
                     switch (step.kind) {
                         case ARRAY:
                             if (step.arrayExpr != null) {
-                                step.arrayExpr.accept(this);
+                                ans &= step.arrayExpr.accept(this);
                             }
                             break;
                         case FUNCTION_P:
                             if (step.params != null) {
                                 for (Parameter param : step.params) {
                                     if (param != null) {
-                                        param.accept(this);
+                                        ans &= param.accept(this);
                                     }
                                 }
                             }
@@ -432,7 +437,7 @@ public class NameAnalyzer extends Visitor<Boolean>{
                             if (step.identifiers != null) {
                                 for (Identifier id : step.identifiers) {
                                     if (id != null) {
-                                        id.accept(this);
+                                        ans &= id.accept(this);
                                     }
                                 }
                             }
@@ -441,73 +446,78 @@ public class NameAnalyzer extends Visitor<Boolean>{
                 }
             }
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(InitDeclarator initDeclarator) {
+        Boolean ans = true;
         if (initDeclarator.getDeclarator() != null) {
-            initDeclarator.getDeclarator().accept(this);
+            ans &= initDeclarator.getDeclarator().accept(this);
         }
         if (initDeclarator.getInitializer() != null) {
-            initDeclarator.getInitializer().accept(this);
+            ans &= initDeclarator.getInitializer().accept(this);
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(Initializer initializer) {
+        Boolean ans = true;
         if (initializer.getExpr() != null) {
-            initializer.getExpr().accept(this);
+            ans &= initializer.getExpr().accept(this);
         }
         if (initializer.getInitializerlist() != null) {
-            initializer.getInitializerlist().accept(this);
+            ans &= initializer.getInitializerlist().accept(this);
         }
         if (initializer.getDesignation() != null) {
-            initializer.getDesignation().accept(this);
+            ans &= initializer.getDesignation().accept(this);
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(InitializerList initializerList) {
+        Boolean ans = true;
         if (initializerList.getList() != null) {
             for (InitializerList.Pair p : initializerList.getList()) {
                 if (p != null) {
                     if (p.designation() != null) {
-                        p.designation().accept(this);
+                        ans &= p.designation().accept(this);
                     }
                     if (p.initializer() != null) {
-                        p.initializer().accept(this);
+                        ans &= p.initializer().accept(this);
                     }
                 }
             }
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(Parameter parameter) {
+        Boolean ans = true;
         if (parameter.getDeclarationSpecifiers() != null) {
             for (StringVal specifier : parameter.getDeclarationSpecifiers()) {
                 if (specifier != null) {
-                    specifier.accept(this);
+                    ans &= specifier.accept(this);
                 }
             }
         }
         if (parameter.getDeclarator() != null) {
-            parameter.getDeclarator().accept(this);
+            ans &= parameter.getDeclarator().accept(this);
         }
-        return null;
+        return ans;
     }
 
     public Boolean visit(Typename typename) {
+        Boolean ans = true;
         if (typename.getSpecifierQualifiers() != null) {
             for (StringVal specQual : typename.getSpecifierQualifiers()) {
                 if (specQual != null) {
-                    specQual.accept(this);
+                    ans &= specQual.accept(this);
                 }
             }
         }
         if (typename.getDeclarator() != null) {
-            typename.getDeclarator().accept(this);
+            ans &= typename.getDeclarator().accept(this);
         }
-        return null;
+        return ans;
     }
 }
