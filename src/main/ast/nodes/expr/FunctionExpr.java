@@ -2,6 +2,7 @@ package main.ast.nodes.expr;
 
 import main.visitor.IVisitor;
 
+import java.util.Collections;
 import java.util.List;
 
 public class FunctionExpr extends Expr{
@@ -13,6 +14,21 @@ public class FunctionExpr extends Expr{
         this.arguments = arguments;
     }
 
+    public void removeArgs(List<Integer> inds){
+        if (inds.isEmpty())
+            return;
+//        inds.sort(Collections.reverseOrder());
+        if (!arguments.isEmpty() && !(arguments.getFirst() instanceof CommaExpr)){
+            arguments.removeFirst();
+            return;
+        }
+        List<Expr> list = ((CommaExpr)arguments.getFirst()).getExpressions();
+        for (int index : inds) {
+            if (index >= 0 && index < list.size()) {
+                list.remove(index);
+            }
+        }
+    }
     public String getName(){
         return this.outside.getName();
     }

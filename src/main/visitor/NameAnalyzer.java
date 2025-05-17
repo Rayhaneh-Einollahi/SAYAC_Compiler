@@ -11,6 +11,7 @@ import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.item.FuncDecSymbolTableItem;
 import main.symbolTable.item.DecSymbolTableItem;
+import main.symbolTable.item.SymbolTableItem;
 import main.symbolTable.utils.Key;
 
 /*
@@ -112,11 +113,11 @@ public class NameAnalyzer extends Visitor<Boolean>{
             ans = false;
             System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
         }
-        if (declaration.getInitDeclarators() != null) {
-            for (InitDeclarator id : declaration.getInitDeclarators()) {
-                ans &= id.accept(this);
-            }
-        }
+//        if (declaration.getInitDeclarators() != null) {
+//            for (InitDeclarator id : declaration.getInitDeclarators()) {
+//                ans &= id.accept(this);
+//            }
+//        }
         return ans;
     }
 
@@ -136,7 +137,8 @@ public class NameAnalyzer extends Visitor<Boolean>{
     public Boolean visit(Identifier identifier) {
         Boolean ans = true;
         try {
-            SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()));
+            SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()));
+            symbolTableItem.incUsed();
         } catch (ItemNotFoundException e) {
             ans = false;
             System.out.printf("Line:%d-> %s not declared\n", identifier.getLine(), identifier.getName() );

@@ -62,7 +62,9 @@ public class SymbolTable {
         for (Map.Entry<Key, SymbolTableItem> entry : items.entrySet()) {
             if (! (entry.getValue() instanceof DecSymbolTableItem item))
                 continue;
-            declarations.add(item.getDeclaration());
+            if (!entry.getValue().isUsed()){
+                declarations.add(item.getDeclaration());
+            }
         }
         return declarations;
     }
@@ -72,7 +74,6 @@ public class SymbolTable {
         while(currentSymbolTable != null) {
             SymbolTableItem symbolTableItem = currentSymbolTable.items.get(key);
             if( symbolTableItem != null ) {
-                symbolTableItem.incUsed();
                 return symbolTableItem;
             }
             currentSymbolTable = currentSymbolTable.pre;

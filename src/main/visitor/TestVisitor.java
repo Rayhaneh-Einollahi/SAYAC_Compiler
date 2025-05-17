@@ -30,7 +30,7 @@ public class TestVisitor extends Visitor<Void>{
         System.out.print("Line ");
         System.out.print(functionDefinition.getLine());
         System.out.print(": Stmt function "+functionDefinition.getName() + " = ");
-        System.out.println(functionDefinition.getBody().getStatementCount());
+        System.out.println(functionDefinition.getBody().getStatementCount() + " " + functionDefinition.getArgDeclarations().size());
         if (functionDefinition.getDeclarationSpecifiers() != null){
             for (StringVal ds: functionDefinition.getDeclarationSpecifiers()){
                 ds.accept(this);
@@ -192,9 +192,9 @@ public class TestVisitor extends Visitor<Void>{
 
 
     public Void visit(ArrayExpr arrayExpr) {
-        System.out.print("Line ");
-        System.out.print(arrayExpr.getLine());
-        System.out.println(": Expr Array");
+//        System.out.print("Line ");
+//        System.out.print(arrayExpr.getLine());
+//        System.out.println(": Expr Array");
 //        if (arrayExpr.getOutside() != null) {
 //            arrayExpr.getOutside().accept(this);
 //        }
@@ -205,9 +205,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(BinaryExpr binaryExpr) {
-        System.out.print("Line ");
-        System.out.print(binaryExpr.getLine());
-        System.out.println(": Expr "+binaryExpr.getOperator().getSymbol() );
+//        System.out.print("Line ");
+//        System.out.print(binaryExpr.getLine());
+//        System.out.println(": Expr "+binaryExpr.getOperator().getSymbol() );
 //        if (binaryExpr.getFirstOperand() != null) {
 //            binaryExpr.getFirstOperand().accept(this);
 //        }
@@ -218,9 +218,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(CastExpr castExpr) {
-        System.out.print("Line ");
-        System.out.print(castExpr.getLine());
-        System.out.println(": Expr castExpr");
+//        System.out.print("Line ");
+//        System.out.print(castExpr.getLine());
+//        System.out.println(": Expr castExpr");
 //        if (castExpr.getTypename() != null) {
 //            castExpr.getTypename().accept(this);
 //        }
@@ -231,9 +231,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(CommaExpr commaExpr) {
-        System.out.print("Line ");
-        System.out.print(commaExpr.getLine());
-        System.out.println(": Expr ,");
+//        System.out.print("Line ");
+//        System.out.print(commaExpr.getLine());
+//        System.out.println(": Expr ,");
 //        if (commaExpr.getExpressions() != null) {
 //            for (Expr expr : commaExpr.getExpressions()) {
 //                expr.accept(this);
@@ -243,9 +243,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(ConstantExpr constantExpr) {
-        System.out.print("Line ");
-        System.out.print(constantExpr.getLine());
-        System.out.println(": Expr "+constantExpr.getStr().getName() );
+//        System.out.print("Line ");
+//        System.out.print(constantExpr.getLine());
+//        System.out.println(": Expr "+constantExpr.getStr().getName() );
 //        if (constantExpr.getStr() != null) {
 //            constantExpr.getStr().accept(this);
 //        }
@@ -253,10 +253,10 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(FunctionExpr functionExpr) {
-        System.out.print("Line ");
-        System.out.print(functionExpr.getLine());
-        String x = functionExpr.getName();
-        System.out.println(": Expr " + x);
+//        System.out.print("Line ");
+//        System.out.print(functionExpr.getLine());
+//        String x = functionExpr.getName();
+//        System.out.println(": Expr " + x);
 //        if (functionExpr.getOutside() != null) {
 //            functionExpr.getOutside().accept(this);
 //        }
@@ -269,9 +269,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(Identifier identifier) {
-        System.out.print("Line ");
-        System.out.print(identifier.getLine());
-        System.out.println(": Expr "+identifier.getName() );
+//        System.out.print("Line ");
+//        System.out.print(identifier.getLine());
+//        System.out.println(": Expr "+identifier.getName() );
 //        if (identifier.getName() != null) {
 //            identifier.getName().accept(this);
 //        }
@@ -279,9 +279,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(IniListExpr iniListExpr) {
-        System.out.print("Line ");
-        System.out.print(iniListExpr.getLine());
-        System.out.println(": Expr initializerList" );
+//        System.out.print("Line ");
+//        System.out.print(iniListExpr.getLine());
+//        System.out.println(": Expr initializerList" );
 //        if (iniListExpr.getTypename() != null) {
 //            iniListExpr.getTypename().accept(this);
 //        }
@@ -292,9 +292,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(SizeofTypeExpr sizeofTypeExpr) {
-        System.out.print("Line ");
-        System.out.print(sizeofTypeExpr.getLine());
-        System.out.println(": Expr sizeOf");
+//        System.out.print("Line ");
+//        System.out.print(sizeofTypeExpr.getLine());
+//        System.out.println(": Expr sizeOf");
 
 //        if (sizeofTypeExpr.getTypename() != null) {
 //            sizeofTypeExpr.getTypename().accept(this);
@@ -317,9 +317,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(TernaryExpr ternaryExpr) {
-        System.out.print("Line ");
-        System.out.print(ternaryExpr.getLine());
-        System.out.println(": Expr ternary");
+//        System.out.print("Line ");
+//        System.out.print(ternaryExpr.getLine());
+//        System.out.println(": Expr ternary");
 //        if (ternaryExpr.getFirstOperand() != null) {
 //            ternaryExpr.getFirstOperand().accept(this);
 //        }
@@ -333,9 +333,9 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(UnaryExpr unaryExpr) {
-        System.out.print("Line ");
-        System.out.print(unaryExpr.getLine());
-        System.out.println(": Expr "+unaryExpr.getOperator().getSymbol() );
+//        System.out.print("Line ");
+//        System.out.print(unaryExpr.getLine());
+//        System.out.println(": Expr "+unaryExpr.getOperator().getSymbol() );
 //        unaryExpr.getOperand().accept(this);
         return null;
     }

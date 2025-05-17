@@ -10,6 +10,7 @@ import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.item.DecSymbolTableItem;
 import main.symbolTable.item.FuncDecSymbolTableItem;
+import main.symbolTable.item.SymbolTableItem;
 import main.symbolTable.utils.Key;
 
 import java.util.List;
@@ -44,17 +45,31 @@ public class UnusedRemover extends Visitor<Boolean>{
     @Override
     public Boolean visit(FunctionDefinition functionDefinition) {
         Boolean ans = true;
-        List<Declaration> unused = functionDefinition.get_symbol_table().getUnused();
 
+
+        List<Declaration> unused = functionDefinition.get_symbol_table().getUnused();
+        FuncDecSymbolTableItem func_item = null;
+        try {
+            Key key = new Key(FuncDecSymbolTableItem.START_KEY, functionDefinition.getName(), functionDefinition.getArgDeclarations().size());
+            func_item = (FuncDecSymbolTableItem) functionDefinition.get_symbol_table().getItem(key);
+        }
+        catch(ItemNotFoundException e){
+            System.out.println("function not found in the symbol table");
+        }
         if (functionDefinition.getDeclarations() != null) {
+            int ind = 0;
             for (Declaration declaration : functionDefinition.getArgDeclarations()) {
                 if ( unused.contains(declaration)){
+                    //delete the node:
                     functionDefinition.remove(declaration);
+                    //delete from symbol table item:
+                    func_item.addRemoved(ind);
                     ans = false;
-                    continue;
                 }
+                ind++;
             }
         }
+
 
 
 //        if (functionDefinition.getDeclarator() != null){
@@ -69,7 +84,6 @@ public class UnusedRemover extends Visitor<Boolean>{
         if (functionDefinition.getBody() != null){
             ans &= functionDefinition.getBody().accept(this);
         }
-        SymbolTable.pop();
         return ans;
     }
 
@@ -79,13 +93,15 @@ public class UnusedRemover extends Visitor<Boolean>{
         Boolean ans = true;
         try {
             if (!SymbolTable.isBuiltIn(functionExpr.getName())) {
-                SymbolTable.top.getItem(new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount()));
+                Key key = new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount());
+                FuncDecSymbolTableItem symbolTableItem = (FuncDecSymbolTableItem)SymbolTable.top.getItem(key);
+                List<Integer> removedInds = symbolTableItem.getRemovedArgs();
+                functionExpr.removeArgs(removedInds);
             }
         } catch (ItemNotFoundException e) {
             ans = false;
             System.out.printf("Line:%d-> %s not declared\n", functionExpr.getLine(), functionExpr.getName());
         }
-
         if (functionExpr.getArguments() != null) {
             for (Expr arg : functionExpr.getArguments()) {
                 ans &= arg.accept(this);
@@ -97,18 +113,7 @@ public class UnusedRemover extends Visitor<Boolean>{
     @Override
     public Boolean visit(Declaration declaration) {
         Boolean ans = true;
-        DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
-        try {
-            SymbolTable.top.put(var_dec_item);
-        } catch (ItemAlreadyExistsException e) {
-            ans = false;
-            System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
-        }
-        if (declaration.getDeclarationSpecifiers() != null) {
-            for (StringVal ds : declaration.getDeclarationSpecifiers()) {
-                ans &= ds.accept(this);
-            }
-        }
+
         if (declaration.getInitDeclarators() != null) {
             for (InitDeclarator id : declaration.getInitDeclarators()) {
                 ans &= id.accept(this);
@@ -132,12 +137,6 @@ public class UnusedRemover extends Visitor<Boolean>{
     @Override
     public Boolean visit(Identifier identifier) {
         Boolean ans = true;
-        try {
-            SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()));
-        } catch (ItemNotFoundException e) {
-            ans = false;
-            System.out.printf("Line:%d-> %s not declared\n", identifier.getLine(), identifier.getName() );
-        }
         return ans;
     }
 
@@ -154,16 +153,15 @@ public class UnusedRemover extends Visitor<Boolean>{
 
     public Boolean visit(CompoundStatement compoundStatement) {
         Boolean ans = true;
-        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
-        compoundStatement.set_symbol_table(new_symbol_table);
-        SymbolTable.push(new_symbol_table);
-
+        List<Declaration> unused = compoundStatement.get_symbol_table().getUnused();
+        for(Declaration unusedDec :unused){
+            compoundStatement.remove(unusedDec);
+        }
         if (compoundStatement.getBlockItems() != null) {
             for (BlockItem bi : compoundStatement.getBlockItems()) {
                 ans &= bi.accept(this);
             }
         }
-        SymbolTable.pop();
         return ans;
     }
 
@@ -198,11 +196,7 @@ public class UnusedRemover extends Visitor<Boolean>{
 
     public Boolean visit(ForDeclaration forDeclaration) {
         Boolean ans = true;
-        if (forDeclaration.getDeclarationSpecifiers() != null) {
-            for (StringVal ds : forDeclaration.getDeclarationSpecifiers()) {
-                ans &= ds.accept(this);
-            }
-        }
+
         if (forDeclaration.getInitDeclarators() != null) {
             for (InitDeclarator id : forDeclaration.getInitDeclarators()) {
                 ans &= id.accept(this);
@@ -298,11 +292,7 @@ public class UnusedRemover extends Visitor<Boolean>{
     }
 
     public Boolean visit(ConstantExpr constantExpr) {
-        Boolean ans = true;
-        if (constantExpr.getStr() != null) {
-            ans &= constantExpr.getStr().accept(this);
-        }
-        return ans;
+        return true;
     }
 
 
@@ -331,15 +321,7 @@ public class UnusedRemover extends Visitor<Boolean>{
 //        System.out.print("Line ");
 //        System.out.print(stringExpr.getLine());
 //        System.out.println(": Expr string" );
-        Boolean ans = true;
-        if (stringExpr.getStrings() != null) {
-            for (StringVal str : stringExpr.getStrings()) {
-                if (str != null) {
-                    ans &= str.accept(this);
-                }
-            }
-        }
-        return ans;
+        return true;
     }
 
     public Boolean visit(TernaryExpr ternaryExpr) {
@@ -485,13 +467,6 @@ public class UnusedRemover extends Visitor<Boolean>{
 
     public Boolean visit(Parameter parameter) {
         Boolean ans = true;
-        if (parameter.getDeclarationSpecifiers() != null) {
-            for (StringVal specifier : parameter.getDeclarationSpecifiers()) {
-                if (specifier != null) {
-                    ans &= specifier.accept(this);
-                }
-            }
-        }
         if (parameter.getDeclarator() != null) {
             ans &= parameter.getDeclarator().accept(this);
         }
@@ -500,13 +475,6 @@ public class UnusedRemover extends Visitor<Boolean>{
 
     public Boolean visit(Typename typename) {
         Boolean ans = true;
-        if (typename.getSpecifierQualifiers() != null) {
-            for (StringVal specQual : typename.getSpecifierQualifiers()) {
-                if (specQual != null) {
-                    ans &= specQual.accept(this);
-                }
-            }
-        }
         if (typename.getDeclarator() != null) {
             ans &= typename.getDeclarator().accept(this);
         }
