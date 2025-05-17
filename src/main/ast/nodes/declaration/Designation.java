@@ -21,4 +21,10 @@ public class Designation extends Node {
         return visitor.visit(this);
     }
 
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Designation other = (Designation) obj;
+        return this.designators.equals(other.designators);
+    }
 }

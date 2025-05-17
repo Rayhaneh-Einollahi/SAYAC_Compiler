@@ -30,6 +30,9 @@ public class Declarator extends Node {
         return directDeclarator.getParamsDeclarations();
 
     }
+    public void remove(Declaration declaration){
+        directDeclarator.remove(declaration);
+    }
 
 
 
@@ -51,6 +54,14 @@ public class Declarator extends Node {
 
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
+    }
+
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Declarator other = (Declarator) obj;
+        return this.pointer.equals(other.pointer)
+                && this.directDeclarator.equals(other.directDeclarator);
     }
 
 }

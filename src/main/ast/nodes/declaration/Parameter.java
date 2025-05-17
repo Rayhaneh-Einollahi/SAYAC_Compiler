@@ -37,4 +37,11 @@ public class Parameter extends Node {
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
     }
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Parameter other = (Parameter) obj;
+        return this.declarationSpecifiers.equals(other.declarationSpecifiers)
+                && this.declarator.equals(other.declarator);
+    }
 }

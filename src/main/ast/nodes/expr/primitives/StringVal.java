@@ -18,4 +18,10 @@ public class StringVal extends Expr {
     public String toString(){return this.string_val;}
     @Override
     public <T> T accept(IVisitor<T> visitor){return visitor.visit(this);}
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        StringVal other = (StringVal) obj;
+        return this.string_val.equals(other.string_val);
+    }
 }

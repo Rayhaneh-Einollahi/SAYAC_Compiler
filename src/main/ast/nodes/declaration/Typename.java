@@ -30,4 +30,11 @@ public class Typename extends Node {
         return visitor.visit(this);
     }
 
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Typename other = (Typename) obj;
+        return this.specifierQualifiers.equals(other.specifierQualifiers)
+                && this.declarator.equals(other.declarator);
+    }
 }

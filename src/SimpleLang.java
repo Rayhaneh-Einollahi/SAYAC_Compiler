@@ -4,6 +4,7 @@ import main.grammar.SimpleLangParser;
 import main.symbolTable.SymbolTable;
 import main.visitor.NameAnalyzer;
 import main.visitor.TestVisitor;
+import main.visitor.UnusedRemover;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -105,7 +106,12 @@ public class SimpleLang {
 //        my_visitor.visit(program);
 
         NameAnalyzer my_name_analyzer = new NameAnalyzer();
-        my_name_analyzer.visit(program);
+        boolean ok = my_name_analyzer.visit(program);
+
+        if (ok) {
+            UnusedRemover my_unusedRemover = new UnusedRemover();
+            my_unusedRemover.visit(program);
+        }
 
         SymbolTable.root.hashCode();
         System.out.println();

@@ -29,6 +29,19 @@ public class DirectDeclarator extends Node {
             }
             return paramsTypes;
         }
+        public void remove(Declaration declaration){
+            params.removeIf(parameter -> declaration.equals(parameter.extractDeclaration()));
+        }
+
+        public boolean equals(Object obj) {
+            if (this == obj) return true;
+            if (obj == null || getClass() != obj.getClass()) return false;
+            DDStep other = (DDStep) obj;
+            return this.kind.equals(other.kind)
+                    && this.arrayExpr.equals(other.arrayExpr)
+                    && this.params.equals(other.params)
+                    && this.identifiers.equals(other.identifiers);
+        }
     }
     public DirectDeclarator() {}
 
@@ -37,6 +50,9 @@ public class DirectDeclarator extends Node {
             return new ArrayList<>();
         return steps.getFirst().getParamsDeclarations();
 
+    }
+    public void remove(Declaration declaration){
+        steps.getFirst().remove(declaration);
     }
     public void setIdentifier(Identifier identifier){
         this.identifier = identifier;
@@ -79,5 +95,14 @@ public class DirectDeclarator extends Node {
 
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
+    }
+
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        DirectDeclarator other = (DirectDeclarator) obj;
+        return this.identifier.equals(other.identifier)
+                && this.innerDeclarator.equals(other.innerDeclarator)
+                && this.steps.equals(other.steps);
     }
 }

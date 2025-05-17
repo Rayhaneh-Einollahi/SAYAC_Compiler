@@ -30,4 +30,11 @@ public class Designator extends Node {
         return visitor.visit(this);
     }
 
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Designator other = (Designator) obj;
+        return this.expr.equals(other.expr)
+                && this.identifier.equals(other.identifier);
+    }
 }

@@ -51,10 +51,16 @@ public class FunctionDefinition extends ExternalDeclaration {
     public List<Declaration> getDeclarations() {
         return declarations;
     }
-
+    public void remove(Declaration declaration){
+        if (declarations.contains(declaration)){
+            declarations.remove(declaration);
+        }
+        else{
+            declarator.remove(declaration);
+        }
+    }
     public List<Declaration> getArgDeclarations() {
-        List<Declaration> allDeclarations = new ArrayList<>();
-        allDeclarations.addAll(declarations);
+        List<Declaration> allDeclarations = new ArrayList<>(declarations);
         if (declarator == null)
             return new ArrayList<>();
         allDeclarations.addAll(declarator.getParamsDeclarations());

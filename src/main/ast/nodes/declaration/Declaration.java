@@ -33,4 +33,12 @@ public class Declaration extends ExternalDeclaration {
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
     }
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Declaration other = (Declaration) obj;
+        return this.declarationSpecifiers.equals(other.declarationSpecifiers)
+                && this.initDeclarators.equals(other.initDeclarators);
+    }
 }

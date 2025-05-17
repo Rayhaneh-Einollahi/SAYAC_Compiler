@@ -29,4 +29,11 @@ public class Pointer extends Node {
         return visitor.visit(this);
     }
 
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Pointer other = (Pointer) obj;
+        return starCount == other.starCount
+                && constCounts.equals(other.constCounts);
+    }
 }

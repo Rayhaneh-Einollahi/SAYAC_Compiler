@@ -1,5 +1,6 @@
 package main.ast.nodes;
 
+import main.ast.nodes.declaration.Declaration;
 import main.symbolTable.SymbolTable;
 import main.visitor.IVisitor;
 import main.ast.nodes.declaration.ExternalDeclaration;
@@ -16,6 +17,9 @@ public class Program extends Node{
     }
     public void addExternalDeclarations(List<ExternalDeclaration> declarations){
         this.externalDeclarations = declarations;
+
+    }
+    public void remove(Declaration declaration){
 
     }
     public List<ExternalDeclaration> getExternalDeclarations() {

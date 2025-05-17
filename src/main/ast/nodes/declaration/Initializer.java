@@ -37,4 +37,13 @@ public class Initializer extends Node {
         return visitor.visit(this);
     }
 
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+        Initializer other = (Initializer) obj;
+        return this.expr.equals(other.expr)
+                && this.initializerList.equals(other.initializerList)
+                && this.designation.equals(other.designation);
+    }
+
 }
