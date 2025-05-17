@@ -10,6 +10,12 @@ public class ArrayExpr extends Expr{
         this.inside = inside;
         this.outside = outside;
     }
+    public boolean isDead(){
+        if(outside != null && !outside.isDead()){
+            return false;
+        }
+        return inside == null || inside.isDead();
+    }
 
     public Expr getOutside() {
         return outside;

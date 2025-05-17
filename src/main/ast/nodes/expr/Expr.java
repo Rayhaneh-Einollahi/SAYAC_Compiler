@@ -7,4 +7,7 @@ public abstract class Expr extends Node {
     public String getName(){
         return null;
     }
+    public boolean isDead(){
+        return true;
+    };
 }

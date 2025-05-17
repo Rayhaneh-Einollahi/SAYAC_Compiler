@@ -42,4 +42,11 @@ public class BinaryExpr extends Expr {
     public void setOperator(BinaryOperator operator) {
         this.binaryOperator = operator;
     }
+
+    public boolean isDead(){
+        if(firstOperand != null && !firstOperand.isDead()){
+            return false;
+        }
+        return secondOperand == null || secondOperand.isDead();
+    }
 }

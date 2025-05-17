@@ -19,4 +19,12 @@ public class CommaExpr extends Expr {
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
     }
+    public boolean isDead(){
+        for(Expr expr: expressions){
+            if(expr != null && !expr.isDead()){
+                return false;
+            }
+        }
+        return true;
+    }
 }

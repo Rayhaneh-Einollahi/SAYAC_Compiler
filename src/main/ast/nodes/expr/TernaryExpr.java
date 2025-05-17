@@ -43,4 +43,13 @@ public class TernaryExpr extends Expr{
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
     }
+    public boolean isDead(){
+        if(firstOperand != null && !firstOperand.isDead()){
+            return false;
+        }
+        if(secondOperand != null && !secondOperand.isDead()){
+            return false;
+        }
+        return thirdOperand == null || thirdOperand.isDead();
+    }
 }

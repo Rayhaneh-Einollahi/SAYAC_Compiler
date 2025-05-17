@@ -57,5 +57,8 @@ public class FunctionExpr extends Expr{
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
     }
+    public boolean isDead(){
+        return false;
+    }
 
 }

@@ -2,6 +2,7 @@ import main.ast.nodes.Program;
 import main.grammar.SimpleLangLexer;
 import main.grammar.SimpleLangParser;
 import main.symbolTable.SymbolTable;
+import main.visitor.DeadStmtRemover;
 import main.visitor.NameAnalyzer;
 import main.visitor.TestVisitor;
 import main.visitor.UnusedRemover;
@@ -102,16 +103,20 @@ public class SimpleLang {
         Program program = flParser.compilationUnit().programRet;
         System.out.println();
 
-        boolean ok = false;
-        while(!ok) {
+        boolean ok;
+        while(true) {
             NameAnalyzer my_name_analyzer = new NameAnalyzer();
             ok = my_name_analyzer.visit(program);
             if (!ok) break;
 
             UnusedRemover my_unusedRemover = new UnusedRemover();
             ok = my_unusedRemover.visit(program);
-
             if(!ok) continue;
+
+            DeadStmtRemover my_deadRemover = new DeadStmtRemover();
+            ok = my_deadRemover.visit(program);
+            if(!ok) continue;
+
             TestVisitor my2_visitor = new TestVisitor();
             my2_visitor.visit(program);
             break;

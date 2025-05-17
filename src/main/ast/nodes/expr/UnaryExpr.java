@@ -32,4 +32,7 @@ public class UnaryExpr extends Expr{
     public void setOperator(UnaryOperator operator) {
         this.operator = operator;
     }
+    public boolean isDead(){
+        return operand == null || operand.isDead();
+    }
 }

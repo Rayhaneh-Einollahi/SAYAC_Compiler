@@ -4,12 +4,6 @@ import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
-import main.symbolTable.SymbolTable;
-import main.symbolTable.exceptions.ItemNotFoundException;
-import main.symbolTable.item.FuncDecSymbolTableItem;
-import main.symbolTable.utils.Key;
-
-import java.util.List;
 
 /*
  *   Main Changes:
@@ -20,7 +14,7 @@ import java.util.List;
  * */
 
 
-public class AfterReturnRemover extends Visitor<Boolean>{
+public class DeadStmtRemover extends Visitor<Boolean>{
 
     @Override
     public Boolean visit(Program program) {
@@ -108,7 +102,17 @@ public class AfterReturnRemover extends Visitor<Boolean>{
         if (compoundStatement.getBlockItems() != null) {
             int ind = 0;
             for (BlockItem bi : compoundStatement.getBlockItems()) {
+                if (bi.getStatement() instanceof ExpressionStatement){
+                    ExpressionStatement expressionStatement = (ExpressionStatement) bi.getStatement();
+                    if(expressionStatement.getExpr().isDead()){
+                        compoundStatement.getBlockItems().remove(bi);
+                    }
+                }
+
+
                 ans &= bi.accept(this);
+
+
                 ind++;
                 if (bi.getStatement() instanceof JumpStatement){
                     int size = compoundStatement.getBlockItems().size();
@@ -179,9 +183,6 @@ public class AfterReturnRemover extends Visitor<Boolean>{
         Boolean ans = true;
         if (jumpStatement.getExpr() != null) {
             ans &= jumpStatement.getExpr().accept(this);
-        }
-        if (jumpStatement.getCommand() != null) {
-            ans &= jumpStatement.getCommand().accept(this);
         }
         return ans;
     }
