@@ -112,11 +112,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
             ans = false;
             System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
         }
-        if (declaration.getDeclarationSpecifiers() != null) {
-            for (StringVal ds : declaration.getDeclarationSpecifiers()) {
-                ans &= ds.accept(this);
-            }
-        }
         if (declaration.getInitDeclarators() != null) {
             for (InitDeclarator id : declaration.getInitDeclarators()) {
                 ans &= id.accept(this);
@@ -206,11 +201,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
 
     public Boolean visit(ForDeclaration forDeclaration) {
         Boolean ans = true;
-        if (forDeclaration.getDeclarationSpecifiers() != null) {
-            for (StringVal ds : forDeclaration.getDeclarationSpecifiers()) {
-                ans &= ds.accept(this);
-            }
-        }
         if (forDeclaration.getInitDeclarators() != null) {
             for (InitDeclarator id : forDeclaration.getInitDeclarators()) {
                 ans &= id.accept(this);
@@ -306,11 +296,7 @@ public class NameAnalyzer extends Visitor<Boolean>{
     }
 
     public Boolean visit(ConstantExpr constantExpr) {
-        Boolean ans = true;
-        if (constantExpr.getStr() != null) {
-            ans &= constantExpr.getStr().accept(this);
-        }
-        return ans;
+        return true;
     }
 
 
@@ -339,15 +325,7 @@ public class NameAnalyzer extends Visitor<Boolean>{
 //        System.out.print("Line ");
 //        System.out.print(stringExpr.getLine());
 //        System.out.println(": Expr string" );
-        Boolean ans = true;
-        if (stringExpr.getStrings() != null) {
-            for (StringVal str : stringExpr.getStrings()) {
-                if (str != null) {
-                    ans &= str.accept(this);
-                }
-            }
-        }
-        return ans;
+        return true;
     }
 
     public Boolean visit(TernaryExpr ternaryExpr) {
@@ -493,13 +471,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
 
     public Boolean visit(Parameter parameter) {
         Boolean ans = true;
-        if (parameter.getDeclarationSpecifiers() != null) {
-            for (StringVal specifier : parameter.getDeclarationSpecifiers()) {
-                if (specifier != null) {
-                    ans &= specifier.accept(this);
-                }
-            }
-        }
         if (parameter.getDeclarator() != null) {
             ans &= parameter.getDeclarator().accept(this);
         }
@@ -508,13 +479,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
 
     public Boolean visit(Typename typename) {
         Boolean ans = true;
-        if (typename.getSpecifierQualifiers() != null) {
-            for (StringVal specQual : typename.getSpecifierQualifiers()) {
-                if (specQual != null) {
-                    ans &= specQual.accept(this);
-                }
-            }
-        }
         if (typename.getDeclarator() != null) {
             ans &= typename.getDeclarator().accept(this);
         }
