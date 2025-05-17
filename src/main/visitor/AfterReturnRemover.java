@@ -4,15 +4,12 @@ import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
-import main.ast.nodes.expr.operator.BinaryOperator;
-import main.ast.nodes.expr.primitives.*;
 import main.symbolTable.SymbolTable;
-import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
 import main.symbolTable.item.FuncDecSymbolTableItem;
-import main.symbolTable.item.DecSymbolTableItem;
-import main.symbolTable.item.SymbolTableItem;
 import main.symbolTable.utils.Key;
+
+import java.util.List;
 
 /*
  *   Main Changes:
@@ -23,15 +20,10 @@ import main.symbolTable.utils.Key;
  * */
 
 
-
-public class NameAnalyzer extends Visitor<Boolean>{
+public class AfterReturnRemover extends Visitor<Boolean>{
 
     @Override
     public Boolean visit(Program program) {
-        SymbolTable.top = new SymbolTable();
-        SymbolTable.root = SymbolTable.top;
-
-        program.set_symbol_table(SymbolTable.top);
         Boolean ans = true;
         for (ExternalDeclaration ed : program.getExternalDeclarations()){
             ans &= ed.accept(this);
@@ -42,29 +34,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
     @Override
     public Boolean visit(FunctionDefinition functionDefinition) {
         Boolean ans = true;
-        FuncDecSymbolTableItem func_dec_item = new FuncDecSymbolTableItem(functionDefinition);
-        try {
-            SymbolTable.top.put(func_dec_item);
-        } catch (ItemAlreadyExistsException e) {
-            ans = false;
-            System.out.println("Redefinition of function \"" + functionDefinition.getName() +"\" in line " + functionDefinition.getLine());
-        }
-
-        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
-        functionDefinition.set_symbol_table(new_symbol_table);
-        SymbolTable.push(new_symbol_table);
-        if (functionDefinition.getDeclarations() != null) {
-            for (Declaration declaration : functionDefinition.getArgDeclarations()) {
-                DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
-                try {
-                    SymbolTable.top.put(var_dec_item);
-                } catch (ItemAlreadyExistsException e) {
-                    ans = false;
-                    System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
-                }
-            }
-        }
-
 
 //        if (functionDefinition.getDeclarator() != null){
 //            functionDefinition.getDeclarator().accept(this);
@@ -78,7 +47,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
         if (functionDefinition.getBody() != null){
             ans &= functionDefinition.getBody().accept(this);
         }
-        SymbolTable.pop();
         return ans;
     }
 
@@ -86,15 +54,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
     @Override
     public Boolean visit(FunctionExpr functionExpr) {
         Boolean ans = true;
-        try {
-            if (!SymbolTable.isBuiltIn(functionExpr.getName())) {
-                SymbolTable.top.getItem(new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount()));
-            }
-        } catch (ItemNotFoundException e) {
-            ans = false;
-            System.out.printf("Line:%d-> %s not declared\n", functionExpr.getLine(), functionExpr.getName());
-        }
-
         if (functionExpr.getArguments() != null) {
             for (Expr arg : functionExpr.getArguments()) {
                 ans &= arg.accept(this);
@@ -106,18 +65,12 @@ public class NameAnalyzer extends Visitor<Boolean>{
     @Override
     public Boolean visit(Declaration declaration) {
         Boolean ans = true;
-        DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
-        try {
-            SymbolTable.top.put(var_dec_item);
-        } catch (ItemAlreadyExistsException e) {
-            ans = false;
-            System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
+
+        if (declaration.getInitDeclarators() != null) {
+            for (InitDeclarator id : declaration.getInitDeclarators()) {
+                ans &= id.accept(this);
+            }
         }
-//        if (declaration.getInitDeclarators() != null) {
-//            for (InitDeclarator id : declaration.getInitDeclarators()) {
-//                ans &= id.accept(this);
-//            }
-//        }
         return ans;
     }
 
@@ -136,13 +89,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
     @Override
     public Boolean visit(Identifier identifier) {
         Boolean ans = true;
-        try {
-            SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()));
-            symbolTableItem.incUsed();
-        } catch (ItemNotFoundException e) {
-            ans = false;
-            System.out.printf("Line:%d-> %s not declared\n", identifier.getLine(), identifier.getName() );
-        }
         return ans;
     }
 
@@ -159,16 +105,18 @@ public class NameAnalyzer extends Visitor<Boolean>{
 
     public Boolean visit(CompoundStatement compoundStatement) {
         Boolean ans = true;
-        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
-        compoundStatement.set_symbol_table(new_symbol_table);
-        SymbolTable.push(new_symbol_table);
-
         if (compoundStatement.getBlockItems() != null) {
+            int ind = 0;
             for (BlockItem bi : compoundStatement.getBlockItems()) {
                 ans &= bi.accept(this);
+                ind++;
+                if (bi.getStatement() instanceof JumpStatement){
+                    int size = compoundStatement.getBlockItems().size();
+                    compoundStatement.getBlockItems().subList(ind, size).clear();
+                    break;
+                }
             }
         }
-        SymbolTable.pop();
         return ans;
     }
 
@@ -203,6 +151,7 @@ public class NameAnalyzer extends Visitor<Boolean>{
 
     public Boolean visit(ForDeclaration forDeclaration) {
         Boolean ans = true;
+
         if (forDeclaration.getInitDeclarators() != null) {
             for (InitDeclarator id : forDeclaration.getInitDeclarators()) {
                 ans &= id.accept(this);
@@ -230,6 +179,9 @@ public class NameAnalyzer extends Visitor<Boolean>{
         Boolean ans = true;
         if (jumpStatement.getExpr() != null) {
             ans &= jumpStatement.getExpr().accept(this);
+        }
+        if (jumpStatement.getCommand() != null) {
+            ans &= jumpStatement.getCommand().accept(this);
         }
         return ans;
     }

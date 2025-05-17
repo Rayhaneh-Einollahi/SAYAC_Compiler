@@ -225,9 +225,6 @@ public class UnusedRemover extends Visitor<Boolean>{
         if (jumpStatement.getExpr() != null) {
             ans &= jumpStatement.getExpr().accept(this);
         }
-        if (jumpStatement.getCommand() != null) {
-            ans &= jumpStatement.getCommand().accept(this);
-        }
         return ans;
     }
 
