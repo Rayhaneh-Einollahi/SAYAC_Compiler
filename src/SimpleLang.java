@@ -102,15 +102,20 @@ public class SimpleLang {
         Program program = flParser.compilationUnit().programRet;
         System.out.println();
 
+        boolean ok = false;
+        while(!ok) {
+            NameAnalyzer my_name_analyzer = new NameAnalyzer();
+            ok = my_name_analyzer.visit(program);
+            if (!ok) break;
 
-        NameAnalyzer my_name_analyzer = new NameAnalyzer();
-        boolean ok = my_name_analyzer.visit(program);
-
-        if (ok) {
             UnusedRemover my_unusedRemover = new UnusedRemover();
-            my_unusedRemover.visit(program);
+            ok = my_unusedRemover.visit(program);
+
+            if(!ok) continue;
             TestVisitor my2_visitor = new TestVisitor();
             my2_visitor.visit(program);
+            break;
+
         }
 
         SymbolTable.root.hashCode();
