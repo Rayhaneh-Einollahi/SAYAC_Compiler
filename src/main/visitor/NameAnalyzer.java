@@ -182,8 +182,8 @@ public class NameAnalyzer extends Visitor<Boolean>{
 
     public Boolean visit(ForCondition forCondition) {
         Boolean ans = true;
-        if (forCondition.getForDeclaration() != null) {
-            ans &= forCondition.getForDeclaration().accept(this);
+        if (forCondition.getDeclaration() != null) {
+            ans &= forCondition.getDeclaration().accept(this);
         }
         if (forCondition.getExpr() != null) {
             ans &= forCondition.getExpr().accept(this);
@@ -201,15 +201,6 @@ public class NameAnalyzer extends Visitor<Boolean>{
         return ans;
     }
 
-    public Boolean visit(ForDeclaration forDeclaration) {
-        Boolean ans = true;
-        if (forDeclaration.getInitDeclarators() != null) {
-            for (InitDeclarator id : forDeclaration.getInitDeclarators()) {
-                ans &= id.accept(this);
-            }
-        }
-        return ans;
-    }
 
     public Boolean visit(IterationStatement iterationStatement) {
         Boolean ans = true;

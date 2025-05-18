@@ -23,7 +23,6 @@ public interface IVisitor<T> {
     T visit(CompoundStatement compoundStatement);
     T visit(IterationStatement iterationStatement);
     T visit(JumpStatement jumpStatement);
-    T visit(ForDeclaration forDeclaration);
     T visit(ForCondition forCondition);
     T visit(ExpressionStatement expressionStatement);
     T visit(SelectionStatement selectionStatement);

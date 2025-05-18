@@ -320,11 +320,11 @@ iterationStatement returns [IterationStatement stRet]
 
 forCondition returns [ForCondition forconRet]:
     {$forconRet = new ForCondition();}
-    (fd=forDeclaration{$forconRet.setForDeclaration($fd.forRet);} | (e=expression{$forconRet.setExpr($e.expRet);})?)
+    (fd=forDeclaration{$forconRet.setDeclaration($fd.forRet);} | (e=expression{$forconRet.setExpr($e.expRet);})?)
     Semi (f1=forExpression{$forconRet.setConditions($f1.list);})? Semi (f2=forExpression{$forconRet.setSteps($f2.list);})? ;
 
-forDeclaration returns [ForDeclaration forRet]:
-    d=declarationSpecifiers{$forRet = new ForDeclaration($d.list);} (i=initDeclaratorList{$forRet.addInitDeclarators($i.list);})?
+forDeclaration returns [Declaration forRet]:
+    d=declarationSpecifiers{$forRet = new Declaration($d.list);} (i=initDeclaratorList{$forRet.addInitDeclarators($i.list);})?
     ;
 
 forExpression returns [List<Expr> list]:

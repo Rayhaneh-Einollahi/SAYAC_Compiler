@@ -94,8 +94,8 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(ForCondition forCondition) {
-        if (forCondition.getForDeclaration() != null) {
-            forCondition.getForDeclaration().accept(this);
+        if (forCondition.getDeclaration() != null) {
+            forCondition.getDeclaration().accept(this);
         }
         if (forCondition.getExpr() != null) {
             forCondition.getExpr().accept(this);
@@ -108,20 +108,6 @@ public class TestVisitor extends Visitor<Void>{
         if (forCondition.getSteps() != null) {
             for (Expr step : forCondition.getSteps()) {
                 step.accept(this);
-            }
-        }
-        return null;
-    }
-
-    public Void visit(ForDeclaration forDeclaration) {
-        if (forDeclaration.getDeclarationSpecifiers() != null) {
-            for (StringVal ds : forDeclaration.getDeclarationSpecifiers()) {
-                ds.accept(this);
-            }
-        }
-        if (forDeclaration.getInitDeclarators() != null) {
-            for (InitDeclarator id : forDeclaration.getInitDeclarators()) {
-                id.accept(this);
             }
         }
         return null;

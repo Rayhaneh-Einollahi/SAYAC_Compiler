@@ -1,4 +1,4 @@
-// Generated from G:/stuff/Ray Universe/Compiler/phase-2-ce-Rayhaneh-Einollahi/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
+// Generated from D:/Ray_Universe/compiler/phase-2-ce-Rayhaneh-Einollahi/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
 package main.grammar;
 
     import java.util.List;
@@ -4033,7 +4033,7 @@ public class SimpleLangParser extends Parser {
 				{
 				setState(708);
 				((ForConditionContext)_localctx).fd = forDeclaration();
-				_localctx.forconRet.setForDeclaration(((ForConditionContext)_localctx).fd.forRet);
+				_localctx.forconRet.setDeclaration(((ForConditionContext)_localctx).fd.forRet);
 				}
 				break;
 			case 2:
@@ -4093,7 +4093,7 @@ public class SimpleLangParser extends Parser {
 
 	@SuppressWarnings("CheckReturnValue")
 	public static class ForDeclarationContext extends ParserRuleContext {
-		public ForDeclaration forRet;
+		public Declaration forRet;
 		public DeclarationSpecifiersContext d;
 		public InitDeclaratorListContext i;
 		public DeclarationSpecifiersContext declarationSpecifiers() {
@@ -4130,7 +4130,7 @@ public class SimpleLangParser extends Parser {
 			{
 			setState(730);
 			((ForDeclarationContext)_localctx).d = declarationSpecifiers();
-			((ForDeclarationContext)_localctx).forRet =  new ForDeclaration(((ForDeclarationContext)_localctx).d.list);
+			((ForDeclarationContext)_localctx).forRet =  new Declaration(((ForDeclarationContext)_localctx).d.list);
 			setState(735);
 			_errHandler.sync(this);
 			_la = _input.LA(1);

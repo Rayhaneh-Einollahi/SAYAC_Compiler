@@ -9,12 +9,12 @@ import java.util.List;
 
 public class ForCondition extends Node {
 
-    private ForDeclaration forDeclaration;
+    private Declaration forDeclaration;
     private Expr expr;
     private List<Expr> conditions;
     private List<Expr> steps;
 
-    public void setForDeclaration(ForDeclaration forDeclaration) {
+    public void setDeclaration(Declaration forDeclaration) {
         this.forDeclaration = forDeclaration;
     }
 
@@ -31,7 +31,7 @@ public class ForCondition extends Node {
     }
 
 
-    public ForDeclaration getForDeclaration() {
+    public Declaration getDeclaration() {
         return forDeclaration;
     }
 

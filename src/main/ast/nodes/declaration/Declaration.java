@@ -8,13 +8,22 @@ import java.util.List;
 
 public class Declaration extends ExternalDeclaration {
     private final List<StringVal> declarationSpecifiers;
-    private final List<InitDeclarator> initDeclarators;
+    private List<InitDeclarator> initDeclarators;
     public Declaration(
             List<StringVal> declarationSpecifiers,
             List<InitDeclarator> initDeclarators){
         this.declarationSpecifiers = declarationSpecifiers;
         this.initDeclarators = initDeclarators;
     }
+    public Declaration(
+            List<StringVal> declarationSpecifiers){
+        this.declarationSpecifiers = declarationSpecifiers;
+    }
+
+    public void addInitDeclarators(List<InitDeclarator> initDeclarators){
+        this.initDeclarators = initDeclarators;
+    }
+
 
     public String getName(){
         if (initDeclarators==null || initDeclarators.isEmpty()){

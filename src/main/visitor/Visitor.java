@@ -47,7 +47,6 @@ public abstract class Visitor<T> implements IVisitor<T> {
     public T visit(SelectionStatement selectionStatement){return null;}
     public T visit(IterationStatement iterationStatement){return null;}
     public T visit(JumpStatement jumpStatement){return null;}
-    public T visit(ForDeclaration forDeclaration){return null;}
     public T visit(ForCondition forCondition){return null;}
     public T visit(UnaryExpr unaryExpr) {
         return null;

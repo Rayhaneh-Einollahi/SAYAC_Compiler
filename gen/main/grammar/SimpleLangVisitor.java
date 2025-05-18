@@ -1,4 +1,4 @@
-// Generated from G:/stuff/Ray Universe/Compiler/phase-2-ce-Rayhaneh-Einollahi/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
+// Generated from D:/Ray_Universe/compiler/phase-2-ce-Rayhaneh-Einollahi/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
 package main.grammar;
 
     import java.util.List;

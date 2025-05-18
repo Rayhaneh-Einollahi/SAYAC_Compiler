@@ -4,6 +4,9 @@ import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
+import main.ast.nodes.expr.primitives.StringVal;
+
+import java.util.List;
 
 /*
  *   Main Changes:
@@ -14,7 +17,7 @@ import main.ast.nodes.expr.*;
  * */
 
 
-public class DeadStmtRemover extends Visitor<Boolean>{
+public class DefRemover extends Visitor<Boolean>{
 
     @Override
     public Boolean visit(Program program) {
@@ -100,25 +103,17 @@ public class DeadStmtRemover extends Visitor<Boolean>{
     public Boolean visit(CompoundStatement compoundStatement) {
         Boolean ans = true;
         if (compoundStatement.getBlockItems() != null) {
-            int ind = 0;
             for (BlockItem bi : compoundStatement.getBlockItems()) {
-                if (bi.getStatement() instanceof ExpressionStatement){
-                    ExpressionStatement expressionStatement = (ExpressionStatement) bi.getStatement();
-                    if(expressionStatement.getExpr().isDead()){
+                if (bi.getDeclaration()!=null){
+                    Declaration declaration = bi.getDeclaration();
+                    if (declaration.getDeclarationSpecifiers().getFirst().getName().equals( "typedef")
+                            ||declaration.getDeclarationSpecifiers().getFirst().getName().equals( "const")){
                         compoundStatement.getBlockItems().remove(bi);
+                        continue;
                     }
+
                 }
-
-
                 ans &= bi.accept(this);
-
-
-                ind++;
-                if (bi.getStatement() instanceof JumpStatement){
-                    int size = compoundStatement.getBlockItems().size();
-                    compoundStatement.getBlockItems().subList(ind, size).clear();
-                    break;
-                }
             }
         }
         return ans;
@@ -156,6 +151,10 @@ public class DeadStmtRemover extends Visitor<Boolean>{
 
     public Boolean visit(IterationStatement iterationStatement) {
         Boolean ans = true;
+        if(iterationStatement.getKind() == IterationStatement.Kind.FOR){
+            ForCondition forCondition = iterationStatement.getForCondition();
+            forCondition.getDeclaration();
+        }
         if (iterationStatement.getCondition() != null) {
             ans &= iterationStatement.getCondition().accept(this);
         }
