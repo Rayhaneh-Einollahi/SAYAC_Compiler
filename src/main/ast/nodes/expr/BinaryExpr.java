@@ -3,6 +3,11 @@ package main.ast.nodes.expr;
 import main.visitor.IVisitor;
 import main.ast.nodes.expr.operator.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
+import static main.ast.nodes.expr.operator.BinaryOperator.*;
+
 public class BinaryExpr extends Expr {
     private Expr firstOperand;
     private Expr secondOperand;
@@ -47,6 +52,11 @@ public class BinaryExpr extends Expr {
         if(firstOperand != null && !firstOperand.isDead()){
             return false;
         }
-        return secondOperand == null || secondOperand.isDead();
+        if(secondOperand != null && !secondOperand.isDead()){
+            return false;
+        }
+        List<BinaryOperator> assignOps = List.of(ASSIGN, STARASSIGN, DIVASSIGN, MODASSIGN, PLUSASSIGN, MINUSASSIGN, LEFTSHIFTASSIGN,
+                RIGHTSHIFTASSIGN, ANDASSIGN, XORASSIGN, ORASSIGN);
+        return !assignOps.contains( binaryOperator);
     }
 }
