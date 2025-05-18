@@ -204,14 +204,19 @@ public class NameAnalyzer extends Visitor<Boolean>{
 
     public Boolean visit(IterationStatement iterationStatement) {
         Boolean ans = true;
+
+        if(iterationStatement.getKind() == IterationStatement.Kind.FOR){
+            ForCondition forCondition = iterationStatement.getForCondition();
+            forCondition.getDeclaration();
+        }
+        if (iterationStatement.getForCondition() != null) {
+            ans &= iterationStatement.getForCondition().accept(this);
+        }
         if (iterationStatement.getCondition() != null) {
             ans &= iterationStatement.getCondition().accept(this);
         }
         if (iterationStatement.getBody() != null) {
             ans &= iterationStatement.getBody().accept(this);
-        }
-        if (iterationStatement.getForCondition() != null) {
-            ans &= iterationStatement.getForCondition().accept(this);
         }
         return ans;
     }

@@ -5,6 +5,9 @@ import main.ast.nodes.Statement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /*
  *   Main Changes:
  *       1.create a SymbolTable class to act as our symbol table
@@ -100,26 +103,26 @@ public class DeadStmtRemover extends Visitor<Boolean>{
     public Boolean visit(CompoundStatement compoundStatement) {
         Boolean ans = true;
         if (compoundStatement.getBlockItems() != null) {
-            int ind = 0;
-            for (BlockItem bi : compoundStatement.getBlockItems()) {
-                if (bi.getStatement() instanceof ExpressionStatement){
-                    ExpressionStatement expressionStatement = (ExpressionStatement) bi.getStatement();
-                    if(expressionStatement.getExpr().isDead()){
-                        compoundStatement.getBlockItems().remove(bi);
+            List<BlockItem> original = compoundStatement.getBlockItems();
+            List<BlockItem> filtered = new ArrayList<>();
+
+            for (BlockItem bi : original) {
+                if (bi.getStatement() instanceof ExpressionStatement es) {
+                    if (es.getExpr().isDead()) {
+                        continue;
                     }
                 }
 
-
                 ans &= bi.accept(this);
+                filtered.add(bi);
 
-
-                ind++;
-                if (bi.getStatement() instanceof JumpStatement){
-                    int size = compoundStatement.getBlockItems().size();
-                    compoundStatement.getBlockItems().subList(ind, size).clear();
+                if (bi.getStatement() instanceof JumpStatement) {
                     break;
                 }
             }
+
+            original.clear();
+            original.addAll(filtered);
         }
         return ans;
     }

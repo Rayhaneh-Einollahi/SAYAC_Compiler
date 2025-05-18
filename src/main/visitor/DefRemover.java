@@ -151,10 +151,7 @@ public class DefRemover extends Visitor<Boolean>{
 
     public Boolean visit(IterationStatement iterationStatement) {
         Boolean ans = true;
-        if(iterationStatement.getKind() == IterationStatement.Kind.FOR){
-            ForCondition forCondition = iterationStatement.getForCondition();
-            forCondition.getDeclaration();
-        }
+
         if (iterationStatement.getCondition() != null) {
             ans &= iterationStatement.getCondition().accept(this);
         }

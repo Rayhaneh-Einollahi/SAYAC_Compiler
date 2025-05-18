@@ -318,9 +318,9 @@ iterationStatement returns [IterationStatement stRet]
     | Do s=statement While LeftParen e=expression RightParen Semi{$stRet.setDoWhileLoop($s.stRet, $e.expRet);}
     | For LeftParen f=forCondition RightParen s=statement {$stRet.setForLoop($f.forconRet, $s.stRet);};
 
-forCondition returns [ForCondition forconRet]:
-    {$forconRet = new ForCondition();}
-    (fd=forDeclaration{$forconRet.setDeclaration($fd.forRet);} | (e=expression{$forconRet.setExpr($e.expRet);})?)
+forCondition returns [ForCondition forconRet]
+    @init {$forconRet = new ForCondition();}
+    :(fd=forDeclaration{$forconRet.setDeclaration($fd.forRet);} | (e=expression{$forconRet.setExpr($e.expRet);})?)
     Semi (f1=forExpression{$forconRet.setConditions($f1.list);})? Semi (f2=forExpression{$forconRet.setSteps($f2.list);})? ;
 
 forDeclaration returns [Declaration forRet]:
