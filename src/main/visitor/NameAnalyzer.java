@@ -66,9 +66,15 @@ public class NameAnalyzer extends Visitor<Boolean>{
         }
 
 
-//        if (functionDefinition.getDeclarator() != null){
-//            functionDefinition.getDeclarator().accept(this);
-//        }
+        if (functionDefinition.getDeclarationSpecifiers() != null){
+            for (Expr expr : functionDefinition.getDeclarationSpecifiers()) {
+                ans &= expr.accept(this);
+            }
+        }
+
+        if (functionDefinition.getDeclarator() != null){
+            ans &= functionDefinition.getDeclarator().accept(this);
+        }
 
         if (functionDefinition.getDeclarations() != null){
             for (Declaration ds: functionDefinition.getDeclarations()){
@@ -113,6 +119,11 @@ public class NameAnalyzer extends Visitor<Boolean>{
             ans = false;
             System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
         }
+        if (declaration.getDeclarationSpecifiers() != null){
+            for (Expr expr : declaration.getDeclarationSpecifiers()) {
+                ans &= expr.accept(this);
+            }
+        }
         if (declaration.getInitDeclarators() != null) {
             for (InitDeclarator id : declaration.getInitDeclarators()) {
                 ans &= id.accept(this);
@@ -137,7 +148,7 @@ public class NameAnalyzer extends Visitor<Boolean>{
     public Boolean visit(Identifier identifier) {
         Boolean ans = true;
         try {
-            SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()));
+            SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()), true);
             symbolTableItem.incUsed();
         } catch (ItemNotFoundException e) {
             ans = false;
@@ -469,6 +480,11 @@ public class NameAnalyzer extends Visitor<Boolean>{
         if (parameter.getDeclarator() != null) {
             ans &= parameter.getDeclarator().accept(this);
         }
+        if (parameter.getDeclarationSpecifiers() != null) {
+            for(Expr expr: parameter.getDeclarationSpecifiers()) {
+                ans &= expr.accept(this);
+            }
+        }
         return ans;
     }
 
@@ -477,6 +493,15 @@ public class NameAnalyzer extends Visitor<Boolean>{
         if (typename.getDeclarator() != null) {
             ans &= typename.getDeclarator().accept(this);
         }
+        if (typename.getSpecifierQualifiers() != null){
+            for (Expr expr : typename.getSpecifierQualifiers()) {
+                ans &= expr.accept(this);
+            }
+        }
         return ans;
+    }
+
+    public Boolean visit(StringVal stringVal) {
+        return true;
     }
 }

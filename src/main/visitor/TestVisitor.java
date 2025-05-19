@@ -32,7 +32,7 @@ public class TestVisitor extends Visitor<Void>{
         System.out.print(": Stmt function "+functionDefinition.getName() + " = ");
         System.out.println(functionDefinition.getBody().getStatementCount() + " " + functionDefinition.getArgDeclarations().size());
         if (functionDefinition.getDeclarationSpecifiers() != null){
-            for (StringVal ds: functionDefinition.getDeclarationSpecifiers()){
+            for (Expr ds: functionDefinition.getDeclarationSpecifiers()){
                 ds.accept(this);
             }
         }
@@ -52,7 +52,7 @@ public class TestVisitor extends Visitor<Void>{
 
     public Void visit(Declaration declaration) {
         if (declaration.getDeclarationSpecifiers() != null){
-            for (StringVal ds: declaration.getDeclarationSpecifiers()){
+            for (Expr ds: declaration.getDeclarationSpecifiers()){
                 ds.accept(this);
             }
         }
@@ -442,7 +442,7 @@ public class TestVisitor extends Visitor<Void>{
 
     public Void visit(Parameter parameter) {
         if (parameter.getDeclarationSpecifiers() != null) {
-            for (StringVal specifier : parameter.getDeclarationSpecifiers()) {
+            for (Expr specifier : parameter.getDeclarationSpecifiers()) {
                 if (specifier != null) {
                     specifier.accept(this);
                 }
@@ -456,7 +456,7 @@ public class TestVisitor extends Visitor<Void>{
 
     public Void visit(Typename typename) {
         if (typename.getSpecifierQualifiers() != null) {
-            for (StringVal specQual : typename.getSpecifierQualifiers()) {
+            for (Expr specQual : typename.getSpecifierQualifiers()) {
                 if (specQual != null) {
                     specQual.accept(this);
                 }

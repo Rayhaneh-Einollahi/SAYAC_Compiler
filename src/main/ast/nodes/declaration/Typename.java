@@ -1,20 +1,21 @@
 package main.ast.nodes.declaration;
 
 import main.ast.nodes.Node;
+import main.ast.nodes.expr.Expr;
 import main.ast.nodes.expr.primitives.StringVal;
 import main.visitor.IVisitor;
 
 import java.util.List;
 
 public class Typename extends Node {
-    private List<StringVal> specifierQualifiers;
+    private List<Expr> specifierQualifiers;
     private Declarator declarator;
 
     public void setDeclarator(Declarator declarator) {
         this.declarator = declarator;
     }
 
-    public void setSpecifierQualifiers(List<StringVal> specifierQualifiers) {
+    public void setSpecifierQualifiers(List<Expr> specifierQualifiers) {
         this.specifierQualifiers = specifierQualifiers;
     }
 
@@ -22,7 +23,7 @@ public class Typename extends Node {
         return declarator;
     }
 
-    public List<StringVal> getSpecifierQualifiers() {
+    public List<Expr> getSpecifierQualifiers() {
         return specifierQualifiers;
     }
 

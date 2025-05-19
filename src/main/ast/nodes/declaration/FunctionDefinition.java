@@ -1,6 +1,7 @@
 package main.ast.nodes.declaration;
 
 import main.ast.nodes.Statement.CompoundStatement;
+import main.ast.nodes.expr.Expr;
 import main.ast.nodes.expr.primitives.StringVal;
 import main.symbolTable.SymbolTable;
 import main.visitor.IVisitor;
@@ -9,7 +10,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class FunctionDefinition extends ExternalDeclaration {
-    private final List<StringVal> declarationSpecifiers;
+    private final List<Expr> declarationSpecifiers;
     private final Declarator declarator;
     private final List<Declaration> declarations;
     private final CompoundStatement body;
@@ -19,7 +20,7 @@ public class FunctionDefinition extends ExternalDeclaration {
     public SymbolTable get_symbol_table() {return symbol_table;}
     public void set_symbol_table(SymbolTable symbol_table) {this.symbol_table = symbol_table;}
     public FunctionDefinition(
-            List<StringVal> declarationSpecifiers,
+            List<Expr> declarationSpecifiers,
             Declarator declarator,
             List<Declaration> declarations,
             CompoundStatement body) {
@@ -37,7 +38,7 @@ public class FunctionDefinition extends ExternalDeclaration {
     }
 
 
-    public List<StringVal> getDeclarationSpecifiers() {
+    public List<Expr> getDeclarationSpecifiers() {
         return declarationSpecifiers;
     }
     public Declarator getDeclarator() {

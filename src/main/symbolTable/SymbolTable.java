@@ -80,6 +80,24 @@ public class SymbolTable {
         }
         throw new ItemNotFoundException();
     }
+    public SymbolTableItem getItem(Key key, boolean justName) throws ItemNotFoundException {
+        if (!justName){
+            return getItem(key);
+        }
+
+        SymbolTable currentSymbolTable = this;
+        while(currentSymbolTable != null) {
+            for (Map.Entry<Key, SymbolTableItem> entry : currentSymbolTable.items.entrySet()) {
+                if (key.getName().equals(entry.getValue().getKey().getName())) {
+                    return entry.getValue();
+                }
+            }
+
+            currentSymbolTable = currentSymbolTable.pre;
+        }
+        throw new ItemNotFoundException();
+    }
+
 
     public int getItemsSize() {
         return this.items.size();

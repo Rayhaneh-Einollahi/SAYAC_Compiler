@@ -8,7 +8,7 @@ public abstract class SymbolTableItem {
         usedCount ++;
     }
     public boolean isUsed(){
-        return usedCount>0;
+        return usedCount>1;
     }
     public abstract Key getKey();
 }

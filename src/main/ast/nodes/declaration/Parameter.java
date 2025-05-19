@@ -1,6 +1,7 @@
 package main.ast.nodes.declaration;
 
 import main.ast.nodes.Node;
+import main.ast.nodes.expr.Expr;
 import main.ast.nodes.expr.primitives.StringVal;
 import main.visitor.IVisitor;
 
@@ -10,9 +11,9 @@ import java.util.LinkedList;
 import java.util.List;
 
 public class Parameter extends Node {
-    private final List<StringVal> declarationSpecifiers;
+    private final List<Expr> declarationSpecifiers;
     private Declarator declarator;
-    public Parameter(List<StringVal> declarationSpecifiers){
+    public Parameter(List<Expr> declarationSpecifiers){
         this.declarationSpecifiers = declarationSpecifiers;
     }
 
@@ -30,7 +31,7 @@ public class Parameter extends Node {
         }
         return new Declaration(declarationSpecifiers, initDeclarators);
     }
-    public List<StringVal> getDeclarationSpecifiers() {
+    public List<Expr> getDeclarationSpecifiers() {
         return declarationSpecifiers;
     }
 

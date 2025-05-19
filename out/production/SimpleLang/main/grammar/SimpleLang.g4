@@ -173,11 +173,11 @@ declaration returns [Declaration decRet]
     }
     ;
 
-declarationSpecifiers returns [List<StringVal> list]:
+declarationSpecifiers returns [List<Expr> list]:
     {$list = new ArrayList<>();}
     (spec = declarationSpecifier{$list.add($spec.specRet);})+ ;
 
-declarationSpecifier returns [StringVal specRet]
+declarationSpecifier returns [Expr specRet]
     : td=Typedef {$specRet = new StringVal($td.text);}
     | ts=typeSpecifier {$specRet = $ts.typeSpecRet;}
     | c =Const {$specRet = new StringVal($c.text);}
@@ -191,7 +191,7 @@ initDeclarator returns [InitDeclarator initDecRet]
     : dec=declarator {$initDecRet = new InitDeclarator($dec.declaratorRet);}
     (Assign ini = initializer {$initDecRet.addInitializer($ini.iniRet);})? ;
 
-typeSpecifier returns [StringVal typeSpecRet]
+typeSpecifier returns [Expr typeSpecRet]
     : Void {$typeSpecRet = new StringVal($Void.text);}
     | Char {$typeSpecRet = new StringVal($Char.text);}
     | Short {$typeSpecRet = new StringVal($Short.text);}
@@ -202,12 +202,12 @@ typeSpecifier returns [StringVal typeSpecRet]
     | Signed {$typeSpecRet = new StringVal($Signed.text);}
     | Unsigned {$typeSpecRet = new StringVal($Unsigned.text);}
     | Bool {$typeSpecRet = new StringVal($Bool.text);}
-    | id=Identifier {$typeSpecRet = new StringVal($id.text);}
+    | id=Identifier {$typeSpecRet = new Identifier($id.text, $id.getLine());}
     ;
 
-specifierQualifierList returns [List<StringVal> list]:
-    {$list = new ArrayList<>();}
-    (ts = typeSpecifier{$list.add($ts.typeSpecRet);} | Const{$list.add(new StringVal($Const.text));})
+specifierQualifierList returns [List<Expr> list]
+    @init{$list = new ArrayList<>();}
+    :(ts = typeSpecifier{$list.add($ts.typeSpecRet);} | Const{$list.add(new StringVal($Const.text));})
     (sq = specifierQualifierList{$list.addAll($sq.list);})?
     ;
 

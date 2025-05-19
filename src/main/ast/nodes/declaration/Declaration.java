@@ -1,22 +1,23 @@
 package main.ast.nodes.declaration;
 
 import main.ast.nodes.Node;
+import main.ast.nodes.expr.Expr;
 import main.ast.nodes.expr.primitives.StringVal;
 import main.visitor.IVisitor;
 
 import java.util.List;
 
 public class Declaration extends ExternalDeclaration {
-    private final List<StringVal> declarationSpecifiers;
+    private final List<Expr> declarationSpecifiers;
     private List<InitDeclarator> initDeclarators;
     public Declaration(
-            List<StringVal> declarationSpecifiers,
+            List<Expr> declarationSpecifiers,
             List<InitDeclarator> initDeclarators){
         this.declarationSpecifiers = declarationSpecifiers;
         this.initDeclarators = initDeclarators;
     }
     public Declaration(
-            List<StringVal> declarationSpecifiers){
+            List<Expr> declarationSpecifiers){
         this.declarationSpecifiers = declarationSpecifiers;
     }
 
@@ -31,7 +32,7 @@ public class Declaration extends ExternalDeclaration {
         }
         return initDeclarators.getLast().getDeclarator().getName();
     }
-    public List<StringVal> getDeclarationSpecifiers() {
+    public List<Expr> getDeclarationSpecifiers() {
         return declarationSpecifiers;
     }
 
