@@ -2,10 +2,7 @@ import main.ast.nodes.Program;
 import main.grammar.SimpleLangLexer;
 import main.grammar.SimpleLangParser;
 import main.symbolTable.SymbolTable;
-import main.visitor.DeadStmtRemover;
-import main.visitor.NameAnalyzer;
-import main.visitor.TestVisitor;
-import main.visitor.UnusedRemover;
+import main.visitor.*;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -115,6 +112,10 @@ public class SimpleLang {
 
             DeadStmtRemover my_deadRemover = new DeadStmtRemover();
             ok = my_deadRemover.visit(program);
+            if(!ok) continue;
+
+            DefRemover my_defRemover = new DefRemover();
+            ok = my_defRemover.visit(program);
             if(!ok) continue;
 
             TestVisitor my2_visitor = new TestVisitor();

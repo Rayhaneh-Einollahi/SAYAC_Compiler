@@ -13,6 +13,7 @@ import main.symbolTable.item.FuncDecSymbolTableItem;
 import main.symbolTable.item.SymbolTableItem;
 import main.symbolTable.utils.Key;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /*
@@ -31,13 +32,15 @@ public class UnusedRemover extends Visitor<Boolean>{
         List<Declaration> unused = program.get_symbol_table().getUnused();
 
         Boolean ans = true;
-        for (ExternalDeclaration ed : program.getExternalDeclarations()){
-            if ((ed instanceof Declaration) && unused.contains(ed)){
-                program.getExternalDeclarations().remove(ed);
+        List<ExternalDeclaration> decls = new ArrayList<>(program.getExternalDeclarations());
+        program.getExternalDeclarations().clear();
+        for (ExternalDeclaration ed : decls) {
+            if (ed instanceof Declaration && unused.contains(ed)) {
                 ans = false;
                 continue;
             }
             ans &= ed.accept(this);
+            program.getExternalDeclarations().add(ed);
         }
         return ans;
     }

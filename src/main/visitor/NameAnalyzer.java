@@ -113,11 +113,11 @@ public class NameAnalyzer extends Visitor<Boolean>{
             ans = false;
             System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
         }
-//        if (declaration.getInitDeclarators() != null) {
-//            for (InitDeclarator id : declaration.getInitDeclarators()) {
-//                ans &= id.accept(this);
-//            }
-//        }
+        if (declaration.getInitDeclarators() != null) {
+            for (InitDeclarator id : declaration.getInitDeclarators()) {
+                ans &= id.accept(this);
+            }
+        }
         return ans;
     }
 

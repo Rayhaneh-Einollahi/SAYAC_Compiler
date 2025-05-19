@@ -6,6 +6,7 @@ import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.primitives.StringVal;
 
+import java.util.Iterator;
 import java.util.List;
 
 /*
@@ -103,18 +104,20 @@ public class DefRemover extends Visitor<Boolean>{
     public Boolean visit(CompoundStatement compoundStatement) {
         Boolean ans = true;
         if (compoundStatement.getBlockItems() != null) {
-            for (BlockItem bi : compoundStatement.getBlockItems()) {
-                if (bi.getDeclaration()!=null){
-                    Declaration declaration = bi.getDeclaration();
-                    if (declaration.getDeclarationSpecifiers().getFirst().getName().equals( "typedef")
-                            ||declaration.getDeclarationSpecifiers().getFirst().getName().equals( "const")){
-                        compoundStatement.getBlockItems().remove(bi);
+            Iterator<BlockItem> iterator = compoundStatement.getBlockItems().iterator();
+            while (iterator.hasNext()) {
+                BlockItem bi = iterator.next();
+                Declaration declaration = bi.getDeclaration();
+                if (declaration != null) {
+                    String name = declaration.getDeclarationSpecifiers().getFirst().getName();
+                    if (name.equals("typedef") || name.equals("const")) {
+                        iterator.remove(); // safe removal
                         continue;
                     }
-
                 }
                 ans &= bi.accept(this);
             }
+
         }
         return ans;
     }
