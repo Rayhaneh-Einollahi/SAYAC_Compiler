@@ -42,6 +42,9 @@ public class FunctionExpr extends Expr{
 
     public Integer getArgumentCount() {
         int cnt= 0;
+        if (arguments == null){
+            return 0;
+        }
         for (Expr expr : arguments){
             if (expr instanceof CommaExpr){
                 cnt += ((CommaExpr) expr).getExpressions().size();

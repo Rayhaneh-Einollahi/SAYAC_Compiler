@@ -46,16 +46,17 @@ public class AccessAnalyzer extends Visitor<Void>{
 
         allFunctions.get(stack.peek()).accept(this);
 
-        for (ExternalDeclaration ed : program.getExternalDeclarations()){
-            if(!(ed instanceof FunctionDefinition functionDefinition)){
+        Iterator<ExternalDeclaration> iterator = program.getExternalDeclarations().iterator();
+        while (iterator.hasNext()) {
+            ExternalDeclaration ed = iterator.next();
+            if (!(ed instanceof FunctionDefinition functionDefinition)) {
                 continue;
             }
 
             Key key = new Key(FuncDecSymbolTableItem.START_KEY, functionDefinition.getName(), functionDefinition.getArgDeclarations().size());
 
-
-            if (!accessedFunctions.contains(key)){
-                program.getExternalDeclarations().remove(functionDefinition);
+            if (!accessedFunctions.contains(key)) {
+                iterator.remove();
             }
             allFunctions.put(key, functionDefinition);
         }
@@ -64,7 +65,7 @@ public class AccessAnalyzer extends Visitor<Void>{
     }
     public Void visit(FunctionExpr functionExpr) {
         Key key = new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount());
-        if (!accessedFunctions.contains(key)){
+        if (!SymbolTable.isBuiltIn(functionExpr.getName()) && !accessedFunctions.contains(key)){
             stack.add(key);
             accessedFunctions.add(key);
             allFunctions.get(key).accept(this);
