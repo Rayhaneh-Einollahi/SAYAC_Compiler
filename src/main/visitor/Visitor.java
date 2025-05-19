@@ -22,36 +22,275 @@ public abstract class Visitor<T> implements IVisitor<T> {
     @Override
 
     public T visit(Program program) {
+        for (ExternalDeclaration ed : program.getExternalDeclarations()){
+            ed.accept(this);
+        }
         return null;
     }
 
-    public T visit(FunctionDefinition funcDef) {
+    public T visit(FunctionDefinition functionDefinition) {
+        if (functionDefinition.getDeclarationSpecifiers() != null){
+            for (Expr expr : functionDefinition.getDeclarationSpecifiers()) {
+                expr.accept(this);
+            }
+        }
+
+        if (functionDefinition.getDeclarator() != null){
+            functionDefinition.getDeclarator().accept(this);
+        }
+
+        if (functionDefinition.getDeclarations() != null){
+            for (Declaration ds: functionDefinition.getDeclarations()){
+                ds.accept(this);
+            }
+        }
+        if (functionDefinition.getBody() != null){
+            functionDefinition.getBody().accept(this);
+        }
         return null;
     }
     public T visit(ExternalDeclaration externalDeclaration){return null;}
-    public T visit(Declaration declaration){return null;}
-    public T visit(InitDeclarator initDeclarator){return null;}
-    public T visit(Declarator declarator){return null;}
-    public T visit(DirectDeclarator directDeclarator){return null;}
-    public T visit(Designator designator){return null;}
-    public T visit(Parameter parameter){return null;}
-    public T visit(Typename typename){return null;}
-    public T visit(Initializer initializer){return null;}
-    public T visit(InitializerList initializerList){return null;}
-    public T visit(Designation designation){return null;}
+    public T visit(Declaration declaration) {
+        if (declaration.getDeclarationSpecifiers() != null){
+            for (Expr expr : declaration.getDeclarationSpecifiers()) {
+                expr.accept(this);
+            }
+        }
+        if (declaration.getInitDeclarators() != null) {
+            for (InitDeclarator id : declaration.getInitDeclarators()) {
+                id.accept(this);
+            }
+        }
+        return null;
+    }
+    public T visit(InitDeclarator initDeclarator) {
+
+        if (initDeclarator.getDeclarator() != null) {
+            initDeclarator.getDeclarator().accept(this);
+        }
+        if (initDeclarator.getInitializer() != null) {
+            initDeclarator.getInitializer().accept(this);
+        }
+        return null;
+    }
+    public T visit(Declarator declarator) {
+
+        if (declarator.getPointer() != null) {
+            declarator.getPointer().accept(this);
+        }
+        if (declarator.getDirectDeclarator() != null) {
+            declarator.getDirectDeclarator().accept(this);
+        }
+        return null;
+    }
+    public T visit(DirectDeclarator directDeclarator) {
+
+        if (directDeclarator.getIdentifier() != null) {
+            directDeclarator.getIdentifier().accept(this);
+        }
+        if (directDeclarator.getInnerDeclarator() != null) {
+            directDeclarator.getInnerDeclarator().accept(this);
+        }
+        if (directDeclarator.getSteps() != null) {
+            for (DirectDeclarator.DDStep step : directDeclarator.getSteps()) {
+                if (step != null) {
+                    switch (step.kind) {
+                        case ARRAY:
+                            if (step.arrayExpr != null) {
+                                step.arrayExpr.accept(this);
+                            }
+                            break;
+                        case FUNCTION_P:
+                            if (step.params != null) {
+                                for (Parameter param : step.params) {
+                                    if (param != null) {
+                                        param.accept(this);
+                                    }
+                                }
+                            }
+                            break;
+                        case FUNCTION_I:
+                            if (step.identifiers != null) {
+                                for (Identifier id : step.identifiers) {
+                                    if (id != null) {
+                                        id.accept(this);
+                                    }
+                                }
+                            }
+                            break;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    public T visit(Designator designator) {
+
+        if (designator.getExpr() != null) {
+            designator.getExpr().accept(this);
+        }
+        if (designator.getIdentifier() != null) {
+            designator.getIdentifier().accept(this);
+        }
+        return null;
+    }
+    public T visit(Parameter parameter) {
+
+        if (parameter.getDeclarator() != null) {
+            parameter.getDeclarator().accept(this);
+        }
+        if (parameter.getDeclarationSpecifiers() != null) {
+            for(Expr expr: parameter.getDeclarationSpecifiers()) {
+                expr.accept(this);
+            }
+        }
+        return null;
+    }
+    public T visit(Typename typename) {
+
+        if (typename.getDeclarator() != null) {
+            typename.getDeclarator().accept(this);
+        }
+        if (typename.getSpecifierQualifiers() != null){
+            for (Expr expr : typename.getSpecifierQualifiers()) {
+                expr.accept(this);
+            }
+        }
+        return null;
+    }
+    public T visit(Initializer initializer) {
+
+        if (initializer.getExpr() != null) {
+            initializer.getExpr().accept(this);
+        }
+        if (initializer.getInitializerlist() != null) {
+            initializer.getInitializerlist().accept(this);
+        }
+        if (initializer.getDesignation() != null) {
+            initializer.getDesignation().accept(this);
+        }
+        return null;
+    }
+    public T visit(InitializerList initializerList) {
+
+        if (initializerList.getList() != null) {
+            for (InitializerList.Pair p : initializerList.getList()) {
+                if (p != null) {
+                    if (p.designation() != null) {
+                        p.designation().accept(this);
+                    }
+                    if (p.initializer() != null) {
+                        p.initializer().accept(this);
+                    }
+                }
+            }
+        }
+        return null;
+    }
+    public T visit(Designation designation) {
+
+        if (designation.getDesignators() != null) {
+            for (Designator designator : designation.getDesignators()) {
+                if (designator != null) {
+                    designator.accept(this);
+                }
+            }
+        }
+        return null;
+    }
 
     public T visit(Pointer pointer){return null;}
-    public T visit(BlockItem lockItem){return null;}
-    public T visit(CompoundStatement compoundStatement){return null;}
-    public T visit(ExpressionStatement expressionStatement){return null;}
-    public T visit(SelectionStatement selectionStatement){return null;}
-    public T visit(IterationStatement iterationStatement){return null;}
-    public T visit(JumpStatement jumpStatement){return null;}
-    public T visit(ForCondition forCondition){return null;}
+    public T visit(BlockItem blockItem) {
+
+        if (blockItem.getStatement() != null) {
+            blockItem.getStatement().accept(this);
+        }
+        if (blockItem.getDeclaration() != null) {
+            blockItem.getDeclaration().accept(this);
+        }
+        return null;
+    }
+    public T visit(CompoundStatement compoundStatement) {
+        if (compoundStatement.getBlockItems() != null) {
+            for (BlockItem bi : compoundStatement.getBlockItems()) {
+                bi.accept(this);
+            }
+        }
+        return null;
+    }
+    public T visit(ExpressionStatement expressionStatement) {
+
+        if (expressionStatement.getExpr() != null) {
+            expressionStatement.getExpr().accept(this);
+        }
+        return null;
+    }
+    public T visit(SelectionStatement selectionStatement) {
+
+        if (selectionStatement.getCondition() != null) {
+            selectionStatement.getCondition().accept(this);
+        }
+        if (selectionStatement.getIfStatement() != null) {
+            selectionStatement.getIfStatement().accept(this);
+        }
+        if (selectionStatement.getElseStatement() != null) {
+            selectionStatement.getElseStatement().accept(this);
+        }
+        return null;
+    }
+    public T visit(IterationStatement iterationStatement) {
+
+        if (iterationStatement.getForCondition() != null) {
+            iterationStatement.getForCondition().accept(this);
+        }
+        if (iterationStatement.getCondition() != null) {
+            iterationStatement.getCondition().accept(this);
+        }
+        if (iterationStatement.getBody() != null) {
+            iterationStatement.getBody().accept(this);
+        }
+        return null;
+    }
+    public T visit(JumpStatement jumpStatement) {
+
+        if (jumpStatement.getExpr() != null) {
+            jumpStatement.getExpr().accept(this);
+        }
+        return null;
+    }
+    public T visit(ForCondition forCondition) {
+
+        if (forCondition.getDeclaration() != null) {
+            forCondition.getDeclaration().accept(this);
+        }
+        if (forCondition.getExpr() != null) {
+            forCondition.getExpr().accept(this);
+        }
+        if (forCondition.getConditions() != null) {
+            for (Expr condition : forCondition.getConditions()) {
+                condition.accept(this);
+            }
+        }
+        if (forCondition.getSteps() != null) {
+            for (Expr step : forCondition.getSteps()) {
+                step.accept(this);
+            }
+        }
+        return null;
+    }
     public T visit(UnaryExpr unaryExpr) {
+
+        unaryExpr.getOperand().accept(this);
         return null;
     }
     public T visit(BinaryExpr binaryExpr) {
+
+        if (binaryExpr.getFirstOperand() != null) {
+            binaryExpr.getFirstOperand().accept(this);
+        }
+        if (binaryExpr.getSecondOperand() != null) {
+            binaryExpr.getSecondOperand().accept(this);
+        }
         return null;
     }
     public T visit(Identifier identifier) {
@@ -59,13 +298,74 @@ public abstract class Visitor<T> implements IVisitor<T> {
     }
     public T visit(ConstantExpr constantExpr) {return null;}
     public T visit(StringExpr stringExpr) {return null;}
-    public T visit(IniListExpr iniListExpr) {return null;}
-    public T visit(ArrayExpr arrayExpr) {return null;}
-    public T visit(CastExpr castExpr) {return null;}
-    public T visit(FunctionExpr functionExpr) {return null;}
-    public T visit(SizeofTypeExpr sizeofTypeExpr) {return null;}
-    public T visit(TernaryExpr ternaryExpr) {return null;}
-    public T visit(CommaExpr commaExpr) {return null;}
+    public T visit(IniListExpr iniListExpr) {
+
+        if (iniListExpr.getTypename() != null) {
+            iniListExpr.getTypename().accept(this);
+        }
+        if (iniListExpr.getInitializerList() != null) {
+            iniListExpr.getInitializerList().accept(this);
+        }
+        return null;
+    }
+    public T visit(ArrayExpr arrayExpr) {
+
+        if (arrayExpr.getOutside() != null) {
+            arrayExpr.getOutside().accept(this);
+        }
+        if (arrayExpr.getInside() != null) {
+            arrayExpr.getInside().accept(this);
+        }
+        return null;
+    }
+    public T visit(CastExpr castExpr) {
+
+        if (castExpr.getTypename() != null) {
+            castExpr.getTypename().accept(this);
+        }
+        if (castExpr.getCastExpr() != null) {
+            castExpr.getCastExpr().accept(this);
+        }
+        return null;
+    }
+    public T visit(FunctionExpr functionExpr) {
+
+        if (functionExpr.getArguments() != null) {
+            for (Expr arg : functionExpr.getArguments()) {
+                arg.accept(this);
+            }
+        }
+        return null;
+    }
+    public T visit(SizeofTypeExpr sizeofTypeExpr) {
+
+        if (sizeofTypeExpr.getTypename() != null) {
+            sizeofTypeExpr.getTypename().accept(this);
+        }
+        return null;
+    }
+    public T visit(TernaryExpr ternaryExpr) {
+
+        if (ternaryExpr.getFirstOperand() != null) {
+            ternaryExpr.getFirstOperand().accept(this);
+        }
+        if (ternaryExpr.getSecondOperand() != null) {
+            ternaryExpr.getSecondOperand().accept(this);
+        }
+        if (ternaryExpr.getThirdOperand() != null) {
+            ternaryExpr.getThirdOperand().accept(this);
+        }
+        return null;
+    }
+    public T visit(CommaExpr commaExpr) {
+
+        if (commaExpr.getExpressions() != null) {
+            for (Expr expr : commaExpr.getExpressions()) {
+                expr.accept(this);
+            }
+        }
+        return null;
+    }
 
     public T visit(IntVal intVal) {
         return null;

@@ -10,8 +10,6 @@ import org.antlr.v4.runtime.CommonTokenStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Stack;
 
 public class SimpleLang {
@@ -103,20 +101,20 @@ public class SimpleLang {
         boolean ok;
         while(true) {
             NameAnalyzer my_name_analyzer = new NameAnalyzer();
-            ok = my_name_analyzer.visit(program);
-            if (!ok) break;
+            my_name_analyzer.visit(program);
+            if (!my_name_analyzer.ok) break;
 
             UnusedRemover my_unusedRemover = new UnusedRemover();
             ok = my_unusedRemover.visit(program);
             if(!ok) continue;
 
             DeadStmtRemover my_deadRemover = new DeadStmtRemover();
-            ok = my_deadRemover.visit(program);
-            if(!ok) continue;
+            my_deadRemover.visit(program);
+            if(!my_deadRemover.ok) continue;
 
             DefRemover my_defRemover = new DefRemover();
-            ok = my_defRemover.visit(program);
-            if(!ok) continue;
+            my_defRemover.visit(program);
+            if(!my_defRemover.ok) continue;
 
             TestVisitor my2_visitor = new TestVisitor();
             my2_visitor.visit(program);

@@ -4,8 +4,6 @@ import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
-import main.ast.nodes.expr.operator.BinaryOperator;
-import main.ast.nodes.expr.primitives.*;
 import main.symbolTable.SymbolTable;
 import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
@@ -25,7 +23,7 @@ import main.symbolTable.utils.Key;
 
 
 public class NameAnalyzer extends Visitor<Void>{
-    public boolean ans = true; 
+    public boolean ok = true;
 
     @Override
     public Void visit(Program program) {
@@ -47,7 +45,7 @@ public class NameAnalyzer extends Visitor<Void>{
         try {
             SymbolTable.top.put(func_dec_item);
         } catch (ItemAlreadyExistsException e) {
-            ans = false;
+            ok = false;
             System.out.println("Redefinition of function \"" + functionDefinition.getName() +"\" in line " + functionDefinition.getLine());
         }
 
@@ -60,7 +58,7 @@ public class NameAnalyzer extends Visitor<Void>{
                 try {
                     SymbolTable.top.put(var_dec_item);
                 } catch (ItemAlreadyExistsException e) {
-                    ans = false;
+                    ok = false;
                     System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
                 }
             }
@@ -98,7 +96,7 @@ public class NameAnalyzer extends Visitor<Void>{
                 SymbolTable.top.getItem(new Key(FuncDecSymbolTableItem.START_KEY, functionExpr.getName(), functionExpr.getArgumentCount()));
             }
         } catch (ItemNotFoundException e) {
-            ans = false;
+            ok = false;
             System.out.printf("Line:%d-> %s not declared\n", functionExpr.getLine(), functionExpr.getName());
         }
 
@@ -117,7 +115,7 @@ public class NameAnalyzer extends Visitor<Void>{
         try {
             SymbolTable.top.put(var_dec_item);
         } catch (ItemAlreadyExistsException e) {
-            ans = false;
+            ok = false;
             System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
         }
         if (declaration.getDeclarationSpecifiers() != null){
@@ -134,43 +132,20 @@ public class NameAnalyzer extends Visitor<Void>{
     }
 
     @Override
-    public Void visit(BinaryExpr binaryExpr) {
-        
-        if (binaryExpr.getFirstOperand() != null) {
-            binaryExpr.getFirstOperand().accept(this);
-        }
-        if (binaryExpr.getSecondOperand() != null) {
-            binaryExpr.getSecondOperand().accept(this);
-        }
-        return null;
-    }
-
-    @Override
     public Void visit(Identifier identifier) {
         
         try {
             SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()), true);
             symbolTableItem.incUsed();
         } catch (ItemNotFoundException e) {
-            ans = false;
+            ok = false;
             System.out.printf("Line:%d-> %s not declared\n", identifier.getLine(), identifier.getName() );
         }
         return null;
     }
 
-    public Void visit(BlockItem blockItem) {
-        
-        if (blockItem.getStatement() != null) {
-            blockItem.getStatement().accept(this);
-        }
-        if (blockItem.getDeclaration() != null) {
-            blockItem.getDeclaration().accept(this);
-        }
-        return null;
-    }
-
     public Void visit(CompoundStatement compoundStatement) {
-        
+
         SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
         compoundStatement.set_symbol_table(new_symbol_table);
         SymbolTable.push(new_symbol_table);
@@ -181,323 +156,6 @@ public class NameAnalyzer extends Visitor<Void>{
             }
         }
         SymbolTable.pop();
-        return null;
-    }
-
-    public Void visit(ExpressionStatement expressionStatement) {
-        
-        if (expressionStatement.getExpr() != null) {
-            expressionStatement.getExpr().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(ForCondition forCondition) {
-        
-        if (forCondition.getDeclaration() != null) {
-            forCondition.getDeclaration().accept(this);
-        }
-        if (forCondition.getExpr() != null) {
-            forCondition.getExpr().accept(this);
-        }
-        if (forCondition.getConditions() != null) {
-            for (Expr condition : forCondition.getConditions()) {
-                condition.accept(this);
-            }
-        }
-        if (forCondition.getSteps() != null) {
-            for (Expr step : forCondition.getSteps()) {
-                step.accept(this);
-            }
-        }
-        return null;
-    }
-
-
-    public Void visit(IterationStatement iterationStatement) {
-
-        if (iterationStatement.getForCondition() != null) {
-            iterationStatement.getForCondition().accept(this);
-        }
-        if (iterationStatement.getCondition() != null) {
-            iterationStatement.getCondition().accept(this);
-        }
-        if (iterationStatement.getBody() != null) {
-            iterationStatement.getBody().accept(this);
-        }
-        return null;
-    }
-
-
-    public Void visit(JumpStatement jumpStatement) {
-        
-        if (jumpStatement.getExpr() != null) {
-            jumpStatement.getExpr().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(SelectionStatement selectionStatement) {
-//        System.out.print("Line ");
-//        System.out.print(selectionStatement.getLine());
-//        System.out.print(": Stmt selection = ");
-//        System.out.println(selectionStatement.getIfStatement().getStatementCount());
-//
-//        if (selectionStatement.getElseStatement()!=null && !(selectionStatement.getElseStatement() instanceof SelectionStatement)) {
-//            System.out.print("Line ");
-//            System.out.print(selectionStatement.getElseStatement().getLine());
-//            System.out.print(": Stmt selection = ");
-//            System.out.println(selectionStatement.getElseStatement().getStatementCount());
-//        }
-        
-        if (selectionStatement.getCondition() != null) {
-            selectionStatement.getCondition().accept(this);
-        }
-        if (selectionStatement.getIfStatement() != null) {
-            selectionStatement.getIfStatement().accept(this);
-        }
-        if (selectionStatement.getElseStatement() != null) {
-            selectionStatement.getElseStatement().accept(this);
-        }
-        return null;
-    }
-
-
-
-    public Void visit(ArrayExpr arrayExpr) {
-        
-        if (arrayExpr.getOutside() != null) {
-            arrayExpr.getOutside().accept(this);
-        }
-        if (arrayExpr.getInside() != null) {
-            arrayExpr.getInside().accept(this);
-        }
-        return null;
-    }
-
-
-    public Void visit(CastExpr castExpr) {
-        
-        if (castExpr.getTypename() != null) {
-            castExpr.getTypename().accept(this);
-        }
-        if (castExpr.getCastExpr() != null) {
-            castExpr.getCastExpr().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(CommaExpr commaExpr) {
-        
-        if (commaExpr.getExpressions() != null) {
-            for (Expr expr : commaExpr.getExpressions()) {
-                expr.accept(this);
-            }
-        }
-        return null;
-    }
-
-    public Void visit(ConstantExpr constantExpr) {
-        return null;
-    }
-
-
-
-
-    public Void visit(IniListExpr iniListExpr) {
-        
-        if (iniListExpr.getTypename() != null) {
-            iniListExpr.getTypename().accept(this);
-        }
-        if (iniListExpr.getInitializerList() != null) {
-            iniListExpr.getInitializerList().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(SizeofTypeExpr sizeofTypeExpr) {
-        
-        if (sizeofTypeExpr.getTypename() != null) {
-            sizeofTypeExpr.getTypename().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(StringExpr stringExpr) {
-//        System.out.print("Line ");
-//        System.out.print(stringExpr.getLine());
-//        System.out.println(": Expr string" );
-        return null;
-    }
-
-    public Void visit(TernaryExpr ternaryExpr) {
-        
-        if (ternaryExpr.getFirstOperand() != null) {
-            ternaryExpr.getFirstOperand().accept(this);
-        }
-        if (ternaryExpr.getSecondOperand() != null) {
-            ternaryExpr.getSecondOperand().accept(this);
-        }
-        if (ternaryExpr.getThirdOperand() != null) {
-            ternaryExpr.getThirdOperand().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(UnaryExpr unaryExpr) {
-        
-        unaryExpr.getOperand().accept(this);
-        return null;
-    }
-
-
-
-
-    public Void visit(Declarator declarator) {
-        
-        if (declarator.getPointer() != null) {
-            declarator.getPointer().accept(this);
-        }
-        if (declarator.getDirectDeclarator() != null) {
-            declarator.getDirectDeclarator().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(Designation designation) {
-        
-        if (designation.getDesignators() != null) {
-            for (Designator designator : designation.getDesignators()) {
-                if (designator != null) {
-                    designator.accept(this);
-                }
-            }
-        }
-        return null;
-    }
-
-    public Void visit(Designator designator) {
-        
-        if (designator.getExpr() != null) {
-            designator.getExpr().accept(this);
-        }
-        if (designator.getIdentifier() != null) {
-            designator.getIdentifier().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(DirectDeclarator directDeclarator) {
-        
-        if (directDeclarator.getIdentifier() != null) {
-            directDeclarator.getIdentifier().accept(this);
-        }
-        if (directDeclarator.getInnerDeclarator() != null) {
-            directDeclarator.getInnerDeclarator().accept(this);
-        }
-        if (directDeclarator.getSteps() != null) {
-            for (DirectDeclarator.DDStep step : directDeclarator.getSteps()) {
-                if (step != null) {
-                    switch (step.kind) {
-                        case ARRAY:
-                            if (step.arrayExpr != null) {
-                                step.arrayExpr.accept(this);
-                            }
-                            break;
-                        case FUNCTION_P:
-                            if (step.params != null) {
-                                for (Parameter param : step.params) {
-                                    if (param != null) {
-                                        param.accept(this);
-                                    }
-                                }
-                            }
-                            break;
-                        case FUNCTION_I:
-                            if (step.identifiers != null) {
-                                for (Identifier id : step.identifiers) {
-                                    if (id != null) {
-                                        id.accept(this);
-                                    }
-                                }
-                            }
-                            break;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    public Void visit(InitDeclarator initDeclarator) {
-        
-        if (initDeclarator.getDeclarator() != null) {
-            initDeclarator.getDeclarator().accept(this);
-        }
-        if (initDeclarator.getInitializer() != null) {
-            initDeclarator.getInitializer().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(Initializer initializer) {
-        
-        if (initializer.getExpr() != null) {
-            initializer.getExpr().accept(this);
-        }
-        if (initializer.getInitializerlist() != null) {
-            initializer.getInitializerlist().accept(this);
-        }
-        if (initializer.getDesignation() != null) {
-            initializer.getDesignation().accept(this);
-        }
-        return null;
-    }
-
-    public Void visit(InitializerList initializerList) {
-        
-        if (initializerList.getList() != null) {
-            for (InitializerList.Pair p : initializerList.getList()) {
-                if (p != null) {
-                    if (p.designation() != null) {
-                        p.designation().accept(this);
-                    }
-                    if (p.initializer() != null) {
-                        p.initializer().accept(this);
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    public Void visit(Parameter parameter) {
-        
-        if (parameter.getDeclarator() != null) {
-            parameter.getDeclarator().accept(this);
-        }
-        if (parameter.getDeclarationSpecifiers() != null) {
-            for(Expr expr: parameter.getDeclarationSpecifiers()) {
-                expr.accept(this);
-            }
-        }
-        return null;
-    }
-
-    public Void visit(Typename typename) {
-        
-        if (typename.getDeclarator() != null) {
-            typename.getDeclarator().accept(this);
-        }
-        if (typename.getSpecifierQualifiers() != null){
-            for (Expr expr : typename.getSpecifierQualifiers()) {
-                expr.accept(this);
-            }
-        }
-        return null;
-    }
-
-    public Void visit(StringVal stringVal) {
         return null;
     }
 }
