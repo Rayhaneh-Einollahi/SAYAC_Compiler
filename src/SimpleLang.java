@@ -116,6 +116,10 @@ public class SimpleLang {
             my_defRemover.visit(program);
             if(!my_defRemover.ok) continue;
 
+            AccessAnalyzer my_AccessAnalyzer = new AccessAnalyzer();
+            my_AccessAnalyzer.visit(program);
+            if(!my_AccessAnalyzer.ok) continue;
+
             TestVisitor my2_visitor = new TestVisitor();
             my2_visitor.visit(program);
             break;
