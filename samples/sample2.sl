@@ -1,14 +1,6 @@
-FuncDec hello(){
-    how_are_you();          //Undeclared function "how_are_you"
-}
-
-main() {
-    int b;
-    b = 10;
-    if (b + a + test())         //Undeclared function "test"   //Undeclared variable "a"
-        b = b + 5;
-    else
-        x();                     //Undeclared function "x"
-
-    int b;                       //Redeclaration of "b"
-}
+int main():
+    int arr[2]={2,3}
+    int a=2,b,c
+    b=b+c+a
+    int d=arr[1]
+end

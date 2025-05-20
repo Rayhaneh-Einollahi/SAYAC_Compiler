@@ -1,22 +1,22 @@
-FuncDec first_func(){
-    int apple;
-    apple = 10;
-    return apple;
-} 
+void fee(int x):
+    return 0
+end
+void foo(int y,int x):
+    x=fee(y)
+    return 0
+end
 
-FuncDec second_func(){
-    int banana;
-    if(1)
-        if(1)
-            int y;
+int main():
+    while(1):
+        int x
+        int y=foo(1,1)+fee(1)
+        if(1):
+            if(1):
+                return 1
+                int z
+            else:
+                return 1
+                int z
+            int x
 
-    banana = 33 / three;        //Undeclared variable "three"
-    return banana;
-}
-
-main(){
-    int test;
-    test = 50;
-    int tmp;
-    tmp = 55++ + 10 * second_func() + first_func();
-}
+end

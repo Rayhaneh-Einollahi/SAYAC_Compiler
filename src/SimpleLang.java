@@ -105,23 +105,32 @@ public class SimpleLang {
             if (!my_name_analyzer.ok) break;
 
             UnusedRemover my_unusedRemover = new UnusedRemover();
-            ok = my_unusedRemover.visit(program);
-            if(!ok) continue;
+            my_unusedRemover.visit(program);
+//            System.out.println("unused remover:");
+//            TestVisitor my2_visitor = new TestVisitor();
+//            my2_visitor.visit(program);
+            if(!my_unusedRemover.ok) continue;
 
             DeadStmtRemover my_deadRemover = new DeadStmtRemover();
             my_deadRemover.visit(program);
+//            System.out.println("dead remover:");
+//            TestVisitor my3_visitor = new TestVisitor();
+//            my3_visitor.visit(program);
             if(!my_deadRemover.ok) continue;
 
             DefRemover my_defRemover = new DefRemover();
             my_defRemover.visit(program);
+//            System.out.println("def remover:");
+//            TestVisitor my4_visitor = new TestVisitor();
+//            my4_visitor.visit(program);
             if(!my_defRemover.ok) continue;
 
             AccessAnalyzer my_AccessAnalyzer = new AccessAnalyzer();
             my_AccessAnalyzer.visit(program);
             if(!my_AccessAnalyzer.ok) continue;
 
-            TestVisitor my2_visitor = new TestVisitor();
-            my2_visitor.visit(program);
+            TestVisitor my6_visitor = new TestVisitor();
+            my6_visitor.visit(program);
             break;
 
         }

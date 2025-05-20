@@ -23,6 +23,7 @@ public class FunctionExpr extends Expr{
             return;
         }
         List<Expr> list = ((CommaExpr)arguments.getFirst()).getExpressions();
+        inds.sort(Collections.reverseOrder()); // sort descending
         for (int index : inds) {
             if (index >= 0 && index < list.size()) {
                 list.remove(index);
