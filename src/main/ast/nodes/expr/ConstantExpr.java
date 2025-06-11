@@ -9,8 +9,8 @@ public class ConstantExpr extends Expr {
         this.str = str;
     }
 
-    public StringVal getStr() {
-        return str;
+    public String getStr() {
+        return str.getName();
     }
 
     @Override
