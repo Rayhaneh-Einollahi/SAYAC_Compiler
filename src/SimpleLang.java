@@ -1,4 +1,5 @@
 import main.ast.nodes.Program;
+import main.codeGenerator.CodeGenerator;
 import main.grammar.SimpleLangLexer;
 import main.grammar.SimpleLangParser;
 import main.symbolTable.SymbolTable;
@@ -88,9 +89,9 @@ public class SimpleLang {
 
     public static void main(String[] args) throws IOException {
         String code = Files.readString(Paths.get(args[0]));
-        String transformedCode = preprocess(removeComments(code));
+//        String transformedCode = preprocess(removeComments(code));
 //        System.out.println(transformedCode);
-        CharStream reader = CharStreams.fromString(transformedCode);
+        CharStream reader = CharStreams.fromString(code);
 
         SimpleLangLexer SimpleLangLexer = new SimpleLangLexer(reader);
         CommonTokenStream tokens = new CommonTokenStream(SimpleLangLexer);
@@ -99,43 +100,47 @@ public class SimpleLang {
         System.out.println();
 
         boolean ok;
-        while(true) {
-            NameAnalyzer my_name_analyzer = new NameAnalyzer();
-            my_name_analyzer.visit(program);
-            if (!my_name_analyzer.ok) break;
+//        while(true) {
+//            NameAnalyzer my_name_analyzer = new NameAnalyzer();
+//            my_name_analyzer.visit(program);
+//            if (!my_name_analyzer.ok) break;
+//
+//            UnusedRemover my_unusedRemover = new UnusedRemover();
+//            my_unusedRemover.visit(program);
+////            System.out.println("unused remover:");
+////            TestVisitor my2_visitor = new TestVisitor();
+////            my2_visitor.visit(program);
+//            if(!my_unusedRemover.ok) continue;
+//
+//            DeadStmtRemover my_deadRemover = new DeadStmtRemover();
+//            my_deadRemover.visit(program);
+////            System.out.println("dead remover:");
+////            TestVisitor my3_visitor = new TestVisitor();
+////            my3_visitor.visit(program);
+//            if(!my_deadRemover.ok) continue;
+//
+//            DefRemover my_defRemover = new DefRemover();
+//            my_defRemover.visit(program);
+////            System.out.println("def remover:");
+////            TestVisitor my4_visitor = new TestVisitor();
+////            my4_visitor.visit(program);
+//            if(!my_defRemover.ok) continue;
+//
+//            AccessAnalyzer my_AccessAnalyzer = new AccessAnalyzer();
+//            my_AccessAnalyzer.visit(program);
+//            if(!my_AccessAnalyzer.ok) continue;
+//
+//            TestVisitor my6_visitor = new TestVisitor();
+//            my6_visitor.visit(program);
+//            break;
+//
+//        }
 
-            UnusedRemover my_unusedRemover = new UnusedRemover();
-            my_unusedRemover.visit(program);
-//            System.out.println("unused remover:");
-//            TestVisitor my2_visitor = new TestVisitor();
-//            my2_visitor.visit(program);
-            if(!my_unusedRemover.ok) continue;
+        CodeGenerator codeGenerator = new CodeGenerator();
+        codeGenerator.visit(program);
+        codeGenerator.printAssembly();
 
-            DeadStmtRemover my_deadRemover = new DeadStmtRemover();
-            my_deadRemover.visit(program);
-//            System.out.println("dead remover:");
-//            TestVisitor my3_visitor = new TestVisitor();
-//            my3_visitor.visit(program);
-            if(!my_deadRemover.ok) continue;
-
-            DefRemover my_defRemover = new DefRemover();
-            my_defRemover.visit(program);
-//            System.out.println("def remover:");
-//            TestVisitor my4_visitor = new TestVisitor();
-//            my4_visitor.visit(program);
-            if(!my_defRemover.ok) continue;
-
-            AccessAnalyzer my_AccessAnalyzer = new AccessAnalyzer();
-            my_AccessAnalyzer.visit(program);
-            if(!my_AccessAnalyzer.ok) continue;
-
-            TestVisitor my6_visitor = new TestVisitor();
-            my6_visitor.visit(program);
-            break;
-
-        }
-
-        SymbolTable.root.hashCode();
-        System.out.println();
+//        SymbolTable.root.hashCode();
+//        System.out.println();
     }
 }
