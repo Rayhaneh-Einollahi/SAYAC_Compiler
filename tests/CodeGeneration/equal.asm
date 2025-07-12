@@ -1,3 +1,0 @@
-MSI r1 2
-MSI r2 2
-CMR r1 r2

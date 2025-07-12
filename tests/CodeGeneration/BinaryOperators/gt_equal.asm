@@ -1,0 +1,9 @@
+MSI 2  r1
+MSI 2  r2
+CMR r1 r2
+BRR >= NEQUAL
+MSI 0  r3
+JMP    END
+NEQUAL:
+MSI 0  r3
+END:

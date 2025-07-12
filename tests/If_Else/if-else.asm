@@ -1,0 +1,9 @@
+MSI 0 r1
+MSI 1 r2
+CMI 1 r1
+BRR < IF
+MSI 3 r2
+JMP END
+IF:
+MSI 2 r2
+END:

@@ -1,0 +1,2 @@
+A XOR B=(A AND NOT B) OR (NOT A AND B)
+???
