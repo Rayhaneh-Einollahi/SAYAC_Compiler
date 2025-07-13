@@ -7,6 +7,23 @@ def imm(val, bits):
         val = (1 << bits) + val 
     return format(val, f'0{bits}b')
 
+def flag(sign):
+    val = sign
+
+    if sign == "==":
+        val = 0
+    elif sign == "<":
+        val = 1
+    elif sign == ">":
+        val = 2
+    elif sign == ">=":
+        val = 3
+    elif sign == "<=":
+        val = 4
+    elif sign == "!=":
+        val = 5
+    return imm(val, 5)
+
 def assemble_sayac(line):
     parts = line.strip().split()
     if not parts:
@@ -67,9 +84,9 @@ def assemble_sayac(line):
     elif op == 'CMI':
         b = '1111001' + imm(parts[1], 5) + reg(parts[2])
     elif op == 'BRC':
-        b = '1111010' + imm(parts[1], 5) + reg(parts[2])
+        b = '1111010' + flag(parts[1]) + reg(parts[2])
     elif op == 'BRR':
-        b = '1111011' + imm(parts[1], 5) + reg(parts[2])
+        b = '1111011' + flag(parts[1]) + reg(parts[2])
     elif op == 'SHI':
         b = '1111100' + imm(parts[1], 5) + reg(parts[2])
     elif op == 'SHA':
@@ -144,11 +161,12 @@ def expand_macros(lines, labels):
                     f'JMR {target}'
                 ])
         elif op == 'BRR':
-            target = parts[1]
+            target = parts[2]
+            flag = parts[1]
             new_lines.extend([
                 f'MSI r14',
                 f'MHI r14',
-                f'BRR {target}'
+                f'BRR {flag} {target}'
             ])
         else:
             new_lines.append(line)
@@ -178,24 +196,33 @@ def replace_labels(lines, labels):
                 f'JMR 0 r14 r0'
             ]
         elif op == 'BRR':
-            target = parts[1]
+            flag = parts[1]
+            target = parts[2]
             offset = labels[target] - pc
             lo = offset & 0x00FF
             hi = (offset >> 8) & 0x00FF
             lines[i-2:i+1] = [
                 f'MSI {lo} r14',
                 f'MHI {hi} r14',
-                f'BRR 0 r14 r0'
+                f'BRR {flag} r14'
             ]
         pc += 1
     return lines
 
+def remove_comments(lines):
+    cleaned_lines = []
+    for line in lines:
+        stripped_line = line.split('#', 1)[0].strip()
+        if stripped_line:
+            cleaned_lines.append(stripped_line)
+    return cleaned_lines
+
 def assemble_program(lines):
+    lines = remove_comments(lines)
     labels, _ = collect_labels(lines)
     expanded_lines = expand_macros(lines, labels)
     new_labels, new_lines = collect_labels(expanded_lines)
     no_label_lines = replace_labels(new_lines, new_labels)
-    # print_assembly(no_label_lines)
     binaries = []
     for line in no_label_lines:
         result = assemble_sayac(line)
@@ -203,11 +230,10 @@ def assemble_program(lines):
             binaries.append(result)
     return binaries
 
-def print_assembly(lines):
+def print_lines(lines):
     for l in lines:
         print(l)
 
-# Test programs (can also be read from .in files)
 import sys
 
 if len(sys.argv) < 2:
@@ -222,12 +248,5 @@ for filename in sys.argv[1:]:
 
 
 for i, program in enumerate(test_programs):
-    # print(f"\n*********** Test NO.{i+1} ************\n")
-    # print("Initial code:\n")
-    # print_assembly(program)
-    # print("------------------")
-    # print("Pure assembly:\n")
     binary = assemble_program(program)
-    # print("------------------")
-    # print("Binary code:\n")
-    print_assembly(binary)
+    print_lines(binary)
