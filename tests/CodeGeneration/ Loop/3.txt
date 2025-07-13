@@ -1,0 +1,25 @@
+MSI r0, 0         # sum = 0
+MSI r1, 0         # i = 0
+loop_while:
+    CMI r1 20
+    BRC 001 end_while
+
+    MSI r2, 3       
+    DIV r3 r1 r2
+    CMI r4 0
+    BRC 000 cnt
+
+    CMI r0 50
+    BRC 001 end_while
+
+    ADD r0 r1 r0
+    ADI r1 1   
+cnt:
+    ADI r1 1
+    JMR r5, loop_while, 0 
+end_while
+
+
+
+
+

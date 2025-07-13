@@ -1,0 +1,11 @@
+MSI r0, 0         # sum = 0
+MSI r1, 0         # i = 0
+MSI r2, 10        # constant 10
+
+loop_for:
+    CMR r2 r1
+    BRC 001 end_for
+    ADD r0 r0 r1
+    ADI r1 1
+    JMR r2, loop_for, 0 
+end_for:
