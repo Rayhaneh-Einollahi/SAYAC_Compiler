@@ -313,10 +313,9 @@ selectionStatement returns [SelectionStatement stRet]
     (Else elsest=statement {$stRet.addElse($elsest.stRet);})?;
 
 iterationStatement returns [IterationStatement stRet]
-    @init {$stRet = new IterationStatement();}
-    :While LeftParen e=expression RightParen s=statement {$stRet.setWhileLoop($e.expRet, $s.stRet);}
-    | Do s=statement While LeftParen e=expression RightParen Semi{$stRet.setDoWhileLoop($s.stRet, $e.expRet);}
-    | For LeftParen f=forCondition RightParen s=statement {$stRet.setForLoop($f.forconRet, $s.stRet);};
+    :While LeftParen e=expression RightParen s=statement {$stRet = new WhileStatement($e.expRet, $s.stRet);}
+    | Do s=statement While LeftParen e=expression RightParen Semi{$stRet = new DoWhileStatement($s.stRet, $e.expRet);}
+    | For LeftParen f=forCondition RightParen s=statement {$stRet = new ForStatement($f.forconRet, $s.stRet);};
 
 forCondition returns [ForCondition forconRet]
     @init {$forconRet = new ForCondition();}

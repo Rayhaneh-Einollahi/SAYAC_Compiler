@@ -1,4 +1,4 @@
-// Generated from D:/Ray_Universe/compiler/phase-2-ce-Rayhaneh-Einollahi/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
+// Generated from G:/stuff/Paper/SAYAC/SAYAC_Compiler/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
 package main.grammar;
 
     import java.util.List;
@@ -3904,7 +3904,6 @@ public class SimpleLangParser extends Parser {
 	public final IterationStatementContext iterationStatement() throws RecognitionException {
 		IterationStatementContext _localctx = new IterationStatementContext(_ctx, getState());
 		enterRule(_localctx, 70, RULE_iterationStatement);
-		((IterationStatementContext)_localctx).stRet =  new IterationStatement();
 		try {
 			setState(704);
 			_errHandler.sync(this);
@@ -3922,7 +3921,7 @@ public class SimpleLangParser extends Parser {
 				match(RightParen);
 				setState(685);
 				((IterationStatementContext)_localctx).s = statement();
-				_localctx.stRet.setWhileLoop(((IterationStatementContext)_localctx).e.expRet, ((IterationStatementContext)_localctx).s.stRet);
+				((IterationStatementContext)_localctx).stRet =  new WhileStatement(((IterationStatementContext)_localctx).e.expRet, ((IterationStatementContext)_localctx).s.stRet);
 				}
 				break;
 			case Do:
@@ -3942,7 +3941,7 @@ public class SimpleLangParser extends Parser {
 				match(RightParen);
 				setState(694);
 				match(Semi);
-				_localctx.stRet.setDoWhileLoop(((IterationStatementContext)_localctx).s.stRet, ((IterationStatementContext)_localctx).e.expRet);
+				((IterationStatementContext)_localctx).stRet =  new DoWhileStatement(((IterationStatementContext)_localctx).s.stRet, ((IterationStatementContext)_localctx).e.expRet);
 				}
 				break;
 			case For:
@@ -3958,7 +3957,7 @@ public class SimpleLangParser extends Parser {
 				match(RightParen);
 				setState(701);
 				((IterationStatementContext)_localctx).s = statement();
-				_localctx.stRet.setForLoop(((IterationStatementContext)_localctx).f.forconRet, ((IterationStatementContext)_localctx).s.stRet);
+				((IterationStatementContext)_localctx).stRet =  new ForStatement(((IterationStatementContext)_localctx).f.forconRet, ((IterationStatementContext)_localctx).s.stRet);
 				}
 				break;
 			default:

@@ -113,30 +113,46 @@ public class TestVisitor extends Visitor<Void>{
         return null;
     }
 
-
-    public Void visit(IterationStatement iterationStatement) {
+    public Void visit(ForStatement forStatement){
         System.out.print("Line ");
-        System.out.print(iterationStatement.getLine());
-        String kind;
-        if(iterationStatement.getKind() == IterationStatement.Kind.FOR)
-            kind = "for";
-        else if(iterationStatement.getKind() == IterationStatement.Kind.WHILE)
-            kind = "while";
-        else
-            kind = "do-while";
+        System.out.print(forStatement.getLine());
+        System.out.print(": Stmt for = ");
+        System.out.println(forStatement.getBody().getStatementCount());
+        if (forStatement.getForCondition() != null) {
+            forStatement.getForCondition().accept(this);
+        }
+        if (forStatement.getBody() != null) {
+            forStatement.getBody().accept(this);
+        }
+        return null;
+    }
 
-        System.out.print(": Stmt " + kind + " = ");
-        System.out.println(iterationStatement.getBody().getStatementCount());
+    public Void visit(WhileStatement whileStatement){
+        System.out.print("Line ");
+        System.out.print(whileStatement.getLine());
+        System.out.print(": Stmt while = ");
+        System.out.println(whileStatement.getBody().getStatementCount());
+        if (whileStatement.getCondition() != null) {
+            whileStatement.getCondition().accept(this);
+        }
+        if (whileStatement.getBody() != null) {
+            whileStatement.getBody().accept(this);
+        }
+        return null;
+    }
 
-        if (iterationStatement.getCondition() != null) {
-            iterationStatement.getCondition().accept(this);
+    public Void visit(DoWhileStatement doWhileStatement){
+        System.out.print("Line ");
+        System.out.print(doWhileStatement.getLine());
+        System.out.print(": Stmt do-while = ");
+        System.out.println(doWhileStatement.getBody().getStatementCount());
+        if (doWhileStatement.getCondition() != null) {
+            doWhileStatement.getCondition().accept(this);
         }
-        if (iterationStatement.getBody() != null) {
-            iterationStatement.getBody().accept(this);
+        if (doWhileStatement.getBody() != null) {
+            doWhileStatement.getBody().accept(this);
         }
-        if (iterationStatement.getForCondition() != null) {
-            iterationStatement.getForCondition().accept(this);
-        }
+
         return null;
     }
 

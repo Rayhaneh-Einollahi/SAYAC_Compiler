@@ -21,7 +21,9 @@ public interface IVisitor<T> {
     T visit(Designation designation);
     T visit(BlockItem blockItem);
     T visit(CompoundStatement compoundStatement);
-    T visit(IterationStatement iterationStatement);
+    T visit(ForStatement forStatement);
+    T visit(WhileStatement whileStatement);
+    T visit(DoWhileStatement doWhileStatement);
     T visit(JumpStatement jumpStatement);
     T visit(ForCondition forCondition);
     T visit(ExpressionStatement expressionStatement);

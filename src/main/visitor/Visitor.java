@@ -238,16 +238,32 @@ public abstract class Visitor<T> implements IVisitor<T> {
         }
         return null;
     }
-    public T visit(IterationStatement iterationStatement) {
+    public T visit(ForStatement forStatement){
+        if (forStatement.getForCondition() != null) {
+            forStatement.getForCondition().accept(this);
+        }
+        if (forStatement.getBody() != null) {
+            forStatement.getBody().accept(this);
+        }
+        return null;
+    }
 
-        if (iterationStatement.getForCondition() != null) {
-            iterationStatement.getForCondition().accept(this);
+    public T visit(WhileStatement whileStatement){
+        if (whileStatement.getCondition() != null) {
+            whileStatement.getCondition().accept(this);
         }
-        if (iterationStatement.getCondition() != null) {
-            iterationStatement.getCondition().accept(this);
+        if (whileStatement.getBody() != null) {
+            whileStatement.getBody().accept(this);
         }
-        if (iterationStatement.getBody() != null) {
-            iterationStatement.getBody().accept(this);
+        return null;
+    }
+
+    public T visit(DoWhileStatement doWhileStatement){
+        if (doWhileStatement.getCondition() != null) {
+            doWhileStatement.getCondition().accept(this);
+        }
+        if (doWhileStatement.getBody() != null) {
+            doWhileStatement.getBody().accept(this);
         }
         return null;
     }
