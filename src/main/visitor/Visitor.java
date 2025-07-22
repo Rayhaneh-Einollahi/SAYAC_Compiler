@@ -2,6 +2,11 @@ package main.visitor;
 
 import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
+import main.ast.nodes.Statement.IterationStatement.*;
+import main.ast.nodes.Statement.JumpStatement.BreakStatement;
+import main.ast.nodes.Statement.JumpStatement.ContinueStatement;
+import main.ast.nodes.Statement.JumpStatement.JumpStatement;
+import main.ast.nodes.Statement.JumpStatement.ReturnStatement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.primitives.BoolVal;
@@ -267,13 +272,21 @@ public abstract class Visitor<T> implements IVisitor<T> {
         }
         return null;
     }
-    public T visit(JumpStatement jumpStatement) {
+    public T visit(ContinueStatement continueStatement){
+        return null;
+    }
 
-        if (jumpStatement.getExpr() != null) {
-            jumpStatement.getExpr().accept(this);
+    public T visit(BreakStatement breakStatement){
+        return null;
+    }
+
+    public T visit(ReturnStatement returnStatement){
+        if(returnStatement.getExpr() != null){
+            returnStatement.getExpr().accept(this);
         }
         return null;
     }
+
     public T visit(ForCondition forCondition) {
 
         if (forCondition.getDeclaration() != null) {

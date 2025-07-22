@@ -2,6 +2,8 @@ package main.visitor;
 
 import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
+import main.ast.nodes.Statement.IterationStatement.*;
+import main.ast.nodes.Statement.JumpStatement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.primitives.*;
@@ -24,7 +26,9 @@ public interface IVisitor<T> {
     T visit(ForStatement forStatement);
     T visit(WhileStatement whileStatement);
     T visit(DoWhileStatement doWhileStatement);
-    T visit(JumpStatement jumpStatement);
+    T visit(ContinueStatement continueStatement);
+    T visit(BreakStatement breakStatement);
+    T visit(ReturnStatement returnStatement);
     T visit(ForCondition forCondition);
     T visit(ExpressionStatement expressionStatement);
     T visit(SelectionStatement selectionStatement);

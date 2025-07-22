@@ -2,9 +2,10 @@ package main.visitor;
 
 import main.ast.nodes.*;
 import main.ast.nodes.Statement.*;
+import main.ast.nodes.Statement.IterationStatement.*;
+import main.ast.nodes.Statement.JumpStatement.JumpStatement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
-import main.ast.nodes.expr.primitives.*;
 
 
 /*GOALs:
@@ -156,15 +157,6 @@ public class TestVisitor extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(JumpStatement jumpStatement) {
-        if (jumpStatement.getExpr() != null) {
-            jumpStatement.getExpr().accept(this);
-        }
-        if (jumpStatement.getCommand() != null) {
-            jumpStatement.getCommand().accept(this);
-        }
-        return null;
-    }
 
     public Void visit(SelectionStatement selectionStatement) {
         System.out.print("Line ");

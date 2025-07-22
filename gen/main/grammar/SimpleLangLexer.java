@@ -6,6 +6,8 @@ package main.grammar;
     import main.ast.nodes.*;
     import main.ast.nodes.declaration.*;
     import main.ast.nodes.Statement.*;
+    import main.ast.nodes.Statement.IterationStatement.*;
+    import main.ast.nodes.Statement.JumpStatement.*;
     import main.ast.nodes.expr.*;
     import main.ast.nodes.expr.primitives.*;
     import main.ast.nodes.expr.operator.*;

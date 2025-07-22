@@ -1,14 +1,16 @@
-package main.ast.nodes.Statement;
+package main.ast.nodes.Statement.IterationStatement;
 
+import main.ast.nodes.Statement.Statement;
 import main.ast.nodes.expr.Expr;
 import main.visitor.IVisitor;
 
-public class DoWhileStatement extends IterationStatement{
+public class WhileStatement extends IterationStatement{
     private Expr condition;
-    public DoWhileStatement(Statement body, Expr condition) {
+    public WhileStatement(Expr condition, Statement body) {
         this.condition = condition;
         this.body = body;
     }
+
     public Expr getCondition() {
         return condition;
     }

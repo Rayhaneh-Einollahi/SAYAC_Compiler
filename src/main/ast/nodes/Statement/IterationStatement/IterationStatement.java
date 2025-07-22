@@ -1,10 +1,9 @@
-package main.ast.nodes.Statement;
+package main.ast.nodes.Statement.IterationStatement;
 
-import main.ast.nodes.expr.Expr;
+import main.ast.nodes.Statement.Statement;
 import main.symbolTable.SymbolTable;
-import main.visitor.IVisitor;
 
-public abstract class IterationStatement extends Statement{
+public abstract class IterationStatement extends Statement {
     protected Statement body;
 
     private SymbolTable symbol_table;

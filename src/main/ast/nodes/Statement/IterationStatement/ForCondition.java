@@ -1,4 +1,4 @@
-package main.ast.nodes.Statement;
+package main.ast.nodes.Statement.IterationStatement;
 
 import main.ast.nodes.Node;
 import main.ast.nodes.declaration.Declaration;

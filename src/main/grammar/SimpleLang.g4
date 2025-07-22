@@ -5,6 +5,8 @@ grammar SimpleLang;
     import main.ast.nodes.*;
     import main.ast.nodes.declaration.*;
     import main.ast.nodes.Statement.*;
+    import main.ast.nodes.Statement.IterationStatement.*;
+    import main.ast.nodes.Statement.JumpStatement.*;
     import main.ast.nodes.expr.*;
     import main.ast.nodes.expr.primitives.*;
     import main.ast.nodes.expr.operator.*;
@@ -331,8 +333,11 @@ forExpression returns [List<Expr> list]:
     e=expression{$list.add($e.expRet);} (Comma e2=expression{$list.add($e2.expRet);})*;
 
 jumpStatement returns [JumpStatement stRet]:
-    {$stRet = new JumpStatement();}
-    ( c=Continue | c=Break | c=Return (e=expression{$stRet.setExpr($e.expRet);})? ){$stRet.setCommand(new StringVal($c.text));} Semi ;
+
+    ( Continue {$stRet = new ContinueStatement();}
+    | Break {$stRet = new BreakStatement();}
+    | Return {$stRet = new ReturnStatement();} (e=expression{((ReturnStatement)$stRet).setExpr($e.expRet);})? )
+    Semi ;
 
 Break                 : 'break'                 ;
 Char                  : 'char'                  ;

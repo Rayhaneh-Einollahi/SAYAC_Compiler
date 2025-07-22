@@ -1,9 +1,7 @@
 package main.visitor;
 
-import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
-import main.ast.nodes.declaration.*;
-import main.ast.nodes.expr.*;
+import main.ast.nodes.Statement.JumpStatement.*;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,6 +1,6 @@
-package main.ast.nodes.Statement;
+package main.ast.nodes.Statement.IterationStatement;
 
-import main.ast.nodes.expr.Expr;
+import main.ast.nodes.Statement.Statement;
 import main.visitor.IVisitor;
 
 public class ForStatement extends IterationStatement{
