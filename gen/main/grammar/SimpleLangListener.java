@@ -419,4 +419,14 @@ public interface SimpleLangListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitJumpStatement(SimpleLangParser.JumpStatementContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SimpleLangParser#constant}.
+	 * @param ctx the parse tree
+	 */
+	void enterConstant(SimpleLangParser.ConstantContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleLangParser#constant}.
+	 * @param ctx the parse tree
+	 */
+	void exitConstant(SimpleLangParser.ConstantContext ctx);
 }

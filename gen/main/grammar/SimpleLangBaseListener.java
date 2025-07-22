@@ -504,6 +504,18 @@ public class SimpleLangBaseListener implements SimpleLangListener {
 	 * <p>The default implementation does nothing.</p>
 	 */
 	@Override public void exitJumpStatement(SimpleLangParser.JumpStatementContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void enterConstant(SimpleLangParser.ConstantContext ctx) { }
+	/**
+	 * {@inheritDoc}
+	 *
+	 * <p>The default implementation does nothing.</p>
+	 */
+	@Override public void exitConstant(SimpleLangParser.ConstantContext ctx) { }
 
 	/**
 	 * {@inheritDoc}

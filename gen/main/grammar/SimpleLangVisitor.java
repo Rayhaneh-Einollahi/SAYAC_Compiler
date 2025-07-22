@@ -262,4 +262,10 @@ public interface SimpleLangVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitJumpStatement(SimpleLangParser.JumpStatementContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SimpleLangParser#constant}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitConstant(SimpleLangParser.ConstantContext ctx);
 }

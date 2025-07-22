@@ -5,6 +5,8 @@ import main.ast.nodes.Statement.*;
 import main.ast.nodes.Statement.IterationStatement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
+import main.ast.nodes.expr.primitives.ConstantExpr;
+import main.ast.nodes.expr.primitives.StringExpr;
 
 
 /*GOALs:

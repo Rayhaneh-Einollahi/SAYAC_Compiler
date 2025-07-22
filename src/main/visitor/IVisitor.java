@@ -37,7 +37,6 @@ public interface IVisitor<T> {
     T visit(UnaryExpr unaryExpr);
     T visit(BinaryExpr binaryExpr);
     T visit(Identifier identifier);
-    T visit(ConstantExpr constantExpr);
     T visit(StringExpr stringExpr);
     T visit(IniListExpr iniListExpr);
     T visit(ArrayExpr arrayExpr);
@@ -47,7 +46,6 @@ public interface IVisitor<T> {
     T visit(TernaryExpr ternaryExpr);
     T visit(CommaExpr commaExpr);
     T visit(IntVal intVal);
-    T visit(StringVal string_val);
-    T visit(BoolVal int_Val);
-    T visit(DoubleVal double_val);
+    T visit(CharVal charVal);
+    T visit(FloatVal floatVal);
 }

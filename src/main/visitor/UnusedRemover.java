@@ -4,13 +4,9 @@ import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
-import main.ast.nodes.expr.primitives.StringVal;
 import main.symbolTable.SymbolTable;
-import main.symbolTable.exceptions.ItemAlreadyExistsException;
 import main.symbolTable.exceptions.ItemNotFoundException;
-import main.symbolTable.item.DecSymbolTableItem;
 import main.symbolTable.item.FuncDecSymbolTableItem;
-import main.symbolTable.item.SymbolTableItem;
 import main.symbolTable.utils.Key;
 
 import java.util.ArrayList;

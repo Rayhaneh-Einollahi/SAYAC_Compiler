@@ -8,10 +8,7 @@ import main.ast.nodes.Statement.JumpStatement.ContinueStatement;
 import main.ast.nodes.Statement.JumpStatement.ReturnStatement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
-import main.ast.nodes.expr.primitives.BoolVal;
-import main.ast.nodes.expr.primitives.DoubleVal;
-import main.ast.nodes.expr.primitives.IntVal;
-import main.ast.nodes.expr.primitives.StringVal;
+import main.ast.nodes.expr.primitives.*;
 
 /*GOALs:
 *   1. print out scope changes each time a new scope starts
@@ -304,8 +301,6 @@ public abstract class Visitor<T> implements IVisitor<T> {
     public T visit(Identifier identifier) {
         return null;
     }
-    public T visit(ConstantExpr constantExpr) {return null;}
-    public T visit(StringExpr stringExpr) {return null;}
     public T visit(IniListExpr iniListExpr) {
 
         if (iniListExpr.getTypename() != null) {
@@ -378,8 +373,8 @@ public abstract class Visitor<T> implements IVisitor<T> {
     public T visit(IntVal intVal) {
         return null;
     }
-    public T visit(StringVal string_val){return null;}
-    public T visit(BoolVal bool_val){return null;}
-    public T visit(DoubleVal double_vals){return null;}
+    public T visit(CharVal charVal){return null;}
+    public T visit(FloatVal floatVal){return null;}
+    public T visit(StringExpr stringExpr){return null;}
 
 }

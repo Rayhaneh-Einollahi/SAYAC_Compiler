@@ -6,6 +6,7 @@ import main.ast.nodes.declaration.InitDeclarator;
 import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.operator.BinaryOperator;
 import main.ast.nodes.expr.operator.UnaryOperator;
+import main.ast.nodes.expr.primitives.ConstantExpr;
 import main.visitor.Visitor;
 
 import java.util.*;

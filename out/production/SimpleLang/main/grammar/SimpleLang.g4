@@ -42,8 +42,8 @@ declarationList returns [List<Declaration> list]:
 
 expression returns [Expr expRet]
   : id=Identifier   {$expRet = new Identifier($id.text, $id.getLine());}
-  | c=Constant        {$expRet = new ConstantExpr(new StringVal($c.text));  $expRet.setLine($c.getLine());}
-  | {List<StringVal> list = new ArrayList<>();}(str=StringLiteral{list.add(new StringVal($str.text));})+  {$expRet = new StringExpr(list); $expRet.setLine($ctx.start.getLine());}
+  | c=constant        {$expRet = $c.cret;  $expRet.setLine($c.start.getLine());}
+  | {List<String> list = new ArrayList<>();}(str=StringLiteral{list.add($str.text);})+  {$expRet = new StringExpr(list); $expRet.setLine($ctx.start.getLine());}
   | LeftParen e=expression RightParen {$expRet = $e.expRet; $expRet.setLine($ctx.start.getLine());}
   | LeftParen t=typeName RightParen LeftBrace i=initializerList Comma? RightBrace {$expRet = new IniListExpr($t.typeRet, $i.list); $expRet.setLine($ctx.start.getLine());}
   | e1=expression LeftBracket e2=expression RightBracket { $expRet = new ArrayExpr($e1.expRet, $e2.expRet); $expRet.setLine($ctx.start.getLine());}
@@ -53,8 +53,8 @@ expression returns [Expr expRet]
   | { List<Token> ops = new ArrayList<>(); }
        (op=(PlusPlus  | MinusMinus | Sizeof) {ops.add($op);})* (                                          // Prefix operators (zero or more)
          id=Identifier     {$expRet = new Identifier($id.text, $id.getLine()); }
-       | c=Constant       {$expRet = new ConstantExpr(new StringVal($c.text));}
-       | {List<StringVal> list = new ArrayList<>();}(str=StringLiteral{list.add(new StringVal($str.text));})+  {$expRet = new StringExpr(list);}
+       | c=constant       {$expRet = $c.cret;}
+       | {List<String> list = new ArrayList<>();}(str=StringLiteral{list.add($str.text);})+  {$expRet = new StringExpr(list);}
        | LeftParen e=expression RightParen {$expRet = $e.expRet;}
        | LeftParen t=typeName RightParen LeftBrace i=initializerList Comma? RightBrace {$expRet = new IniListExpr($t.typeRet, $i.list);}
        | u=unaryOperator ce=castExpression { $expRet = new UnaryExpr($ce.expRet, $u.op); }
@@ -165,7 +165,7 @@ unaryOperator returns [UnaryOperator op]:
 castExpression  returns [Expr expRet]
   : LeftParen tn=typeName RightParen ce=castExpression { $expRet = new CastExpr($tn.typeRet, $ce.expRet); }
   | e=expression { $expRet = $e.expRet; }
-  | d=DigitSequence {$expRet = new IntVal(Integer.parseInt($d.text));}
+  | d=DigitSequence {$expRet = new IntVal($d.text);}
   ;
 
 assignmentOperator returns [String text]
@@ -347,6 +347,11 @@ jumpStatement returns [JumpStatement stRet]:
     | Break {$stRet = new BreakStatement();}
     | Return {$stRet = new ReturnStatement();} (e=expression{((ReturnStatement)$stRet).setExpr($e.expRet);})? )
     Semi ;
+constant returns [ConstantExpr cret]:
+    i=IntegerConstant        { $cret = new IntVal($i.text); }
+    | f=FloatingConstant       { $cret = new FloatVal($f.text); }
+    | c=CharacterConstant      { $cret = new CharVal($c.text); }
+    ;
 
 Break                 : 'break'                 ;
 Char                  : 'char'                  ;
@@ -434,10 +439,8 @@ fragment UniversalCharacterName
 fragment HexQuad
     : HexadecimalDigit HexadecimalDigit HexadecimalDigit HexadecimalDigit ;
 
-Constant
-    : IntegerConstant | FloatingConstant | CharacterConstant ;
 
-fragment IntegerConstant
+IntegerConstant
     : DecimalConstant IntegerSuffix?
     | OctalConstant IntegerSuffix?
     | HexadecimalConstant IntegerSuffix?
@@ -479,7 +482,7 @@ fragment LongSuffix
 fragment LongLongSuffix
     : 'll' | 'LL' ;
 
-fragment FloatingConstant
+FloatingConstant
     : DecimalFloatingConstant | HexadecimalFloatingConstant ;
 
 fragment DecimalFloatingConstant
@@ -512,7 +515,7 @@ fragment HexadecimalDigitSequence
 fragment FloatingSuffix
     : [flFL] ;
 
-fragment CharacterConstant
+CharacterConstant
     : '\'' CCharSequence '\'' | 'L\'' CCharSequence '\''| 'u\'' CCharSequence '\'' | 'U\'' CCharSequence '\''
     ;
 
