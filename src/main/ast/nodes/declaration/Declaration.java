@@ -1,24 +1,21 @@
 package main.ast.nodes.declaration;
 
-import main.ast.nodes.Node;
-import main.ast.nodes.expr.Expr;
-import main.ast.nodes.expr.primitives.StringVal;
 import main.visitor.IVisitor;
 
 import java.util.List;
 
 public class Declaration extends ExternalDeclaration {
-    private final List<Expr> declarationSpecifiers;
+    private final List<Type> types;
     private List<InitDeclarator> initDeclarators;
     public Declaration(
-            List<Expr> declarationSpecifiers,
+            List<Type> types,
             List<InitDeclarator> initDeclarators){
-        this.declarationSpecifiers = declarationSpecifiers;
+        this.types = types;
         this.initDeclarators = initDeclarators;
     }
     public Declaration(
-            List<Expr> declarationSpecifiers){
-        this.declarationSpecifiers = declarationSpecifiers;
+            List<Type> types){
+        this.types = types;
     }
 
     public void addInitDeclarators(List<InitDeclarator> initDeclarators){
@@ -28,12 +25,12 @@ public class Declaration extends ExternalDeclaration {
 
     public String getName(){
         if (initDeclarators==null || initDeclarators.isEmpty()){
-            return this.declarationSpecifiers.getLast().getName();
+            return this.types.getLast().getName();
         }
         return initDeclarators.getLast().getDeclarator().getName();
     }
-    public List<Expr> getDeclarationSpecifiers() {
-        return declarationSpecifiers;
+    public List<Type> getTypes() {
+        return types;
     }
 
     public List<InitDeclarator> getInitDeclarators() {
@@ -48,7 +45,7 @@ public class Declaration extends ExternalDeclaration {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Declaration other = (Declaration) obj;
-        return this.declarationSpecifiers.equals(other.declarationSpecifiers)
+        return this.types.equals(other.types)
                 && this.initDeclarators.equals(other.initDeclarators);
     }
 }

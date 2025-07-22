@@ -3,11 +3,7 @@ package main.visitor;
 import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
 import main.ast.nodes.declaration.*;
-import main.ast.nodes.expr.*;
-import main.ast.nodes.expr.primitives.StringVal;
-
 import java.util.Iterator;
-import java.util.List;
 
 /*
  *   Main Changes:
@@ -27,8 +23,8 @@ public class DefRemover extends Visitor<Void>{
             ExternalDeclaration bi = iterator.next();
             if (!(bi instanceof Declaration declaration))
                 continue;
-            String name = declaration.getDeclarationSpecifiers().getFirst().getName();
-            if (name.equals("typedef") || name.equals("const")) {
+            Type type = declaration.getTypes().getFirst();
+            if (type == Type.TYPEDEF || type == Type.CONST) {
                 iterator.remove();
                 continue;
             }
@@ -43,8 +39,8 @@ public class DefRemover extends Visitor<Void>{
                 BlockItem bi = iterator.next();
                 Declaration declaration = bi.getDeclaration();
                 if (declaration != null) {
-                    String name = declaration.getDeclarationSpecifiers().getFirst().getName();
-                    if (name.equals("typedef") || name.equals("const")) {
+                    Type type = declaration.getTypes().getFirst();
+                    if (type == Type.TYPEDEF || type == Type.CONST) {
                         iterator.remove();
                         continue;
                     }

@@ -5,7 +5,6 @@ import main.ast.nodes.Statement.*;
 import main.ast.nodes.Statement.IterationStatement.*;
 import main.ast.nodes.Statement.JumpStatement.BreakStatement;
 import main.ast.nodes.Statement.JumpStatement.ContinueStatement;
-import main.ast.nodes.Statement.JumpStatement.JumpStatement;
 import main.ast.nodes.Statement.JumpStatement.ReturnStatement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
@@ -34,11 +33,6 @@ public abstract class Visitor<T> implements IVisitor<T> {
     }
 
     public T visit(FunctionDefinition functionDefinition) {
-        if (functionDefinition.getDeclarationSpecifiers() != null){
-            for (Expr expr : functionDefinition.getDeclarationSpecifiers()) {
-                expr.accept(this);
-            }
-        }
 
         if (functionDefinition.getDeclarator() != null){
             functionDefinition.getDeclarator().accept(this);
@@ -56,11 +50,6 @@ public abstract class Visitor<T> implements IVisitor<T> {
     }
     public T visit(ExternalDeclaration externalDeclaration){return null;}
     public T visit(Declaration declaration) {
-        if (declaration.getDeclarationSpecifiers() != null){
-            for (Expr expr : declaration.getDeclarationSpecifiers()) {
-                expr.accept(this);
-            }
-        }
         if (declaration.getInitDeclarators() != null) {
             for (InitDeclarator id : declaration.getInitDeclarators()) {
                 id.accept(this);
@@ -144,22 +133,12 @@ public abstract class Visitor<T> implements IVisitor<T> {
         if (parameter.getDeclarator() != null) {
             parameter.getDeclarator().accept(this);
         }
-        if (parameter.getDeclarationSpecifiers() != null) {
-            for(Expr expr: parameter.getDeclarationSpecifiers()) {
-                expr.accept(this);
-            }
-        }
         return null;
     }
     public T visit(Typename typename) {
 
         if (typename.getDeclarator() != null) {
             typename.getDeclarator().accept(this);
-        }
-        if (typename.getSpecifierQualifiers() != null){
-            for (Expr expr : typename.getSpecifierQualifiers()) {
-                expr.accept(this);
-            }
         }
         return null;
     }

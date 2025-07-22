@@ -65,11 +65,6 @@ public class NameAnalyzer extends Visitor<Void>{
         }
 
 
-        if (functionDefinition.getDeclarationSpecifiers() != null){
-            for (Expr expr : functionDefinition.getDeclarationSpecifiers()) {
-                expr.accept(this);
-            }
-        }
 
         if (functionDefinition.getDeclarator() != null){
             functionDefinition.getDeclarator().accept(this);
@@ -117,11 +112,6 @@ public class NameAnalyzer extends Visitor<Void>{
         } catch (ItemAlreadyExistsException e) {
             ok = false;
             System.out.println("Redeclaration of variable \"" + declaration.getName() + "\" in line " + declaration.getLine());
-        }
-        if (declaration.getDeclarationSpecifiers() != null){
-            for (Expr expr : declaration.getDeclarationSpecifiers()) {
-                expr.accept(this);
-            }
         }
         if (declaration.getInitDeclarators() != null) {
             for (InitDeclarator id : declaration.getInitDeclarators()) {

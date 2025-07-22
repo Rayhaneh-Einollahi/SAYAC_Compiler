@@ -3,7 +3,6 @@ package main.visitor;
 import main.ast.nodes.*;
 import main.ast.nodes.Statement.*;
 import main.ast.nodes.Statement.IterationStatement.*;
-import main.ast.nodes.Statement.JumpStatement.JumpStatement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 
@@ -32,11 +31,7 @@ public class TestVisitor extends Visitor<Void>{
         System.out.print(functionDefinition.getLine());
         System.out.print(": Stmt function "+functionDefinition.getName() + " = ");
         System.out.println(functionDefinition.getBody().getStatementCount() + " " + functionDefinition.getArgDeclarations().size());
-        if (functionDefinition.getDeclarationSpecifiers() != null){
-            for (Expr ds: functionDefinition.getDeclarationSpecifiers()){
-                ds.accept(this);
-            }
-        }
+
         if (functionDefinition.getDeclarator() != null){
             functionDefinition.getDeclarator().accept(this);
         }
@@ -51,19 +46,7 @@ public class TestVisitor extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(Declaration declaration) {
-        if (declaration.getDeclarationSpecifiers() != null){
-            for (Expr ds: declaration.getDeclarationSpecifiers()){
-                ds.accept(this);
-            }
-        }
-        if (declaration.getInitDeclarators() != null){
-            for (InitDeclarator id: declaration.getInitDeclarators()){
-                id.accept(this);
-            }
-        }
-        return null;
-    }
+
 
 
 
@@ -448,33 +431,7 @@ public class TestVisitor extends Visitor<Void>{
         return null;
     }
 
-    public Void visit(Parameter parameter) {
-        if (parameter.getDeclarationSpecifiers() != null) {
-            for (Expr specifier : parameter.getDeclarationSpecifiers()) {
-                if (specifier != null) {
-                    specifier.accept(this);
-                }
-            }
-        }
-        if (parameter.getDeclarator() != null) {
-            parameter.getDeclarator().accept(this);
-        }
-        return null;
-    }
 
-    public Void visit(Typename typename) {
-        if (typename.getSpecifierQualifiers() != null) {
-            for (Expr specQual : typename.getSpecifierQualifiers()) {
-                if (specQual != null) {
-                    specQual.accept(this);
-                }
-            }
-        }
-        if (typename.getDeclarator() != null) {
-            typename.getDeclarator().accept(this);
-        }
-        return null;
-    }
 
 
 //    public Void visit(Assign assign) {

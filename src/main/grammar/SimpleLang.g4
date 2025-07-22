@@ -57,7 +57,7 @@ expression returns [Expr expRet]
        | {List<StringVal> list = new ArrayList<>();}(str=StringLiteral{list.add(new StringVal($str.text));})+  {$expRet = new StringExpr(list);}
        | LeftParen e=expression RightParen {$expRet = $e.expRet;}
        | LeftParen t=typeName RightParen LeftBrace i=initializerList Comma? RightBrace {$expRet = new IniListExpr($t.typeRet, $i.list);}
-       | u=unaryOperator ce=castExpression { $expRet = new UnaryExpr($ce.expRet, UnaryOperator.fromString($u.stringRet.getName())); }
+       | u=unaryOperator ce=castExpression { $expRet = new UnaryExpr($ce.expRet, $u.op); }
        | Sizeof LeftParen t=typeName RightParen { $expRet = new SizeofTypeExpr($t.typeRet);}
     )
     {
@@ -153,8 +153,14 @@ argumentExpressionList returns [List<Expr> list]:
     {$list = new ArrayList<>();}
   e=expression{$list.add($e.expRet);} (Comma e2=expression{$list.add($e2.expRet);})* ;
 
-unaryOperator returns [StringVal stringRet]:
-  cm=(And | Star | Plus | Minus | Tilde | Not){$stringRet = new StringVal($cm.text);} ;
+unaryOperator returns [UnaryOperator op]:
+  And {$op = UnaryOperator.AND;}
+  | Star {$op = UnaryOperator.STAR;}
+  | Plus {$op = UnaryOperator.PLUS;}
+  | Minus {$op = UnaryOperator.MINUS;}
+  | Tilde {$op = UnaryOperator.TILDE;}
+  | Not {$op = UnaryOperator.NOT;}
+  ;
 
 castExpression  returns [Expr expRet]
   : LeftParen tn=typeName RightParen ce=castExpression { $expRet = new CastExpr($tn.typeRet, $ce.expRet); }
@@ -175,14 +181,14 @@ declaration returns [Declaration decRet]
     }
     ;
 
-declarationSpecifiers returns [List<Expr> list]:
+declarationSpecifiers returns [List<Type> list]:
     {$list = new ArrayList<>();}
-    (spec = declarationSpecifier{$list.add($spec.specRet);})+ ;
+    (spec = declarationSpecifier{$list.add($spec.typeRet);})+ ;
 
-declarationSpecifier returns [Expr specRet]
-    : td=Typedef {$specRet = new StringVal($td.text);}
-    | ts=typeSpecifier {$specRet = $ts.typeSpecRet;}
-    | c =Const {$specRet = new StringVal($c.text);}
+declarationSpecifier returns [Type typeRet]
+    : td=Typedef {$typeRet = Type.TYPEDEF;}
+    | ts=typeSpecifier {$typeRet = $ts.typeRet;}
+    | c =Const {$typeRet = Type.CONST;}
     ;
 
 initDeclaratorList returns [List<InitDeclarator> list]:
@@ -193,23 +199,26 @@ initDeclarator returns [InitDeclarator initDecRet]
     : dec=declarator {$initDecRet = new InitDeclarator($dec.declaratorRet);}
     (Assign ini = initializer {$initDecRet.addInitializer($ini.iniRet);})? ;
 
-typeSpecifier returns [Expr typeSpecRet]
-    : Void {$typeSpecRet = new StringVal($Void.text);}
-    | Char {$typeSpecRet = new StringVal($Char.text);}
-    | Short {$typeSpecRet = new StringVal($Short.text);}
-    | Int {$typeSpecRet = new StringVal($Int.text);}
-    | Long {$typeSpecRet = new StringVal($Long.text);}
-    | Float {$typeSpecRet = new StringVal($Float.text);}
-    | Double {$typeSpecRet = new StringVal($Double.text);}
-    | Signed {$typeSpecRet = new StringVal($Signed.text);}
-    | Unsigned {$typeSpecRet = new StringVal($Unsigned.text);}
-    | Bool {$typeSpecRet = new StringVal($Bool.text);}
-    | id=Identifier {$typeSpecRet = new Identifier($id.text, $id.getLine());}
+typeSpecifier returns [Type typeRet]
+    : Void       { $typeRet = Type.VOID; }
+    | Char       { $typeRet = Type.CHAR; }
+    | Short      { $typeRet = Type.SHORT; }
+    | Int        { $typeRet = Type.INT; }
+    | Long       { $typeRet = Type.LONG; }
+    | Float      { $typeRet = Type.FLOAT; }
+    | Double     { $typeRet = Type.DOUBLE; }
+    | Signed     { $typeRet = Type.SIGNED; }
+    | Unsigned   { $typeRet = Type.UNSIGNED; }
+    | Bool       { $typeRet = Type.BOOL; }
+    | id=Identifier {
+        $typeRet = Type.IDENTIFIER;
+        $typeRet.setIdentifierName($id.getText());
+      }
     ;
 
-specifierQualifierList returns [List<Expr> list]
+specifierQualifierList returns [List<Type> list]
     @init{$list = new ArrayList<>();}
-    :(ts = typeSpecifier{$list.add($ts.typeSpecRet);} | Const{$list.add(new StringVal($Const.text));})
+    :(ts = typeSpecifier{$list.add($ts.typeRet);} | Const{$list.add(Type.CONST);})
     (sq = specifierQualifierList{$list.addAll($sq.list);})?
     ;
 
@@ -256,7 +265,7 @@ identifierList returns [List<Identifier> list]:
 
 typeName returns [Typename typeRet]:
     {$typeRet = new Typename();}
-    spl=specifierQualifierList{$typeRet.setSpecifierQualifiers($spl.list);}
+    spl=specifierQualifierList{$typeRet.setTypes($spl.list);}
     (d=abstractDeclarator{$typeRet.setDeclarator($d.declaratorRet);})?
     ;
 

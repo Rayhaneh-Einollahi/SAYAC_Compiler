@@ -1,20 +1,15 @@
 package main.ast.nodes.declaration;
 
 import main.ast.nodes.Node;
-import main.ast.nodes.expr.Expr;
-import main.ast.nodes.expr.primitives.StringVal;
 import main.visitor.IVisitor;
-
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.LinkedList;
 import java.util.List;
 
 public class Parameter extends Node {
-    private final List<Expr> declarationSpecifiers;
+    private final List<Type> types;
     private Declarator declarator;
-    public Parameter(List<Expr> declarationSpecifiers){
-        this.declarationSpecifiers = declarationSpecifiers;
+    public Parameter(List<Type> types){
+        this.types = types;
     }
 
     public void setDeclarator(Declarator declarator){
@@ -29,10 +24,10 @@ public class Parameter extends Node {
         if (declarator != null){
             initDeclarators.add(new InitDeclarator(declarator));
         }
-        return new Declaration(declarationSpecifiers, initDeclarators);
+        return new Declaration(types, initDeclarators);
     }
-    public List<Expr> getDeclarationSpecifiers() {
-        return declarationSpecifiers;
+    public List<Type> getTypes() {
+        return types;
     }
 
     public <T> T accept(IVisitor<T> visitor) {
@@ -42,7 +37,7 @@ public class Parameter extends Node {
         if (this == obj) return true;
         if (obj == null || getClass() != obj.getClass()) return false;
         Parameter other = (Parameter) obj;
-        return this.declarationSpecifiers.equals(other.declarationSpecifiers)
+        return this.types.equals(other.types)
                 && this.declarator.equals(other.declarator);
     }
 }
