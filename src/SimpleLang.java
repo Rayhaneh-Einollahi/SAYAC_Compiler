@@ -1,5 +1,5 @@
 import main.ast.nodes.Program;
-import main.codeGenerator.CodeGenerator;
+import main.codeGenerator.*;
 import main.grammar.SimpleLangLexer;
 import main.grammar.SimpleLangParser;
 import main.visitor.*;
@@ -41,10 +41,13 @@ public class SimpleLang {
         TestVisitor my6_visitor = new TestVisitor();
         my6_visitor.visit(program);
 
-
-        CodeGenerator codeGenerator = new CodeGenerator();
+        RegisterManager registerManager = new RegisterManager();
+        MemoryManager memoryManager = new MemoryManager();
+        InstructionEmitter instructionEmitter = new InstructionEmitter();
+        CodeGenContext context = new CodeGenContext(registerManager, memoryManager, instructionEmitter);
+        CodeGenerator codeGenerator = new CodeGenerator(context);
         codeGenerator.visit(program);
-        codeGenerator.printAssembly();
+//        codeGenerator.printAssembly();
 
     }
 }
