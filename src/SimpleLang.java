@@ -26,20 +26,20 @@ public class SimpleLang {
         NameAnalyzer name_analyzer = new NameAnalyzer();
         name_analyzer.visit(program);
 
-        UnusedRemover unusedRemover = new UnusedRemover();
-        unusedRemover.visit(program);
-
-        DeadStmtRemover deadRemover = new DeadStmtRemover();
-        deadRemover.visit(program);
-
-        DefRemover defRemover = new DefRemover();
-        defRemover.visit(program);
-
-        AccessAnalyzer accessAnalyzer = new AccessAnalyzer();
-        accessAnalyzer.visit(program);
-
-        TestVisitor my6_visitor = new TestVisitor();
-        my6_visitor.visit(program);
+//        UnusedRemover unusedRemover = new UnusedRemover();
+//        unusedRemover.visit(program);
+//
+//        DeadStmtRemover deadRemover = new DeadStmtRemover();
+//        deadRemover.visit(program);
+//
+//        DefRemover defRemover = new DefRemover();
+//        defRemover.visit(program);
+//
+//        AccessAnalyzer accessAnalyzer = new AccessAnalyzer();
+//        accessAnalyzer.visit(program);
+//
+//        TestVisitor testVisitor = new TestVisitor();
+//        testVisitor.visit(program);
 
         RegisterManager registerManager = new RegisterManager();
         MemoryManager memoryManager = new MemoryManager();

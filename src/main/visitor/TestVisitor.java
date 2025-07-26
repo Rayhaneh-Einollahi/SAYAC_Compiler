@@ -5,8 +5,7 @@ import main.ast.nodes.Statement.*;
 import main.ast.nodes.Statement.IterationStatement.*;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
-import main.ast.nodes.expr.primitives.ConstantExpr;
-import main.ast.nodes.expr.primitives.StringExpr;
+import main.ast.nodes.expr.primitives.*;
 
 
 /*GOALs:
@@ -171,41 +170,41 @@ public class TestVisitor extends Visitor<Void>{
 
 
     public Void visit(ArrayExpr arrayExpr) {
-//        System.out.print("Line ");
-//        System.out.print(arrayExpr.getLine());
-//        System.out.println(": Expr Array");
-//        if (arrayExpr.getOutside() != null) {
-//            arrayExpr.getOutside().accept(this);
-//        }
-//        if (arrayExpr.getInside() != null) {
-//            arrayExpr.getInside().accept(this);
-//        }
+        System.out.print("Line ");
+        System.out.print(arrayExpr.getLine());
+        System.out.println(": Expr Array");
+        if (arrayExpr.getOutside() != null) {
+            arrayExpr.getOutside().accept(this);
+        }
+        if (arrayExpr.getInside() != null) {
+            arrayExpr.getInside().accept(this);
+        }
         return null;
     }
 
     public Void visit(BinaryExpr binaryExpr) {
-//        System.out.print("Line ");
-//        System.out.print(binaryExpr.getLine());
-//        System.out.println(": Expr "+binaryExpr.getOperator().getSymbol() );
-//        if (binaryExpr.getFirstOperand() != null) {
-//            binaryExpr.getFirstOperand().accept(this);
-//        }
-//        if (binaryExpr.getSecondOperand() != null) {
-//            binaryExpr.getSecondOperand().accept(this);
-//        }
+        System.out.print("Line ");
+        System.out.print(binaryExpr.getLine());
+        System.out.println(": Expr "+binaryExpr.getOperator().getSymbol() );
+        if (binaryExpr.getFirstOperand() != null) {
+            binaryExpr.getFirstOperand().accept(this);
+        }
+        if (binaryExpr.getSecondOperand() != null) {
+            binaryExpr.getSecondOperand().accept(this);
+        }
         return null;
     }
 
     public Void visit(CastExpr castExpr) {
-//        System.out.print("Line ");
-//        System.out.print(castExpr.getLine());
-//        System.out.println(": Expr castExpr");
-//        if (castExpr.getTypename() != null) {
-//            castExpr.getTypename().accept(this);
-//        }
-//        if (castExpr.getCastExpr() != null) {
-//            castExpr.getCastExpr().accept(this);
-//        }
+        System.out.print("Line ");
+        System.out.print(castExpr.getLine());
+        System.out.println(": Expr castExpr");
+        if (castExpr.getTypename() != null) {
+            castExpr.getTypename().accept(this);
+        }
+        if (castExpr.getCastExpr() != null) {
+            castExpr.getCastExpr().accept(this);
+        }
         return null;
     }
 
@@ -213,109 +212,90 @@ public class TestVisitor extends Visitor<Void>{
 //        System.out.print("Line ");
 //        System.out.print(commaExpr.getLine());
 //        System.out.println(": Expr ,");
-//        if (commaExpr.getExpressions() != null) {
-//            for (Expr expr : commaExpr.getExpressions()) {
-//                expr.accept(this);
-//            }
-//        }
+        if (commaExpr.getExpressions() != null) {
+            for (Expr expr : commaExpr.getExpressions()) {
+                expr.accept(this);
+            }
+        }
         return null;
     }
 
     public Void visit(ConstantExpr constantExpr) {
-//        System.out.print("Line ");
-//        System.out.print(constantExpr.getLine());
-//        System.out.println(": Expr "+constantExpr.getStr().getName() );
-//        if (constantExpr.getStr() != null) {
-//            constantExpr.getStr().accept(this);
-//        }
+        System.out.print("Line ");
+        System.out.print(constantExpr.getLine());
+        System.out.println(": Expr constantExpr"+constantExpr.getStr() );
+
         return null;
     }
 
     public Void visit(FunctionExpr functionExpr) {
-//        System.out.print("Line ");
-//        System.out.print(functionExpr.getLine());
-//        String x = functionExpr.getName();
-//        System.out.println(": Expr " + x);
-//        if (functionExpr.getOutside() != null) {
-//            functionExpr.getOutside().accept(this);
-//        }
-//        if (functionExpr.getArguments() != null) {
-//            for (Expr arg : functionExpr.getArguments()) {
-//                arg.accept(this);
-//            }
-//        }
+        System.out.print("Line ");
+        System.out.print(functionExpr.getLine());
+        String x = functionExpr.getName();
+        System.out.println(": Expr FunctionExpr name: " + x);
+        if (functionExpr.getOutside() != null) {
+            functionExpr.getOutside().accept(this);
+        }
+        if (functionExpr.getArguments() != null) {
+            for (Expr arg : functionExpr.getArguments()) {
+                arg.accept(this);
+            }
+        }
         return null;
     }
 
     public Void visit(Identifier identifier) {
-//        System.out.print("Line ");
-//        System.out.print(identifier.getLine());
-//        System.out.println(": Expr "+identifier.getName() );
-//        if (identifier.getName() != null) {
-//            identifier.getName().accept(this);
-//        }
+
+//        System.out.print(identifier.getName());
+
         return null;
     }
 
     public Void visit(IniListExpr iniListExpr) {
-//        System.out.print("Line ");
-//        System.out.print(iniListExpr.getLine());
-//        System.out.println(": Expr initializerList" );
-//        if (iniListExpr.getTypename() != null) {
-//            iniListExpr.getTypename().accept(this);
-//        }
-//        if (iniListExpr.getInitializerList() != null) {
-//            iniListExpr.getInitializerList().accept(this);
-//        }
+        System.out.print("Line ");
+        System.out.print(iniListExpr.getLine());
+        System.out.println(": Expr initializerList" );
+        if (iniListExpr.getTypename() != null) {
+            iniListExpr.getTypename().accept(this);
+        }
+        if (iniListExpr.getInitializerList() != null) {
+            iniListExpr.getInitializerList().accept(this);
+        }
         return null;
     }
 
     public Void visit(SizeofTypeExpr sizeofTypeExpr) {
-//        System.out.print("Line ");
-//        System.out.print(sizeofTypeExpr.getLine());
-//        System.out.println(": Expr sizeOf");
+        System.out.print("Line ");
+        System.out.print(sizeofTypeExpr.getLine());
+        System.out.println(": Expr sizeOf");
 
-//        if (sizeofTypeExpr.getTypename() != null) {
-//            sizeofTypeExpr.getTypename().accept(this);
-//        }
-        return null;
-    }
-
-    public Void visit(StringExpr stringExpr) {
-//        System.out.print("Line ");
-//        System.out.print(stringExpr.getLine());
-//        System.out.println(": Expr string" );
-//        if (stringExpr.getStrings() != null) {
-//            for (StringVal str : stringExpr.getStrings()) {
-//                if (str != null) {
-//                    str.accept(this);
-//                }
-//            }
-//        }
+        if (sizeofTypeExpr.getTypename() != null) {
+            sizeofTypeExpr.getTypename().accept(this);
+        }
         return null;
     }
 
     public Void visit(TernaryExpr ternaryExpr) {
-//        System.out.print("Line ");
-//        System.out.print(ternaryExpr.getLine());
-//        System.out.println(": Expr ternary");
-//        if (ternaryExpr.getFirstOperand() != null) {
-//            ternaryExpr.getFirstOperand().accept(this);
-//        }
-//        if (ternaryExpr.getSecondOperand() != null) {
-//            ternaryExpr.getSecondOperand().accept(this);
-//        }
-//        if (ternaryExpr.getThirdOperand() != null) {
-//            ternaryExpr.getThirdOperand().accept(this);
-//        }
+        System.out.print("Line ");
+        System.out.print(ternaryExpr.getLine());
+        System.out.println(": Expr ternary");
+        if (ternaryExpr.getFirstOperand() != null) {
+            ternaryExpr.getFirstOperand().accept(this);
+        }
+        if (ternaryExpr.getSecondOperand() != null) {
+            ternaryExpr.getSecondOperand().accept(this);
+        }
+        if (ternaryExpr.getThirdOperand() != null) {
+            ternaryExpr.getThirdOperand().accept(this);
+        }
         return null;
     }
 
     public Void visit(UnaryExpr unaryExpr) {
-//        System.out.print("Line ");
-//        System.out.print(unaryExpr.getLine());
-//        System.out.println(": Expr "+unaryExpr.getOperator().getSymbol() );
-//        unaryExpr.getOperand().accept(this);
+        System.out.print("Line ");
+        System.out.print(unaryExpr.getLine());
+        System.out.println(": Expr unary "+unaryExpr.getOperator().getSymbol() );
+        unaryExpr.getOperand().accept(this);
         return null;
     }
 
@@ -395,12 +375,17 @@ public class TestVisitor extends Visitor<Void>{
     }
 
     public Void visit(InitDeclarator initDeclarator) {
+        System.out.print("Line ");
+        System.out.print(initDeclarator.getLine());
+        System.out.print(": declaration ");
         if (initDeclarator.getDeclarator() != null) {
             initDeclarator.getDeclarator().accept(this);
         }
+        System.out.print(" = ");
         if (initDeclarator.getInitializer() != null) {
             initDeclarator.getInitializer().accept(this);
         }
+        System.out.println(" ");
         return null;
     }
 
@@ -433,34 +418,22 @@ public class TestVisitor extends Visitor<Void>{
         return null;
     }
 
-
-
-
-//    public Void visit(Assign assign) {
-//        System.out.println("Used variable: " + assign.getLeftHand());
-//        assign.getRightHand().accept(this);
-//        return null;
-//    }
-//    public Void visit(VarDec varDec) {
-//        System.out.println("Declared variable: " + varDec.getVarName());
-//        return null;
-//    }
-
-//    public Void visit(FuncCallStatement funcCall) {
-//        System.out.println("Called function: " + funcCall.getFunction().getName());
-//        return null;
-//    }
-
-//    public Void visit(Identifier identifier) {
-//        System.out.println("Used variable: " + identifier.getName());
-//        return null;
-//    }
-
-//    public Void visit(FuncCallExpr func_call_expr){
-//        System.out.println("Called function: " + func_call_expr.getName());
-//        return null;
-//    }
-
+    public Void visit(IntVal intVal) {
+        System.out.print(intVal.getStr());
+        return null;
+    }
+    public Void visit(CharVal charVal){
+        System.out.print(charVal.getStr());
+        return null;
+    }
+    public Void visit(FloatVal floatVal){
+        System.out.print(floatVal.getStr());
+        return null;
+    }
+    public Void visit(StringExpr stringExpr){
+        System.out.print(stringExpr.getStr());
+        return null;
+    }
 }
 
 

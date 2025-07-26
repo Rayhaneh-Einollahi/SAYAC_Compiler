@@ -4,14 +4,13 @@ import main.ast.nodes.expr.Expr;
 import main.visitor.IVisitor;
 
 public class IntVal extends ConstantExpr {
-    private String intVal;
-    public IntVal(String intVal){this.intVal = intVal;
+    public IntVal(String intVal){
         this.str = intVal;
     }
 
     @Override
     public String toString(){
-        return "IntValue:" + String.valueOf(this.intVal);}
+        return "IntValue:" + this.str;}
     @Override
     public <T> T accept(IVisitor<T> visitor){return visitor.visit(this);}
 }

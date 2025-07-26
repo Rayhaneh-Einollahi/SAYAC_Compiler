@@ -7,7 +7,9 @@ import java.util.List;
 
 public class StringExpr extends ConstantExpr{
     private List<String> strings;
-    public StringExpr(List<String> strings) { this.strings = strings; }
+    public StringExpr(List<String> strings) { this.strings = strings;
+        this.str = String.join("", strings);
+    }
 
     public List<String> getStrings() {
         return strings;
