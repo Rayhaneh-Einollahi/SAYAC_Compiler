@@ -18,11 +18,17 @@ import java.util.*;
 
 
 public class CodeGenerator extends Visitor<String> {
-    private final CodeGenContext context;
     private boolean insideFunction = false;
+    public final RegisterManager registerManager;
+    public final MemoryManager memoryManager;
+    public final InstructionEmitter emitter;
+    public final LabelManager labelManager;
 
-    public CodeGenerator(CodeGenContext context) {
-        this.context = context;
+    public CodeGenerator() {
+        registerManager = new RegisterManager();
+        memoryManager = new MemoryManager();
+        emitter = new InstructionEmitter();
+        labelManager = new LabelManager();
     }
 
     public String visit(Declaration declaration) {
@@ -31,7 +37,7 @@ public class CodeGenerator extends Visitor<String> {
             for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
                 String varName = initDeclarator.getDeclarator().getName();
                 String initValue = "0";
-                System.out.println(varName);
+//                System.out.println(varName);
                 if (initDeclarator.getInitializer() != null && initDeclarator.getInitializer().getExpr() != null) {
                     Expr expr = initDeclarator.getInitializer().getExpr();
                     if (expr instanceof ConstantExpr constantExpr) {
@@ -40,37 +46,65 @@ public class CodeGenerator extends Visitor<String> {
                 }
 
                 if (!insideFunction) {
-                    this.context.emitter.emitRaw(".data");
-                    this.context.emitter.emitRaw(varName + ": .word " + initValue);
-                    this.context.emitter.emitRaw(".text");
+                    this.emitter.emitRaw(".data");
+                    this.emitter.emitRaw(varName + ": .word " + initValue);
+                    this.emitter.emitRaw(".text");
                 } else {
-//                    this.context.memoryManager.beginFrame(); entering main function
+//                    this.memoryManager.beginFrame(); entering main function
                     if (initValue != null) {
-                        int offset = this.context.memoryManager.allocateLocal(varName, 4);
-                        int reg = this.context.registerManager.allocate();
-                        int reg2 = this.context.registerManager.allocate();
-                        this.context.emitter.emit("MSI", this.context.registerManager.regName(reg), initValue);
-                        this.context.emitter.emit("MSI", this.context.registerManager.regName(reg2), "1000");
+                        int offset = this.memoryManager.allocateLocal(varName, 4);
+                        int reg = this.registerManager.allocate();
+                        int reg2 = this.registerManager.allocate();
+                        this.emitter.emit("MSI", this.registerManager.regName(reg), initValue);
+                        this.emitter.emit("MSI", this.registerManager.regName(reg2), "1000");
 
-                        this.context.emitter.emit("ADI", this.context.registerManager.regName(reg2), this.context.memoryManager.stackAccess(-4));
+                        this.emitter.emit("ADI", this.registerManager.regName(reg2), this.memoryManager.stackAccess(-4));
 
-                        this.context.emitter.emit("STR", this.context.registerManager.regName(reg2), this.context.registerManager.regName(reg));
-                        this.context.registerManager.free(reg);
-                        this.context.registerManager.free(reg2);
+                        this.emitter.emit("STR", this.registerManager.regName(reg2), this.registerManager.regName(reg));
+                        this.registerManager.free(reg);
+                        this.registerManager.free(reg2);
                     }
                 }
             }
 
-            this.context.emitter.printCode();
+            this.emitter.printCode();
 
             return null;
 
 
     }
 
+    /**
+     * generate code for Function: <p>
+     * 1 - generate a label for the beginning of function definition <p>
+     * 2 - store the current frame-pointer to the stack <p>
+     * 3 - as new function is called another frame should be initialized so the fp is updated to current stack-pointer <p>
+     * 4 - move the sp to point to the clear cell of memory <p>
+     * 5 - store the used registers
+     * @param functionDefinition : function definition node
+     */
 
     public String visit(FunctionDefinition functionDefinition) {
-        this.insideFunction = true;
+        this.emitter.emitRaw(labelManager.generateFunctionLabel(functionDefinition.getName()));
+        this.emitter.STR("fp", "sp");
+        this.emitter.ADR("r0", "sp", "fp");
+        this.emitter.ADI("-2", "sp");
+        //Todo (optional): use liveness  analyze to allocate space for locals instead of allocating all:
+        this.emitter.ADI(String.valueOf(functionDefinition.getNumLocals() * -2), "sp");
+
+        List<String> usableRegisters = registerManager.getUsableRegisters(); //Todo:[option 1(naive approach)] get all the
+                                                                             // registers except the ones in use like
+                                                                             // fp, sp, r0
+                                                                             // [option 2] get the code generated for this part
+                                                                             // and save only the registers used in this func
+                                                                             //
+
+        for (String reg : usableRegisters) {
+            this.emitter.STR( reg, "sp");
+            this.emitter.ADI( "-4", "sp");
+        }
+
+        //----------------------------------------------
         if (functionDefinition.getDeclarator() != null){
             functionDefinition.getDeclarator().accept(this);
         }
@@ -82,31 +116,25 @@ public class CodeGenerator extends Visitor<String> {
         if (functionDefinition.getBody() != null){
             functionDefinition.getBody().accept(this);
         }
+        //--------------------------------------------------
+
+        this.emitter.emitRaw(labelManager.generateFunctionReturnLabel(functionDefinition.getName()));
+
+        for (int i = usableRegisters.size() - 1; i >= 0; i--) {
+            String reg = usableRegisters.get(i);
+            this.emitter.ADI( "4", "sp");
+            this.emitter.LDR("sp", reg);
+        }
+
+        this.emitter.ADR("r0","fp", "sp");
+        this.emitter.LDR("fp", "fp");
+        this.emitter.Ret();
+
+
         return null;
     }
 
-    public String visit(Identifier identifier) {
-        System.out.println("identifier");
-        return null;
-    }
-    public String visit(ConstantExpr constantExpr) {
-        System.out.println("constantExpr");
-        return null;
-    }
-
-    public String visit(UnaryExpr unaryExpr) {
-        System.out.println("unaryExpr");
-        return null;
-    }
-    public String visit(BinaryExpr binaryExpr) {
-        System.out.println("binaryExpr");
-        return null;
-    }
-
-    public String visit(SelectionStatement selectionStatement) {
-        System.out.println("selectionStatement");
-        return null;
-    }
-    public String visit(WhileStatement whileStmt) {  return null; }
-    public String visit(ForStatement forStmt) {  return null; }
 }
+
+
+

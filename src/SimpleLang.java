@@ -22,30 +22,25 @@ public class SimpleLang {
         SimpleLangParser flParser = new SimpleLangParser(tokens);
         Program program = flParser.compilationUnit().programRet;
 
-
-        NameAnalyzer name_analyzer = new NameAnalyzer();
-        name_analyzer.visit(program);
-
+//
+//        NameAnalyzer name_analyzer = new NameAnalyzer();
+//        name_analyzer.visit(program);
+//
 //        UnusedRemover unusedRemover = new UnusedRemover();
 //        unusedRemover.visit(program);
 //
 //        DeadStmtRemover deadRemover = new DeadStmtRemover();
 //        deadRemover.visit(program);
-//
+
 //        DefRemover defRemover = new DefRemover();
 //        defRemover.visit(program);
-//
+
 //        AccessAnalyzer accessAnalyzer = new AccessAnalyzer();
 //        accessAnalyzer.visit(program);
-//
-//        TestVisitor testVisitor = new TestVisitor();
-//        testVisitor.visit(program);
 
-        RegisterManager registerManager = new RegisterManager();
-        MemoryManager memoryManager = new MemoryManager();
-        InstructionEmitter instructionEmitter = new InstructionEmitter();
-        CodeGenContext context = new CodeGenContext(registerManager, memoryManager, instructionEmitter);
-        CodeGenerator codeGenerator = new CodeGenerator(context);
+//        TestVisitor my6_visitor = new TestVisitor();
+//        my6_visitor.visit(program);
+        CodeGenerator codeGenerator = new CodeGenerator();
         codeGenerator.visit(program);
 //        codeGenerator.printAssembly();
 

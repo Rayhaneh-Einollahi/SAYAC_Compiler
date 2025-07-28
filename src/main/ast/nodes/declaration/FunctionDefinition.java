@@ -67,6 +67,11 @@ public class FunctionDefinition extends ExternalDeclaration {
         return  allDeclarations;
     }
 
+    public int getNumLocals(){
+        return 0;   //TODO : write the function to return the total number of locals used in the function
+        /* naive approach */
+    }
+
     @Override
     public <T> T accept(IVisitor<T> visitor) {
         return visitor.visit(this);
