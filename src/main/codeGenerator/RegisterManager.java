@@ -1,32 +1,235 @@
 package main.codeGenerator;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class RegisterManager {
-    private final boolean[] used = new boolean[16];
+    private int tmpVarCounter;
+    public enum RegisterState { FREE, USED, RESERVED }
+    private final Map<String, RegisterState> registerStates = new HashMap<>();
+    private final List<String> allRegisters = Arrays.asList("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11");
+    private final Map<String, String> regToVar = new HashMap<>();
+    private final Map<String, String> varToReg = new HashMap<>();
+    private final Map<String, Integer> spilledVars = new HashMap<>();
+    private final MemoryManager memoryManager;
+    private final Map<String, Integer> varUseCounts = new HashMap<>();
+    private final Set<String> pinnedRegisters = new HashSet<>();
 
-    public RegisterManager() {
-        used[0] = true;
-        used[15] = true;
+    /* Todo: instead of printing, add a class for storing the instruction needed to be added to emitter so the emitter
+        uses it to generate the code
+     */
+    public RegisterManager(MemoryManager memoryManager) {
+        this.memoryManager = memoryManager;
+        this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
+        this.tmpVarCounter = 0;
     }
 
-    public int allocate() {
-        for (int i = 1; i < 15; i++) {
-            if (!used[i]) {
-                used[i] = true;
-                return i;
+    /**
+     * when needing a temp register, create a temporary varName that points to the result
+     */
+    public String newTmpVarName(){
+        tmpVarCounter++;
+        return "tmp"+tmpVarCounter;
+    }
+
+    /**
+     * get a register for the purpose of writing into it that refers to the variable varName
+     */
+    public String allocateForWrite(String varName){
+        if (varToReg.containsKey(varName)) {
+            incrementUseCount(varName);
+            return varToReg.get(varName);
+        }
+        spilledVars.remove(varName);
+
+        String reg = findFreeRegister();
+        if (reg != null) {
+            assignRegister(reg, varName);
+            incrementUseCount(varName);
+            return reg;
+        }
+        return handleSpill(varName);
+
+    }
+    /**
+     * get a register for the purpose of reading from it that refers to the variable varName
+     * so if it's not in a register we undo spilling it from memory
+     */
+    public String allocateForRead(String varName) {
+
+        if (varToReg.containsKey(varName)) {
+            incrementUseCount(varName);
+            return varToReg.get(varName);
+        }
+
+        if (spilledVars.containsKey(varName)) {
+            return loadSpilled(varName);
+        }
+
+        String reg = findFreeRegister();
+        if (reg != null) {
+            assignRegister(reg, varName);
+            incrementUseCount(varName);
+            return reg;
+        }
+        return handleSpill(varName);
+    }
+
+
+    public void freeRegister(String varName) {
+        if (!varToReg.containsKey(varName)) return;
+
+        String reg = varToReg.get(varName);
+        regToVar.remove(reg);
+        varToReg.remove(varName);
+        registerStates.put(reg, RegisterState.FREE);
+        varUseCounts.remove(varName);
+    }
+
+
+    public String loadSpilled(String varName) {
+        if (!spilledVars.containsKey(varName)) {
+            throw new RuntimeException("Variable not spilled: " + varName);
+        }
+
+        int offset = spilledVars.remove(varName);
+        String reg = allocateForRead(varName);
+        System.out.println("LOAD " + reg + ", [FP " + offset + "]  // reload spilled " + varName);
+        incrementUseCount(varName);
+        return reg;
+    }
+
+
+    /**
+     * Allocate a specific register (for special purposes)
+     */
+    public String allocateSpecificRegister(String reg, String varName) {
+        if (registerStates.get(reg) != RegisterState.FREE) {
+            throw new RuntimeException("Register " + reg + " is not free");
+        }
+
+        assignRegister(reg, varName);
+        incrementUseCount(varName);
+        return reg;
+    }
+    public void freeRegisterByReg(String reg) {
+        if (!regToVar.containsKey(reg)) return;
+
+        String varName = regToVar.get(reg);
+        freeRegister(varName);
+    }
+
+    /**
+     * Reserve a register so it won't be allocated
+     */
+    public void reserveRegister(String reg) {
+        if (regToVar.containsKey(reg)) {
+            throw new RuntimeException("Cannot reserve register " + reg + " - it's currently in use");
+        }
+        registerStates.put(reg, RegisterState.RESERVED);
+        pinnedRegisters.add(reg);
+    }
+
+    /**
+     * Release a reserved register
+     */
+    public void releaseRegister(String reg) {
+        if (pinnedRegisters.contains(reg)) {
+            registerStates.put(reg, RegisterState.FREE);
+            pinnedRegisters.remove(reg);
+        }
+    }
+    public Set<String> getUsedRegisters() {
+        return regToVar.keySet();
+    }
+
+    public Set<String> getSpilledVariables() {
+        return spilledVars.keySet();
+    }
+
+    public Set<String> getFreeRegisters() {
+        return registerStates.entrySet().stream()
+                .filter(e -> e.getValue() == RegisterState.FREE)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+    }
+
+
+    public void printState() {
+        System.out.println("\nRegister State:");
+        System.out.println("---------------");
+
+        for (String reg : allRegisters) {
+            String var = regToVar.getOrDefault(reg, "-");
+            String state = registerStates.get(reg).toString();
+            if (pinnedRegisters.contains(reg)) {
+                state += " (pinned)";
+            }
+            System.out.printf("%-4s -> %-10s %s%n", reg, var, state);
+        }
+
+        if (!spilledVars.isEmpty()) {
+            System.out.println("\nSpilled Variables:");
+            spilledVars.forEach((var, offset) ->
+                    System.out.printf("%s -> [FP %d]%n", var, offset));
+        }
+    }
+
+
+
+    private String findFreeRegister() {
+        for (String reg : allRegisters) {
+            if (registerStates.get(reg) == RegisterState.FREE) {
+                return reg;
             }
         }
-        throw new RuntimeException("No free registers available!");
+        return null;
     }
 
-    public void free(int reg) {
-        if (reg <= 0 || reg >= 15)
-            throw new IllegalArgumentException("Cannot free r" + reg);
-        used[reg] = false;
+    private String handleSpill(String varName) {
+        String spillReg = chooseSpillCandidate();
+        String spilledVar = regToVar.get(spillReg);
+
+        int offset = memoryManager.getOffset(spilledVar);
+        System.out.println("SPILL " + spilledVar + " to [FP " + offset + "] from " + spillReg);
+
+        regToVar.remove(spillReg);
+        varToReg.remove(spilledVar);
+        spilledVars.put(spilledVar, offset);
+        registerStates.put(spillReg, RegisterState.FREE);
+
+        assignRegister(spillReg, varName);
+        incrementUseCount(varName);
+        return spillReg;
     }
 
-    public String regName(int reg) {
-        return "r" + reg;
+    private void assignRegister(String reg, String varName) {
+        regToVar.put(reg, varName);
+        varToReg.put(varName, reg);
+        registerStates.put(reg, RegisterState.USED);
+    }
+
+    private void incrementUseCount(String varName) {
+        varUseCounts.put(varName, varUseCounts.getOrDefault(varName, 0) + 1);
+    }
+
+    /* Todo: include the registers needed for the operation in calling this function
+        so they are kept untouched
+     */
+    private String chooseSpillCandidate() {
+        // Don't spill pinned registers
+        List<String> candidates = allRegisters.stream()
+                .filter(reg -> registerStates.get(reg) == RegisterState.USED)
+                .filter(reg -> !pinnedRegisters.contains(reg))
+                .toList();
+
+        if (candidates.isEmpty()) {
+            throw new RuntimeException("No register to spill");
+        }
+
+        return candidates.stream()
+                .min(Comparator.comparingInt(reg ->
+                        varUseCounts.getOrDefault(regToVar.get(reg), Integer.MAX_VALUE)))
+                .orElse(candidates.get(0));
     }
 }
