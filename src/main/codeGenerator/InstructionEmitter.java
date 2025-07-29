@@ -32,11 +32,11 @@ public class InstructionEmitter {
         this.emit("MSI", String.valueOf(imm), destReg);
     }
 
-    public void SW(String valueReg, String adrReg, String imm){
+    public void SW(String valueReg, String adrReg, int imm){
         this.emit(""); //Todo : generate instructions based on sayac limitation to handle immediate
     }
 
-    public void LW(String valueReg, String adrReg, String imm){
+    public void LW(String valueReg, String adrReg, int imm){
         this.emit(""); //Todo : generate instructions based on sayac limitation to handle immediate
     }
 

@@ -15,9 +15,7 @@ public class RegisterManager {
     private final Map<String, Integer> varUseCounts = new HashMap<>();
     private final Set<String> pinnedRegisters = new HashSet<>();
 
-    /* Todo: instead of printing, add a class for storing the instruction needed to be added to emitter so the emitter
-        uses it to generate the code
-     */
+
     public RegisterManager(MemoryManager memoryManager) {
         this.memoryManager = memoryManager;
         this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
@@ -35,7 +33,7 @@ public class RegisterManager {
     /**
      * get a register for the purpose of writing into it that refers to the variable varName
      */
-    public String allocateForWrite(String varName){
+    public String allocateForWrite(String varName, List<RegisterAction> actions){
         if (varToReg.containsKey(varName)) {
             incrementUseCount(varName);
             return varToReg.get(varName);
@@ -48,14 +46,14 @@ public class RegisterManager {
             incrementUseCount(varName);
             return reg;
         }
-        return handleSpill(varName);
+        return handleSpill(varName, actions);
 
     }
     /**
      * get a register for the purpose of reading from it that refers to the variable varName
      * so if it's not in a register we undo spilling it from memory
      */
-    public String allocateForRead(String varName) {
+    public String allocateForRead(String varName, List<RegisterAction> actions) {
 
         if (varToReg.containsKey(varName)) {
             incrementUseCount(varName);
@@ -63,7 +61,7 @@ public class RegisterManager {
         }
 
         if (spilledVars.containsKey(varName)) {
-            return loadSpilled(varName);
+            return loadSpilled(varName, actions);
         }
 
         String reg = findFreeRegister();
@@ -72,7 +70,7 @@ public class RegisterManager {
             incrementUseCount(varName);
             return reg;
         }
-        return handleSpill(varName);
+        return handleSpill(varName, actions);
     }
 
 
@@ -87,14 +85,14 @@ public class RegisterManager {
     }
 
 
-    public String loadSpilled(String varName) {
+    public String loadSpilled(String varName, List<RegisterAction> actions) {
         if (!spilledVars.containsKey(varName)) {
             throw new RuntimeException("Variable not spilled: " + varName);
         }
 
         int offset = spilledVars.remove(varName);
-        String reg = allocateForRead(varName);
-        System.out.println("LOAD " + reg + ", [FP " + offset + "]  // reload spilled " + varName);
+        String reg = allocateForRead(varName, actions);
+        actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, varName, offset));
         incrementUseCount(varName);
         return reg;
     }
@@ -153,6 +151,9 @@ public class RegisterManager {
                 .map(Map.Entry::getKey)
                 .collect(Collectors.toSet());
     }
+    public List<String> getAllRegisters() {
+        return allRegisters;
+    }
 
 
     public void printState() {
@@ -186,12 +187,12 @@ public class RegisterManager {
         return null;
     }
 
-    private String handleSpill(String varName) {
+    private String handleSpill(String varName, List<RegisterAction> actions) {
         String spillReg = chooseSpillCandidate();
         String spilledVar = regToVar.get(spillReg);
 
         int offset = memoryManager.getOffset(spilledVar);
-        System.out.println("SPILL " + spilledVar + " to [FP " + offset + "] from " + spillReg);
+        actions.add(new RegisterAction(RegisterAction.Type.SPILL, spillReg, spilledVar, offset));
 
         regToVar.remove(spillReg);
         varToReg.remove(spilledVar);
@@ -230,6 +231,6 @@ public class RegisterManager {
         return candidates.stream()
                 .min(Comparator.comparingInt(reg ->
                         varUseCounts.getOrDefault(regToVar.get(reg), Integer.MAX_VALUE)))
-                .orElse(candidates.get(0));
+                .orElse(candidates.getFirst());
     }
 }

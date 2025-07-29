@@ -25,6 +25,8 @@ public class MemoryManager {
         return -currentOffset;
     }
 
+    //Todo: the get offset mey be used for tmp variables that are not still in the memory too,
+    //  so if they aren't present in the memory we should allocate an space for it and return that.
     public int getOffset(String varName) {
         if (!variableMap.containsKey(varName))
             throw new RuntimeException("Variable not allocated: " + varName);

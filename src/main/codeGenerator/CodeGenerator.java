@@ -25,11 +25,55 @@ public class CodeGenerator extends Visitor<String> {
     public final LabelManager labelManager;
 
     public CodeGenerator() {
-        registerManager = new RegisterManager();
         memoryManager = new MemoryManager();
+        registerManager = new RegisterManager(memoryManager);
         emitter = new InstructionEmitter();
         labelManager = new LabelManager();
     }
+
+
+    /** Register commands:*/
+    private String getRegisterForRead(String varName){
+        List<RegisterAction> actions = new ArrayList<>();
+        String reg = registerManager.allocateForRead(varName, actions);
+
+        for (RegisterAction action : actions) {
+            switch (action.type) {
+                case SPILL -> emitter.SW(action.register,"FP",action.offset);
+                case LOAD  -> emitter.LW(action.register,"FP",action.offset);
+            }
+        }
+        return reg;
+    }
+
+    private String getRegisterForWrite(String varName){
+        List<RegisterAction> actions = new ArrayList<>();
+        String reg = registerManager.allocateForWrite(varName, actions);
+
+        for (RegisterAction action : actions) {
+            switch (action.type) {
+                case SPILL -> emitter.SW(action.register,"FP",action.offset);
+                case LOAD  -> emitter.LW(action.register,"FP",action.offset);
+            }
+        }
+        return reg;
+    }
+
+    private String getTmpRegister(){
+        List<RegisterAction> actions = new ArrayList<>();
+        String tmpName = registerManager.newTmpVarName();
+        String reg = registerManager.allocateForWrite(tmpName, actions);
+
+        for (RegisterAction action : actions) {
+            switch (action.type) {
+                case SPILL -> emitter.SW(action.register,"FP",action.offset);
+                case LOAD  -> emitter.LW(action.register,"FP",action.offset);
+            }
+        }
+        return reg;
+    }
+
+
 
     public String visit(Declaration declaration) {
 
@@ -92,7 +136,7 @@ public class CodeGenerator extends Visitor<String> {
         //Todo (optional): use liveness  analyze to allocate space for locals instead of allocating all:
         this.emitter.ADI(String.valueOf(functionDefinition.getNumLocals() * -2), "sp");
 
-        List<String> usableRegisters = registerManager.getUsableRegisters(); //Todo:[option 1(naive approach)] get all the
+        List<String> usableRegisters = registerManager.getAllRegisters();    //Todo:[option 1(naive approach)] get all the
                                                                              // registers except the ones in use like
                                                                              // fp, sp, r0
                                                                              // [option 2] get the code generated for this part
