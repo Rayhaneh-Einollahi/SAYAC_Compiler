@@ -1,39 +1,65 @@
 package main.codeGenerator;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.Map;
 
 public class MemoryManager {
-    private int currentOffset = 0;
-    private Deque<Integer> frameStack = new ArrayDeque<>();
-    private Map<String, Integer> variableMap = new HashMap<>();
+    private static final int DATA_REGION_START = 0x7000;
+    private static final int DATA_REGION_END = 0xDFFF;
 
-    public void beginFrame() {
-        frameStack.push(currentOffset);
-        currentOffset = 0;
-        variableMap.clear();
+    private int nextGlobalAddr = DATA_REGION_START;
+    private int frameOffset = 0;
+
+    private final Map<String, Integer> globalAddresses = new HashMap<>();
+    private final Map<String, Integer> localOffsets = new HashMap<>();
+
+    public int allocateGlobal(String name, int size) {
+        if (globalAddresses.containsKey(name)) {
+            return globalAddresses.get(name);
+        }
+        int alignedSize = align(size);
+        int addr = nextGlobalAddr;
+        if (addr + alignedSize - 1 > DATA_REGION_END) {
+            throw new RuntimeException("Out of data memory for global allocation.");
+        }
+        globalAddresses.put(name, addr);
+        nextGlobalAddr += alignedSize;
+        return addr;
     }
 
-    public void endFrame() {
-        if (frameStack.isEmpty()) throw new RuntimeException("No frame to pop");
-        currentOffset = frameStack.pop();
-        variableMap.clear();
+    public int getGlobalAddress(String name) {
+        Integer addr = globalAddresses.get(name);
+        if (addr == null) {
+            throw new RuntimeException("Global variable not found: " + name);
+        }
+        return addr;
     }
 
-    public int allocateLocal(String varName, int size) {
-        currentOffset += size;
-        variableMap.put(varName, -currentOffset);
-        return -currentOffset;
+    public int allocateLocal(String name, int size) {
+        if (localOffsets.containsKey(name)) {
+            return localOffsets.get(name);
+        }
+        int alignedSize = align(size);
+        frameOffset -= alignedSize;
+        localOffsets.put(name, frameOffset);
+        return frameOffset;
     }
 
-    //Todo: the get offset mey be used for tmp variables that are not still in the memory too,
-    //  so if they aren't present in the memory we should allocate an space for it and return that.
-    public int getOffset(String varName) {
-        if (!variableMap.containsKey(varName))
-            throw new RuntimeException("Variable not allocated: " + varName);
-        return variableMap.get(varName);
+    public int getLocalOffset(String name) {
+        Integer offset = localOffsets.get(name);
+        if (offset == null) {
+            int size = 2; // int
+            offset = allocateLocal(name, size);
+        }
+        return offset;
     }
 
-    public String stackAccess(int offset) {
-        return offset + "(sp)";
+    public void beginFunction() {
+        frameOffset = 0;
+        localOffsets.clear();
+    }
+
+    private int align(int size) {
+        return (size + 1) & ~1;
     }
 }

@@ -148,6 +148,8 @@ public class CodeGenerator extends Visitor<String> {
             this.emitter.ADI( "-4", "sp");
         }
 
+        memoryManager.beginFunction();
+
         //----------------------------------------------
         if (functionDefinition.getDeclarator() != null){
             functionDefinition.getDeclarator().accept(this);

@@ -191,7 +191,7 @@ public class RegisterManager {
         String spillReg = chooseSpillCandidate();
         String spilledVar = regToVar.get(spillReg);
 
-        int offset = memoryManager.getOffset(spilledVar);
+        int offset = memoryManager.getLocalOffset(spilledVar);
         actions.add(new RegisterAction(RegisterAction.Type.SPILL, spillReg, spilledVar, offset));
 
         regToVar.remove(spillReg);
