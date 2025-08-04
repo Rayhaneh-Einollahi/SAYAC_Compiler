@@ -118,20 +118,34 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     }
 
-    /**
-     * generate code for Function: <p>
-     * 1 - generate a label for the beginning of function definition <p>
-     * 2 - store the current frame-pointer to the stack <p>
-     * 3 - as new function is called another frame should be initialized so the fp is updated to current stack-pointer <p>
-     * 4 - move the sp to point to the clear cell of memory <p>
-     * 5 - store the used registers
-     * @param functionDefinition : function definition node
-     */
-
+    /// generate code for Function:
+    /// 1 - generate a label for the beginning of function definition
+    /// 2 - store the current frame-pointer to the stack
+    /// 3 - as new function is called another frame should be initialized so the fp is updated to current stack-pointer
+    /// 4 - move the sp to point to the clear cell of memory
+    /// 5 - store the used registers
+    ///
+    /// stack state during call: <p>
+    /// <pre>
+    ///     |              |
+    ///     |  return val  | <- top of stack would be the return value
+    ///     |  ...         |
+    ///     |  locals      |
+    ///     |  reg 11(ra)  |
+    ///     |  ...         |
+    ///     |  reg 2       |
+    ///     |  reg 1       |
+    ///     |  old fp      | <- new fp pointing here
+    ///     |  arg n       |
+    ///     |  ... .       |
+    ///     |  arg2        |
+    ///     |  arg1        |
+    /// </pre>
+    /// @param functionDefinition : function definition node
     public CodeObject visit(FunctionDefinition functionDefinition) {
         CodeObject code = new CodeObject();
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
-        code.addCode(emitter.MSI("fp", "sp"));
+        code.addCode(emitter.STR("fp", "sp"));
         code.addCode(emitter.ADR("r0", "sp", "fp"));
         code.addCode(emitter.ADI(-2, "sp"));
         //Todo (optional): use liveness  analyze to allocate space for locals instead of allocating all:
@@ -144,9 +158,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
                                                                              // and save only the registers used in this func
                                                                              //
 
+        //Todo: set function arguments with corresponding offset in memory manager
         for (String reg : usableRegisters) {
             code.addCode(emitter.STR( reg, "sp"));
-            code.addCode(emitter.ADI( -4, "sp"));
+            code.addCode(emitter.ADI( -2, "sp"));
         }
 
         memoryManager.beginFunction();
@@ -169,17 +184,56 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         for (int i = usableRegisters.size() - 1; i >= 0; i--) {
             String reg = usableRegisters.get(i);
-            code.addCode(emitter.ADI( 4, "sp"));
+            code.addCode(emitter.ADI( 2, "sp"));
             code.addCode(emitter.LDR("sp", reg));
         }
 
         code.addCode(emitter.ADR("r0","fp", "sp"));
         code.addCode(emitter.LDR("fp", "fp"));
-        code.addCode(emitter.Ret());
+        code.addCode(emitter.JMR("ra"));
 
 
         return code;
     }
+
+    @Override
+    public CodeObject visit(FunctionExpr functionExpr) {
+        CodeObject code = new CodeObject();
+
+        List<Expr> arguments = functionExpr.getArguments();
+        List<Integer> tempOffsets = new ArrayList<>();
+        for (int i = 0; i< arguments.size(); i++) {
+            Expr arg = arguments.get(i);
+            CodeObject argCode = arg.accept(this);
+            code.addCode(argCode);
+
+            String resultReg = argCode.getResultReg();
+            if (resultReg == null)
+                throw new RuntimeException("Missing result register for argument");
+
+            int offset = memoryManager.allocateLocal(".arg_"+ i,2);
+            tempOffsets.add(offset);
+
+            code.addCode(emitter.SW(resultReg, "fp", offset));
+        }
+
+
+        for (int offset : tempOffsets) {
+            String tmpReg = getTmpRegister();
+            code.addCode(emitter.LW(tmpReg, "fp", offset));
+
+            code.addCode(emitter.STR(tmpReg, "sp"));
+            code.addCode(emitter.ADI(-2, "sp"));
+        }
+
+        String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
+        code.addCode(emitter.JMPS(funcLabel, "ra"));
+        code.addCode(emitter.ADI(2 * tempOffsets.size(), "sp"));
+//        code.setResultReg("ra");
+
+        return code;
+    }
+
 
 }
 

@@ -54,6 +54,10 @@ public class MemoryManager {
         return offset;
     }
 
+    public int setFunctionArgOffset(String name, int offset) { //Todo: for function argument which are set before
+        return 0;
+    }
+
     public void beginFunction() {
         frameOffset = 0;
         localOffsets.clear();

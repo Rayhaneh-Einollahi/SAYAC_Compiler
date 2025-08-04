@@ -59,10 +59,6 @@ public class InstructionEmitter {
         return this.emit("ADR", String.valueOf(imm) , destReg);
     }
 
-    public String Ret(){
-        return this.JMR("ra");
-    }
-
     /**
      * JMP jumps without storing the return line
      */
@@ -75,6 +71,17 @@ public class InstructionEmitter {
      */
     public String JMRS(String jmpReg, String storeReturnReg){
         return this.emit("JMR", "1", jmpReg, storeReturnReg);
+    }
+
+    /**
+     * notice JMP and JMPS are macros and will be converted to JMI JMR and JMRS after interpreting the labels in assembler
+     */
+    public  String JMP(String label) {
+        return this.emit("JMP", label);
+    }
+
+    public  String JMPS(String label, String returnReg) {
+        return this.emit("JMP", label, returnReg);
     }
 }
 
