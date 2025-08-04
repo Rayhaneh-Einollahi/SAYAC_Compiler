@@ -17,7 +17,7 @@ import java.util.*;
 
 
 
-public class CodeGenerator extends Visitor<String> {
+public class CodeGenerator extends Visitor<CodeObject> {
     private boolean insideFunction = false;
     public final RegisterManager registerManager;
     public final MemoryManager memoryManager;
@@ -75,7 +75,7 @@ public class CodeGenerator extends Visitor<String> {
 
 
 
-    public String visit(Declaration declaration) {
+    public CodeObject visit(Declaration declaration) {
 
 
             for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
@@ -128,13 +128,14 @@ public class CodeGenerator extends Visitor<String> {
      * @param functionDefinition : function definition node
      */
 
-    public String visit(FunctionDefinition functionDefinition) {
-        this.emitter.emitRaw(labelManager.generateFunctionLabel(functionDefinition.getName()));
-        this.emitter.STR("fp", "sp");
-        this.emitter.ADR("r0", "sp", "fp");
-        this.emitter.ADI("-2", "sp");
+    public CodeObject visit(FunctionDefinition functionDefinition) {
+        CodeObject code = new CodeObject();
+        code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
+        code.addCode(emitter.MSI("fp", "sp"));
+        code.addCode(emitter.ADR("r0", "sp", "fp"));
+        code.addCode(emitter.ADI(-2, "sp"));
         //Todo (optional): use liveness  analyze to allocate space for locals instead of allocating all:
-        this.emitter.ADI(String.valueOf(functionDefinition.getNumLocals() * -2), "sp");
+        code.addCode(emitter.ADI(functionDefinition.getNumLocals() * -2, "sp"));
 
         List<String> usableRegisters = registerManager.getAllRegisters();    //Todo:[option 1(naive approach)] get all the
                                                                              // registers except the ones in use like
@@ -144,8 +145,8 @@ public class CodeGenerator extends Visitor<String> {
                                                                              //
 
         for (String reg : usableRegisters) {
-            this.emitter.STR( reg, "sp");
-            this.emitter.ADI( "-4", "sp");
+            code.addCode(emitter.STR( reg, "sp"));
+            code.addCode(emitter.ADI( -4, "sp"));
         }
 
         memoryManager.beginFunction();
@@ -164,20 +165,20 @@ public class CodeGenerator extends Visitor<String> {
         }
         //--------------------------------------------------
 
-        this.emitter.emitRaw(labelManager.generateFunctionReturnLabel(functionDefinition.getName()));
+        code.addCode(emitter.emitLabel(labelManager.generateFunctionReturnLabel(functionDefinition.getName())));
 
         for (int i = usableRegisters.size() - 1; i >= 0; i--) {
             String reg = usableRegisters.get(i);
-            this.emitter.ADI( "4", "sp");
-            this.emitter.LDR("sp", reg);
+            code.addCode(emitter.ADI( 4, "sp"));
+            code.addCode(emitter.LDR("sp", reg));
         }
 
-        this.emitter.ADR("r0","fp", "sp");
-        this.emitter.LDR("fp", "fp");
-        this.emitter.Ret();
+        code.addCode(emitter.ADR("r0","fp", "sp"));
+        code.addCode(emitter.LDR("fp", "fp"));
+        code.addCode(emitter.Ret());
 
 
-        return null;
+        return code;
     }
 
 }
