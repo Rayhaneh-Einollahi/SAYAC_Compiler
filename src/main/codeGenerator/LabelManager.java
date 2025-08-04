@@ -15,13 +15,37 @@ public class LabelManager {
 //        this.prefix = prefix;
     }
 
-    public String generateLabel() {
+    private String generateUniqueLabel(String prefix) {
         String label;
         do {
-            label = /*prefix + */ "_" + counter++;
+            label = prefix + counter++;
         } while (labels.contains(label));
         labels.add(label);
         return label;
+    }
+
+    public String generateWhileConditionLabel() {
+        return generateUniqueLabel("while_condition_");
+    }
+
+    public String generateWhileBodyLabel() {
+        return generateUniqueLabel("while_body_");
+    }
+
+    public String generateWhileEndLabel() {
+        return generateUniqueLabel("while_end_");
+    }
+
+    public String generateForConditionLabel() {
+        return generateUniqueLabel("for_condition_");
+    }
+
+    public String generateForBodyLabel() {
+        return generateUniqueLabel("for_body_");
+    }
+
+    public String generateForEndLabel() {
+        return generateUniqueLabel("for_end_");
     }
 
     public String generateFunctionLabel(String funcName){

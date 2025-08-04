@@ -23,6 +23,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public final MemoryManager memoryManager;
     public final InstructionEmitter emitter;
     public final LabelManager labelManager;
+    private final Stack<String> loopEndLabels = new Stack<>();
 
     public CodeGenerator() {
         memoryManager = new MemoryManager();
@@ -232,6 +233,92 @@ public class CodeGenerator extends Visitor<CodeObject> {
 //        code.setResultReg("ra");
 
         return code;
+    }
+
+
+    public CodeObject visit(WhileStatement whileStatement){
+        CodeObject code = new CodeObject();
+        if (whileStatement.getCondition() != null) {
+            whileStatement.getCondition().accept(this);
+        }
+        if (whileStatement.getBody() != null) {
+            whileStatement.getBody().accept(this);
+        }
+
+        String condLabel = labelManager.generateWhileConditionLabel();
+        String bodyLabel = labelManager.generateWhileBodyLabel();
+        String endLabel = labelManager.generateWhileEndLabel();
+
+        loopEndLabels.push(endLabel);
+
+        code.addCode(emitter.emitLabel(condLabel));
+        if (check_cond_While(whileStatement.getCondition())) {
+            code.addCode(emitter.JMP(bodyLabel));
+        }
+        else {
+            code.addCode(emitter.JMP(endLabel));
+        }
+
+        code.addCode(emitter.emitLabel(bodyLabel));
+        if (whileStatement.getBody() != null) {
+            whileStatement.getBody().accept(this);
+        }
+        code.addCode(emitter.JMP(condLabel));
+
+        code.addCode(emitter.emitLabel(endLabel));
+        loopEndLabels.pop();
+
+        return code;
+    }
+
+
+    @Override
+    public CodeObject visit(ForStatement forStatement) {
+        CodeObject code = new CodeObject();
+        String condLabel = labelManager.generateForConditionLabel();
+        String bodyLabel = labelManager.generateForBodyLabel();
+        String endLabel = labelManager.generateForEndLabel();
+
+        loopEndLabels.push(endLabel);
+
+        if (forStatement.getForCondition().getDeclaration() != null) {
+            forStatement.getForCondition().getDeclaration().accept(this);
+        }
+
+        code.addCode(emitter.emitLabel(condLabel));
+        if(check_cond_For(forStatement.getForCondition().getConditions())) {
+            code.addCode(emitter.JMP(bodyLabel));
+        }
+        else {
+            code.addCode(emitter.JMP(endLabel));
+        }
+
+
+        code.addCode(emitter.emitLabel(bodyLabel));
+        if (forStatement.getBody() != null) {
+            forStatement.getBody().accept(this);
+        }
+
+        if (forStatement.getForCondition().getSteps() != null) {
+            for (Expr step : forStatement.getForCondition().getSteps()) {
+                step.accept(this);
+            }
+        }
+
+        code.addCode(emitter.JMP(condLabel));
+
+        code.addCode(emitter.emitLabel(endLabel));
+        loopEndLabels.pop();
+
+        return null;
+    }
+
+    private Boolean check_cond_For(List<Expr> conditions) {
+        return Boolean.TRUE; // list of expr
+    }
+
+    private Boolean check_cond_While(Expr condition) {
+        return Boolean.TRUE; // expr
     }
 
 
