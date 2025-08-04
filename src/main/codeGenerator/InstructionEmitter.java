@@ -2,7 +2,7 @@ package main.codeGenerator;
 
 
 public class InstructionEmitter {
-    public String emit(String opcode, String... operands) {
+    private String emit(String opcode, String... operands) {
         StringBuilder line = new StringBuilder(opcode);
         for (String op : operands) {
             line.append(" ").append(op);
@@ -59,6 +59,16 @@ public class InstructionEmitter {
         return this.emit("ADR", String.valueOf(imm) , destReg);
     }
 
+    public String CMR(String reg1, String reg2){
+        return this.emit("CMR", reg1, reg2);
+    }
+
+    public String CMI(int imm, String reg2){
+        return this.emit("CMI", String.valueOf(imm), reg2);
+    }
+    public String BRR(String operator, String label) {
+        return this.emit("BRR", operator, label);
+    }
     /**
      * JMP jumps without storing the return line
      */

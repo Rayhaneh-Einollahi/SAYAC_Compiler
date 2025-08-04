@@ -13,6 +13,7 @@ import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.operator.BinaryOperator;
 import main.ast.nodes.expr.operator.UnaryOperator;
 import main.ast.nodes.expr.primitives.ConstantExpr;
+import main.ast.nodes.expr.primitives.IntVal;
 import main.visitor.IVisitor;
 import main.visitor.Visitor;
 
@@ -316,10 +317,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
     }
 
 
-
-
-
-
     private Boolean check_cond_For(List<Expr> conditions) {
         return Boolean.TRUE; // list of expr
     }
@@ -328,6 +325,56 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return Boolean.TRUE; // expr
     }
 
+
+
+    public CodeObject branch(Expr expr, String trueLabel, String falseLabel) {
+        CodeObject code = new CodeObject();
+        
+        if(expr instanceof UnaryExpr unaryexpr) {
+            if(unaryexpr.getOperator() == UnaryOperator.NOT)
+                code.addCode(branch(unaryexpr.getOperand(), falseLabel, trueLabel));
+            else
+                code.addCode(expr.accept(this));
+        }
+        else if(expr instanceof BinaryExpr binaryExpr) {
+            if(binaryExpr.getOperator() == BinaryOperator.ANDAND){
+                String nextLabel = labelManager.generateNextLabel();
+                code.addCode(branch(binaryExpr.getFirstOperand(), nextLabel, falseLabel));
+                code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
+            }
+            else if(binaryExpr.getOperator() == BinaryOperator.OROR) {
+                String nextLabel = labelManager.generateNextLabel();
+                code.addCode(branch(binaryExpr.getFirstOperand(), trueLabel, nextLabel));
+                code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
+            }
+            else if(binaryExpr.getOperator().isCompare()){
+                if (binaryExpr.getFirstOperand() instanceof IntVal intVal){
+                    CodeObject right = binaryExpr.getSecondOperand().accept(this);
+                    String rightReg = getRegisterForRead(right.getResultVar());
+                    code.addCode(emitter.CMI(intVal.getInt(), rightReg));
+                    code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
+                }
+                else if(binaryExpr.getSecondOperand() instanceof IntVal intVal){
+                    CodeObject left = binaryExpr.getFirstOperand().accept(this);
+                    String leftReg = getRegisterForRead(left.getResultVar());
+                    code.addCode(emitter.CMI(intVal.getInt(), leftReg));
+                    code.addCode(emitter.BRR(binaryExpr.getOperator().flip().getSymbol(), trueLabel));
+                }
+                else{
+                    CodeObject left = binaryExpr.getFirstOperand().accept(this);
+                    CodeObject right = binaryExpr.getSecondOperand().accept(this);
+                    String leftReg = getRegisterForRead(left.getResultVar());
+                    String rightReg = getRegisterForRead(right.getResultVar());
+                    code.addCode(emitter.CMR(leftReg, rightReg));
+                    code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
+                }
+                
+                code.addCode(emitter.JMP(falseLabel));
+                
+            }
+        }
+        return code;
+    }
 
 }
 

@@ -11,6 +11,9 @@ public class IntVal extends ConstantExpr {
     @Override
     public String toString(){
         return "IntValue:" + this.str;}
+    public int getInt(){
+        return Integer.parseInt(str);
+    }
     @Override
     public <T> T accept(IVisitor<T> visitor){return visitor.visit(this);}
 }

@@ -62,6 +62,25 @@ public enum BinaryOperator {
           return op;
      }
 
+     public boolean isCompare() {
+          return this == LESS ||
+                  this == GREATER ||
+                  this == LESSEQUAL ||
+                  this == GREATEREQUAL ||
+                  this == EQUAL ||
+                  this == NOTEQUAL;
+     }
+
+     public BinaryOperator flip() {
+          return switch (this) {
+               case LESS -> GREATER;
+               case GREATER -> LESS;
+               case LESSEQUAL -> GREATEREQUAL;
+               case GREATEREQUAL -> LESSEQUAL;
+               default -> this;
+          };
+     }
+
      public String getSymbol() {
           return symbol;
      }

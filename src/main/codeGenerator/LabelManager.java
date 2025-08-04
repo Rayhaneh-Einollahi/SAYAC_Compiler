@@ -24,6 +24,14 @@ public class LabelManager {
         return label;
     }
 
+    public String generateNextLabel(){return generateUniqueLabel("Next_");}
+
+    public String generateAfterIfLabel(){return generateUniqueLabel("After_If_");}
+
+    public String generateIfLabel(){return generateUniqueLabel("If_");}
+
+    public String generateElseLabel(){return generateUniqueLabel("Else_");}
+
     public String generateWhileConditionLabel() {
         return generateUniqueLabel("while_condition_");
     }
