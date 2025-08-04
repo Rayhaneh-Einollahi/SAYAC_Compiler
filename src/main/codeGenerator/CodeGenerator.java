@@ -376,6 +376,26 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return code;
     }
 
+    public CodeObject visit(SelectionStatement selectionStatement) {
+        CodeObject code= new CodeObject();
+        String ifLabel = labelManager.generateIfLabel();
+        String elseLabel = labelManager.generateElseLabel();
+        String afterIfLabel = labelManager.generateAfterIfLabel();
+
+        code.addCode(branch(selectionStatement.getCondition(), ifLabel,selectionStatement.getElseStatement() != null? elseLabel: afterIfLabel));
+
+        code.addCode(emitter.emitLabel(ifLabel));
+        code.addCode(selectionStatement.getIfStatement().accept(this));
+        code.addCode(emitter.JMP(afterIfLabel));
+
+        if (selectionStatement.getElseStatement() != null) {
+            code.addCode(emitter.emitLabel(elseLabel));
+            code.addCode(selectionStatement.getElseStatement().accept(this));
+        }
+        code.addCode(emitter.emitLabel(afterIfLabel));
+        return null;
+    }
+
 }
 
 
