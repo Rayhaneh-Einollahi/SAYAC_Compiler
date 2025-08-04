@@ -2,6 +2,8 @@ package main.codeGenerator;
 
 import main.ast.nodes.Statement.IterationStatement.ForStatement;
 import main.ast.nodes.Statement.IterationStatement.WhileStatement;
+import main.ast.nodes.Statement.JumpStatement.BreakStatement;
+import main.ast.nodes.Statement.JumpStatement.JumpStatement;
 import main.ast.nodes.Statement.SelectionStatement;
 import main.ast.nodes.declaration.Declaration;
 import main.ast.nodes.declaration.Declarator;
@@ -11,6 +13,7 @@ import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.operator.BinaryOperator;
 import main.ast.nodes.expr.operator.UnaryOperator;
 import main.ast.nodes.expr.primitives.ConstantExpr;
+import main.visitor.IVisitor;
 import main.visitor.Visitor;
 
 import java.util.*;
@@ -310,8 +313,25 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.emitLabel(endLabel));
         loopEndLabels.pop();
 
-        return null;
+        return code;
     }
+
+    @Override
+    public CodeObject visit(BreakStatement breakStatement) {
+        CodeObject code = new CodeObject();
+
+        if (loopEndLabels.isEmpty()) {
+            throw new RuntimeException("Break statement not inside a loop"); // won't happen ! compile error
+        }
+        String targetLabel = loopEndLabels.peek();
+        code.addCode(emitter.JMP(targetLabel));
+        return code;
+    }
+
+
+
+
+
 
     private Boolean check_cond_For(List<Expr> conditions) {
         return Boolean.TRUE; // list of expr
