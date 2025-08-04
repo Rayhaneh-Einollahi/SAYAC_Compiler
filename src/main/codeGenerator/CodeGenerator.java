@@ -63,20 +63,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return reg;
     }
 
-    private String getTmpRegister(){
-        List<RegisterAction> actions = new ArrayList<>();
-        String tmpName = registerManager.newTmpVarName();
-        String reg = registerManager.allocateForWrite(tmpName, actions);
-
-        for (RegisterAction action : actions) {
-            switch (action.type) {
-                case SPILL -> emitter.SW(action.register,"FP",action.offset);
-                case LOAD  -> emitter.LW(action.register,"FP",action.offset);
-            }
-        }
-        return reg;
-    }
-
 
 
     public CodeObject visit(Declaration declaration) {
@@ -211,19 +197,20 @@ public class CodeGenerator extends Visitor<CodeObject> {
             CodeObject argCode = arg.accept(this);
             code.addCode(argCode);
 
-            String resultReg = argCode.getResultReg();
-            if (resultReg == null)
+            String resultVar = argCode.getResultVar();
+            if (resultVar == null)
                 throw new RuntimeException("Missing result register for argument");
 
             int offset = memoryManager.allocateLocal(".arg_"+ i,2);
             tempOffsets.add(offset);
 
-            code.addCode(emitter.SW(resultReg, "fp", offset));
+            code.addCode(emitter.SW(resultVar, "fp", offset));
         }
 
 
         for (int offset : tempOffsets) {
-            String tmpReg = getTmpRegister();
+            String tmpName = registerManager.newTmpVarName();
+            String tmpReg = getRegisterForWrite(tmpName);
             code.addCode(emitter.LW(tmpReg, "fp", offset));
 
             code.addCode(emitter.STR(tmpReg, "sp"));

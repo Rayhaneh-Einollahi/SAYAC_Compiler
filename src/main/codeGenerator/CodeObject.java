@@ -13,17 +13,17 @@ public class CodeObject {
      * if the result of this part of code is stored in a register the value of resultReg would be non-null.
 
      */
-    private String resultReg = null;
+    private String resultVar = null;
 
     public CodeObject(){
         code = new ArrayList<String>();
     }
-    public String getResultReg() {
-        return resultReg;
+    public String getResultVar() {
+        return resultVar;
     }
 
-    public void setResultReg(String resultReg) {
-        this.resultReg = resultReg;
+    public void setResultVar(String resultReg) {
+        this.resultVar = resultReg;
     }
 
     public void addCode(CodeObject other){
