@@ -48,12 +48,20 @@ public class LabelManager {
         return generateUniqueLabel("for_condition_");
     }
 
+    public String generateForStepLabel() {
+        return generateUniqueLabel("for_step_");
+    }
+
     public String generateForBodyLabel() {
         return generateUniqueLabel("for_body_");
     }
 
     public String generateForEndLabel() {
         return generateUniqueLabel("for_end_");
+    }
+
+    public String generateAndChainLabel() {
+        return generateUniqueLabel("and_chain_");
     }
 
     public String generateFunctionLabel(String funcName){

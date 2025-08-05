@@ -3,6 +3,7 @@ package main.codeGenerator;
 import main.ast.nodes.Statement.IterationStatement.ForStatement;
 import main.ast.nodes.Statement.IterationStatement.WhileStatement;
 import main.ast.nodes.Statement.JumpStatement.BreakStatement;
+import main.ast.nodes.Statement.JumpStatement.ContinueStatement;
 import main.ast.nodes.Statement.JumpStatement.JumpStatement;
 import main.ast.nodes.Statement.SelectionStatement;
 import main.ast.nodes.declaration.Declaration;
@@ -27,7 +28,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public final MemoryManager memoryManager;
     public final InstructionEmitter emitter;
     public final LabelManager labelManager;
-    private final Stack<String> loopEndLabels = new Stack<>();
+    private final Deque<String> loopEndLabels = new ArrayDeque<>();
+    private final Deque<String> loopContinueLabels = new ArrayDeque<>();
 
     public CodeGenerator() {
         memoryManager = new MemoryManager();
@@ -229,35 +231,33 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(WhileStatement whileStatement){
         CodeObject code = new CodeObject();
-        if (whileStatement.getCondition() != null) {
-            whileStatement.getCondition().accept(this);
-        }
-        if (whileStatement.getBody() != null) {
-            whileStatement.getBody().accept(this);
-        }
 
         String condLabel = labelManager.generateWhileConditionLabel();
         String bodyLabel = labelManager.generateWhileBodyLabel();
         String endLabel = labelManager.generateWhileEndLabel();
 
         loopEndLabels.push(endLabel);
+        loopContinueLabels.push(condLabel);
 
         code.addCode(emitter.emitLabel(condLabel));
-        if (check_cond_While(whileStatement.getCondition())) {
-            code.addCode(emitter.JMP(bodyLabel));
+        if(whileStatement.getCondition() != null) {
+            code.addCode(branch(whileStatement.getCondition(), bodyLabel, endLabel));
         }
         else {
-            code.addCode(emitter.JMP(endLabel));
+            code.addCode(emitter.JMP(bodyLabel));
         }
+
 
         code.addCode(emitter.emitLabel(bodyLabel));
         if (whileStatement.getBody() != null) {
-            whileStatement.getBody().accept(this);
+            code.addCode(whileStatement.getBody().accept(this));
         }
         code.addCode(emitter.JMP(condLabel));
 
         code.addCode(emitter.emitLabel(endLabel));
+
         loopEndLabels.pop();
+        loopContinueLabels.pop();
 
         return code;
     }
@@ -269,62 +269,85 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String condLabel = labelManager.generateForConditionLabel();
         String bodyLabel = labelManager.generateForBodyLabel();
         String endLabel = labelManager.generateForEndLabel();
+        String stepLabel = labelManager.generateForStepLabel();
 
         loopEndLabels.push(endLabel);
+        loopContinueLabels.push(stepLabel);
 
         if (forStatement.getForCondition().getDeclaration() != null) {
-            forStatement.getForCondition().getDeclaration().accept(this);
+            code.addCode(forStatement.getForCondition().getDeclaration().accept(this));
+        }
+        else if (forStatement.getForCondition().getExpr() != null) {
+            code.addCode(forStatement.getForCondition().getExpr().accept(this));
         }
 
         code.addCode(emitter.emitLabel(condLabel));
-        if(check_cond_For(forStatement.getForCondition().getConditions())) {
-            code.addCode(emitter.JMP(bodyLabel));
-        }
-        else {
-            code.addCode(emitter.JMP(endLabel));
-        }
-
+        code.addCode(branchFromAndList(forStatement.getForCondition().getConditions(), bodyLabel, endLabel));
 
         code.addCode(emitter.emitLabel(bodyLabel));
         if (forStatement.getBody() != null) {
-            forStatement.getBody().accept(this);
+            code.addCode(forStatement.getBody().accept(this));
         }
+        code.addCode(emitter.JMP(stepLabel));
 
+        code.addCode(emitter.emitLabel(stepLabel));
         if (forStatement.getForCondition().getSteps() != null) {
             for (Expr step : forStatement.getForCondition().getSteps()) {
-                step.accept(this);
+                code.addCode(step.accept(this));
             }
         }
-
         code.addCode(emitter.JMP(condLabel));
 
         code.addCode(emitter.emitLabel(endLabel));
+
         loopEndLabels.pop();
+        loopContinueLabels.pop();
 
         return code;
     }
+
+
+    private CodeObject branchFromAndList(List<Expr> conditions, String trueLabel, String falseLabel) {
+        CodeObject code = new CodeObject();
+
+        if (conditions == null || conditions.isEmpty()) {
+            code.addCode(emitter.JMP(trueLabel));
+            return code;
+        }
+
+        List<String> intermediateLabels = new ArrayList<>();
+        for (int i = 0; i < conditions.size() - 1; i++) {
+            intermediateLabels.add(labelManager.generateAndChainLabel());
+        }
+
+        for (int i = 0; i < conditions.size(); i++) {
+            Expr cond = conditions.get(i);
+            String nextTrueLabel = (i == conditions.size() - 1) ? trueLabel : intermediateLabels.get(i);
+            code.addCode(branch(cond, nextTrueLabel, falseLabel));
+            if (i < intermediateLabels.size()) {
+                code.addCode(emitter.emitLabel(intermediateLabels.get(i)));
+            }
+        }
+
+        return code;
+    }
+
+
 
     @Override
     public CodeObject visit(BreakStatement breakStatement) {
         CodeObject code = new CodeObject();
-
-        if (loopEndLabels.isEmpty()) {
-            throw new RuntimeException("Break statement not inside a loop"); // won't happen ! compile error
-        }
-        String targetLabel = loopEndLabels.peek();
-        code.addCode(emitter.JMP(targetLabel));
+        String endLabel = loopEndLabels.peek();
+        code.addCode(emitter.JMP(endLabel));
         return code;
     }
 
-
-    private Boolean check_cond_For(List<Expr> conditions) {
-        return Boolean.TRUE; // list of expr
+    public CodeObject visit(ContinueStatement continueStmt) {
+        CodeObject code = new CodeObject();
+        String stepLabel = loopContinueLabels.peek();
+        code.addCode(emitter.JMP(stepLabel));
+        return code;
     }
-
-    private Boolean check_cond_While(Expr condition) {
-        return Boolean.TRUE; // expr
-    }
-
 
 
     public CodeObject branch(Expr expr, String trueLabel, String falseLabel) {
