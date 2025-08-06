@@ -55,7 +55,7 @@ public class MemoryManager {
     }
 
     public int setFunctionArgOffset(String name, int offset) { //Todo: for function argument which are set before
-        return 0;
+        localOffsets.put(name, offset);
     }
 
     public void beginFunction() {

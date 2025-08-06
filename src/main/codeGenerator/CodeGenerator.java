@@ -21,8 +21,6 @@ import main.visitor.Visitor;
 
 import java.util.*;
 
-
-
 public class CodeGenerator extends Visitor<CodeObject> {
     private boolean insideFunction = false;
     public final RegisterManager registerManager;
@@ -122,8 +120,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
             this.emitter.printCode();
 
             return null;
-
-
     }
 
     /// generate code for Function:
@@ -452,6 +448,3 @@ public class CodeGenerator extends Visitor<CodeObject> {
     }
 
 }
-
-
-
