@@ -30,9 +30,9 @@ externalDeclaration returns [ExternalDeclaration externalDecRet]:
     ;
 
 functionDefinition returns [FunctionDefinition funcDefRet]:
-    specs=declarationSpecifiers? dec=declarator declist=declarationList? cstmt=compoundStatement
+    specs=declarationSpecifiers dec=declarator declist=declarationList? cstmt=compoundStatement
     {
-        $funcDefRet = new FunctionDefinition($specs.ctx != null ? $specs.list: null, $dec.declaratorRet, $declist.ctx != null? $declist.list: null, $cstmt.cstmtRet);
+        $funcDefRet = new FunctionDefinition($specs.list, $dec.declaratorRet, $declist.ctx != null? $declist.list: null, $cstmt.cstmtRet);
         $funcDefRet.setLine($ctx.start.getLine());
     };
 
@@ -40,6 +40,19 @@ declarationList returns [List<Declaration> list]:
     {$list = new ArrayList<>();}
     (dec=declaration{$list.add($dec.decRet);})+ ;
 
+allExpression returns [Expr expRet]
+    : e=expression {$expRet = $e.expRet; $expRet.setLine($ctx.start.getLine());}
+    | e1=expression (Comma es+=expression)+                                                 // Comma operator
+        {
+            List<Expr> result = new ArrayList<>();
+                result.add($e1.expRet);
+                for (ExpressionContext ctx : $es) {
+                    result.add(ctx.expRet);
+                }
+            $expRet = new CommaExpr(result);
+            $expRet.setLine($ctx.start.getLine());
+        }
+       ;
 expression returns [Expr expRet]
   : id=Identifier   {$expRet = new Identifier($id.text, $id.getLine());}
   | c=constant        {$expRet = $c.cret;  $expRet.setLine($c.start.getLine());}
@@ -137,17 +150,7 @@ expression returns [Expr expRet]
          $expRet = new BinaryExpr($e1.expRet, op, $e2.expRet);
          $expRet.setLine($ctx.start.getLine());
         }
-  | e1=expression (Comma es+=expression)+                                                 // Comma operator
-        {
-            List<Expr> result = new ArrayList<>();
-                result.add($e1.expRet);
-                for (ExpressionContext ctx : $es) {
-                    result.add(ctx.expRet);
-                }
-            $expRet = new CommaExpr(result);
-            $expRet.setLine($ctx.start.getLine());
-        }
-    ;
+  ;
 
 argumentExpressionList returns [List<Expr> list]:
     {$list = new ArrayList<>();}
@@ -174,7 +177,7 @@ assignmentOperator returns [String text]
    ;
 
 declaration returns [Declaration decRet]
-    : specs=declarationSpecifiers decl=initDeclaratorList? Semi
+    : specs=declarationSpecifiers decl=initDeclaratorList Semi
     {
         $decRet = new Declaration($specs.list, $decl.ctx != null ? $decl.list : null);
         $decRet.setLine($ctx.start.getLine());
@@ -256,7 +259,7 @@ parameterList returns [List<Parameter> list]:
 
 parameterDeclaration returns [Parameter paramRet]:
     ds=declarationSpecifiers{$paramRet = new Parameter($ds.list);} (d=declarator{$paramRet.setDeclarator($d.declaratorRet);}
-            | (d2=abstractDeclarator{$paramRet.setDeclarator($d2.declaratorRet);})?)
+            | (d2=abstractDeclarator{$paramRet.setDeclarator($d2.declaratorRet);}))
     ;
 
 identifierList returns [List<Identifier> list]:
@@ -317,20 +320,20 @@ blockItem returns [BlockItem blockRet]:
     ;
 
 expressionStatement returns [ExpressionStatement stRet]:
-    (exp=expression{$stRet = new ExpressionStatement($exp.expRet);})? Semi;
+    (exp=allExpression{$stRet = new ExpressionStatement($exp.expRet);})? Semi;
 
 selectionStatement returns [SelectionStatement stRet]
-    : If LeftParen exp = expression RightParen ifst=statement {$stRet= new SelectionStatement($exp.expRet, $ifst.stRet);}
+    : If LeftParen exp = allExpression RightParen ifst=statement {$stRet= new SelectionStatement($exp.expRet, $ifst.stRet);}
     (Else elsest=statement {$stRet.addElse($elsest.stRet);})?;
 
 iterationStatement returns [IterationStatement stRet]
-    :While LeftParen e=expression RightParen s=statement {$stRet = new WhileStatement($e.expRet, $s.stRet);}
-    | Do s=statement While LeftParen e=expression RightParen Semi{$stRet = new DoWhileStatement($s.stRet, $e.expRet);}
+    :While LeftParen e=allExpression RightParen s=statement {$stRet = new WhileStatement($e.expRet, $s.stRet);}
+    | Do s=statement While LeftParen e=allExpression RightParen Semi{$stRet = new DoWhileStatement($s.stRet, $e.expRet);}
     | For LeftParen f=forCondition RightParen s=statement {$stRet = new ForStatement($f.forconRet, $s.stRet);};
 
 forCondition returns [ForCondition forconRet]
     @init {$forconRet = new ForCondition();}
-    :(fd=forDeclaration{$forconRet.setDeclaration($fd.forRet);} | (e=expression{$forconRet.setExpr($e.expRet);})?)
+    :(fd=forDeclaration{$forconRet.setDeclaration($fd.forRet);} | (e=allExpression{$forconRet.setExpr($e.expRet);})?)
     Semi (f1=forExpression{$forconRet.setConditions($f1.list);})? Semi (f2=forExpression{$forconRet.setSteps($f2.list);})? ;
 
 forDeclaration returns [Declaration forRet]:
