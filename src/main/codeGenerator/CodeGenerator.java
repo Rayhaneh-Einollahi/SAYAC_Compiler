@@ -82,7 +82,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(Declaration declaration) {
 
-
+            CodeObject code = new CodeObject();
             for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
                 String varName = initDeclarator.getDeclarator().getName();
                 String initValue = "0";
@@ -95,30 +95,30 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 }
 
                 if (!insideFunction) {
-                    this.emitter.emitRaw(".data");
-                    this.emitter.emitRaw(varName + ": .word " + initValue);
-                    this.emitter.emitRaw(".text");
+                    String tempVal = registerManager.newTmpVarName();
+                    String tempReg = getRegisterForWrite(tempVal, code);
+                    String adressVal = registerManager.newTmpVarName();
+                    String adressReg = getRegisterForWrite(adressVal, code);
+
+                    int adress = memoryManager.allocateGlobal(varName, 2);
+                    code.addCode(emitter.MSI(initValue, tempReg));
+                    code.addCode(emitter.MSI(String.valueOf(adress), adressReg));
+                    code.addCode(emitter.STR(tempVal, adressReg));
+                    this.registerManager.freeRegister(tempReg);
+                    this.registerManager.freeRegister(adressReg);
+
+
                 } else {
-//                    this.memoryManager.beginFrame(); entering main function
                     if (initValue != null) {
-                        int offset = this.memoryManager.allocateLocal(varName, 4);
-                        int reg = this.registerManager.allocate();
-                        int reg2 = this.registerManager.allocate();
-                        this.emitter.emit("MSI", this.registerManager.regName(reg), initValue);
-                        this.emitter.emit("MSI", this.registerManager.regName(reg2), "1000");
-
-                        this.emitter.emit("ADI", this.registerManager.regName(reg2), this.memoryManager.stackAccess(-4));
-
-                        this.emitter.emit("STR", this.registerManager.regName(reg2), this.registerManager.regName(reg));
-                        this.registerManager.free(reg);
-                        this.registerManager.free(reg2);
+                        String reg = getRegisterForWrite(varName, code);
+                        code.addCode(emitter.MSI(initValue, reg));
                     }
                 }
             }
+        System.out.println(code.toString());
 
-            this.emitter.printCode();
 
-            return null;
+        return code;
     }
 
     /// generate code for Function:
@@ -147,6 +147,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
     /// @param functionDefinition : function definition node
     @Override
     public CodeObject visit(FunctionDefinition functionDefinition) {
+        insideFunction = true;
         CodeObject code = new CodeObject();
         List<String> usableRegisters = registerManager.getAllRegisters();    //Todo:[option 1(naive approach)] get all the
                                                                              // registers except the ones in use like

@@ -1,6 +1,6 @@
 int d = 5;
 int main(){
-    int a = 2;
-    int b = 5;
-    int c = a + b;
+int a = 3;
+int b = 4;
+int c = a + b;
 }
