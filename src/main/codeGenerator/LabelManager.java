@@ -23,7 +23,9 @@ public class LabelManager {
         labels.add(label);
         return label;
     }
-
+    public String generateTrueLabel(){return generateUniqueLabel("True_");}
+    public String generateFalseLabel(){return generateUniqueLabel("False_");}
+    public String generateEndLabel(){return generateUniqueLabel("End_");}
     public String generateNextLabel(){return generateUniqueLabel("Next_");}
 
     public String generateAfterIfLabel(){return generateUniqueLabel("After_If_");}
