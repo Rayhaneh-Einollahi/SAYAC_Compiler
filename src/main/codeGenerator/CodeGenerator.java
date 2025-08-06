@@ -40,6 +40,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
         labelManager = new LabelManager();
     }
 
+    @Override
+    protected void merge(CodeObject into, CodeObject from) {
+        if (into != null && from != null) {
+            into.addCode(from);
+        }
+    }
+
+    @Override
+    protected CodeObject defaultResult() {
+        return new CodeObject();
+    }
+
 
     /** Register commands:*/
     //Todo: add these code to codeObject too
