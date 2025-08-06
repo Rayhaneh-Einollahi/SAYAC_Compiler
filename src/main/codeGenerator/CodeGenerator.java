@@ -151,17 +151,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(emitter.STR( reg, "sp"));
             code.addCode(emitter.ADI( -2, "sp"));
         }
+        registerManager.clearRegisters();
 
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
         code.addCode(emitter.STR("fp", "sp"));
         code.addCode(emitter.ADR("r0", "sp", "fp"));
         code.addCode(emitter.ADI(-2, "sp"));
-        //Todo (optional): use liveness  analyze to allocate space for locals instead of allocating all:
-        code.addCode(emitter.ADI(functionDefinition.getNumLocals() * -2, "sp"));
 
-
-        //Todo: set function arguments with corresponding offset in memory manager
-        registerManager.clearRegisters();
+        List<Declaration> args = functionDefinition.getArgDeclarations();
+        for(int i = 0; i < args.size(); i++){
+            Declaration arg = args.get(i);
+            memoryManager.setFunctionArgOffset(arg.getName(), usableRegisters.size() + args.size() - i);
+        }
         memoryManager.beginFunction();
         currentFunctionEndLabel = labelManager.generateFunctionReturnLabel(functionDefinition.getName());
 
@@ -187,7 +188,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(emitter.LDR("sp", reg));
         }
         registerManager.restoreRegisters();
-        //Todo: remove function arguments from stack
+
+        code.addCode(emitter.ADI(args.size(), "sp"));
         code.addCode(emitter.JMR("ra"));
 
 
