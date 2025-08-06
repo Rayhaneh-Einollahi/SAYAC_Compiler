@@ -8,12 +8,12 @@ public class RegisterManager {
     public enum RegisterState { FREE, USED, RESERVED }
     private final Map<String, RegisterState> registerStates = new HashMap<>();
     private final List<String> allRegisters = Arrays.asList("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11");
-    private final Map<String, String> regToVar = new HashMap<>();
-    private final Map<String, String> varToReg = new HashMap<>();
-    private final Map<String, Integer> spilledVars = new HashMap<>();
     private final MemoryManager memoryManager;
-    private final Map<String, Integer> varUseCounts = new HashMap<>();
     private final Set<String> pinnedRegisters = new HashSet<>();
+    private  Map<String, String> regToVar = new HashMap<>();
+    private  Map<String, String> varToReg = new HashMap<>();
+    private  Map<String, Integer> spilledVars = new HashMap<>();
+    private  Map<String, Integer> varUseCounts = new HashMap<>();
 
 
     public RegisterManager(MemoryManager memoryManager) {
@@ -234,10 +234,12 @@ public class RegisterManager {
                 .orElse(candidates.getFirst());
     }
 
-    public void clearRegisters() { //Todo: for begin function
-    }
-
-    public void restoreRegisters() { // Todo: for end function
+    public void clearRegisters() {
+        this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
+        regToVar = new HashMap<>();
+        varToReg = new HashMap<>();
+        spilledVars = new HashMap<>();
+        varUseCounts = new HashMap<>();
     }
 
 }

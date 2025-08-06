@@ -52,28 +52,27 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
     /** Register commands:*/
-    //Todo: add these code to codeObject too
-    private String getRegisterForRead(String varName){
+    private String getRegisterForRead(String varName, CodeObject code){
         List<RegisterAction> actions = new ArrayList<>();
         String reg = registerManager.allocateForRead(varName, actions);
 
         for (RegisterAction action : actions) {
             switch (action.type) {
-                case SPILL -> emitter.SW(action.register,"FP",action.offset);
-                case LOAD  -> emitter.LW(action.register,"FP",action.offset);
+                case SPILL -> code.addCode(emitter.SW(action.register,"FP",action.offset));
+                case LOAD  -> code.addCode(emitter.LW(action.register,"FP",action.offset));
             }
         }
         return reg;
     }
 
-    private String getRegisterForWrite(String varName){
+    private String getRegisterForWrite(String varName, CodeObject code){
         List<RegisterAction> actions = new ArrayList<>();
         String reg = registerManager.allocateForWrite(varName, actions);
 
         for (RegisterAction action : actions) {
             switch (action.type) {
-                case SPILL -> emitter.SW(action.register,"FP",action.offset);
-                case LOAD  -> emitter.LW(action.register,"FP",action.offset);
+                case SPILL -> code.addCode(emitter.SW(action.register,"FP",action.offset));
+                case LOAD  -> code.addCode(emitter.LW(action.register,"FP",action.offset));
             }
         }
         return reg;
@@ -195,7 +194,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(emitter.ADI( 2, "sp"));
             code.addCode(emitter.LDR("sp", reg));
         }
-        registerManager.restoreRegisters();
 
         code.addCode(emitter.ADI(args.size(), "sp"));
         code.addCode(emitter.JMR("ra"));
@@ -210,7 +208,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         if(returnStatement.getExpr() != null) {
             CodeObject retStCode = returnStatement.getExpr().accept(this);
             code.addCode(retStCode);
-            String regResult =  getRegisterForRead(retStCode.getResultVar());
+            String regResult =  getRegisterForRead(retStCode.getResultVar(), code);
             code.addCode(emitter.ADR("r0", regResult, "ret"));
         }
         code.addCode(emitter.JMP(currentFunctionEndLabel));
@@ -241,7 +239,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         for (int offset : tempOffsets) {
             String tmpName = registerManager.newTmpVarName();
-            String tmpReg = getRegisterForWrite(tmpName);
+            String tmpReg = getRegisterForWrite(tmpName, code);
             code.addCode(emitter.LW(tmpReg, "fp", offset));
 
             code.addCode(emitter.STR(tmpReg, "sp"));
@@ -401,21 +399,21 @@ public class CodeGenerator extends Visitor<CodeObject> {
             else if(binaryExpr.getOperator().isCompare()){
                 if (binaryExpr.getFirstOperand() instanceof IntVal intVal){
                     CodeObject right = binaryExpr.getSecondOperand().accept(this);
-                    String rightReg = getRegisterForRead(right.getResultVar());
+                    String rightReg = getRegisterForRead(right.getResultVar(), code);
                     code.addCode(emitter.CMI(intVal.getInt(), rightReg));
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
                 }
                 else if(binaryExpr.getSecondOperand() instanceof IntVal intVal){
                     CodeObject left = binaryExpr.getFirstOperand().accept(this);
-                    String leftReg = getRegisterForRead(left.getResultVar());
+                    String leftReg = getRegisterForRead(left.getResultVar(), code);
                     code.addCode(emitter.CMI(intVal.getInt(), leftReg));
                     code.addCode(emitter.BRR(binaryExpr.getOperator().flip().getSymbol(), trueLabel));
                 }
                 else{
                     CodeObject left = binaryExpr.getFirstOperand().accept(this);
                     CodeObject right = binaryExpr.getSecondOperand().accept(this);
-                    String leftReg = getRegisterForRead(left.getResultVar());
-                    String rightReg = getRegisterForRead(right.getResultVar());
+                    String leftReg = getRegisterForRead(left.getResultVar(), code);
+                    String rightReg = getRegisterForRead(right.getResultVar(), code);
                     code.addCode(emitter.CMR(leftReg, rightReg));
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
                 }
