@@ -233,4 +233,11 @@ public class RegisterManager {
                         varUseCounts.getOrDefault(regToVar.get(reg), Integer.MAX_VALUE)))
                 .orElse(candidates.getFirst());
     }
+
+    public void clearRegisters() { //Todo: for begin function
+    }
+
+    public void restoreRegisters() { // Todo: for end function
+    }
+
 }

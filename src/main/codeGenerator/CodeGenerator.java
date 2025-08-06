@@ -5,6 +5,7 @@ import main.ast.nodes.Statement.IterationStatement.WhileStatement;
 import main.ast.nodes.Statement.JumpStatement.BreakStatement;
 import main.ast.nodes.Statement.JumpStatement.ContinueStatement;
 import main.ast.nodes.Statement.JumpStatement.JumpStatement;
+import main.ast.nodes.Statement.JumpStatement.ReturnStatement;
 import main.ast.nodes.Statement.SelectionStatement;
 import main.ast.nodes.declaration.Declaration;
 import main.ast.nodes.declaration.Declarator;
@@ -30,6 +31,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public final LabelManager labelManager;
     private final Deque<String> loopEndLabels = new ArrayDeque<>();
     private final Deque<String> loopContinueLabels = new ArrayDeque<>();
+    private String currentFunctionEndLabel;
 
     public CodeGenerator() {
         memoryManager = new MemoryManager();
@@ -40,6 +42,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
     /** Register commands:*/
+    //Todo: add these code to codeObject too
     private String getRegisterForRead(String varName){
         List<RegisterAction> actions = new ArrayList<>();
         String reg = registerManager.allocateForRead(varName, actions);
@@ -124,19 +127,31 @@ public class CodeGenerator extends Visitor<CodeObject> {
     ///     |  return val  | <- top of stack would be the return value
     ///     |  ...         |
     ///     |  locals      |
+    ///     |  old fp      | <- new fp pointing here
     ///     |  reg 11(ra)  |
     ///     |  ...         |
     ///     |  reg 2       |
     ///     |  reg 1       |
-    ///     |  old fp      | <- new fp pointing here
     ///     |  arg n       |
     ///     |  ... .       |
     ///     |  arg2        |
     ///     |  arg1        |
     /// </pre>
     /// @param functionDefinition : function definition node
+    @Override
     public CodeObject visit(FunctionDefinition functionDefinition) {
         CodeObject code = new CodeObject();
+        List<String> usableRegisters = registerManager.getAllRegisters();    //Todo:[option 1(naive approach)] get all the
+                                                                             // registers except the ones in use like
+                                                                             // fp, sp, r0
+                                                                             // [option 2] get the code generated for this part
+                                                                             // and save only the registers used in this func
+                                                                             //
+        for (String reg : usableRegisters) {
+            code.addCode(emitter.STR( reg, "sp"));
+            code.addCode(emitter.ADI( -2, "sp"));
+        }
+
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
         code.addCode(emitter.STR("fp", "sp"));
         code.addCode(emitter.ADR("r0", "sp", "fp"));
@@ -144,48 +159,51 @@ public class CodeGenerator extends Visitor<CodeObject> {
         //Todo (optional): use liveness  analyze to allocate space for locals instead of allocating all:
         code.addCode(emitter.ADI(functionDefinition.getNumLocals() * -2, "sp"));
 
-        List<String> usableRegisters = registerManager.getAllRegisters();    //Todo:[option 1(naive approach)] get all the
-                                                                             // registers except the ones in use like
-                                                                             // fp, sp, r0
-                                                                             // [option 2] get the code generated for this part
-                                                                             // and save only the registers used in this func
-                                                                             //
 
         //Todo: set function arguments with corresponding offset in memory manager
-        for (String reg : usableRegisters) {
-            code.addCode(emitter.STR( reg, "sp"));
-            code.addCode(emitter.ADI( -2, "sp"));
-        }
-
+        registerManager.clearRegisters();
         memoryManager.beginFunction();
+        currentFunctionEndLabel = labelManager.generateFunctionReturnLabel(functionDefinition.getName());
 
         //----------------------------------------------
-        if (functionDefinition.getDeclarator() != null){
-            functionDefinition.getDeclarator().accept(this);
-        }
         if (functionDefinition.getDeclarations() != null){
             for (Declaration ds: functionDefinition.getDeclarations()){
                 ds.accept(this);
             }
         }
         if (functionDefinition.getBody() != null){
-            functionDefinition.getBody().accept(this);
+            code.addCode(functionDefinition.getBody().accept(this));
         }
         //--------------------------------------------------
 
-        code.addCode(emitter.emitLabel(labelManager.generateFunctionReturnLabel(functionDefinition.getName())));
+        code.addCode(emitter.emitLabel(currentFunctionEndLabel));
 
+
+        code.addCode(emitter.ADR("r0","fp", "sp"));
+        code.addCode(emitter.LDR("fp", "fp"));
         for (int i = usableRegisters.size() - 1; i >= 0; i--) {
             String reg = usableRegisters.get(i);
             code.addCode(emitter.ADI( 2, "sp"));
             code.addCode(emitter.LDR("sp", reg));
         }
-
-        code.addCode(emitter.ADR("r0","fp", "sp"));
-        code.addCode(emitter.LDR("fp", "fp"));
+        registerManager.restoreRegisters();
+        //Todo: remove function arguments from stack
         code.addCode(emitter.JMR("ra"));
 
 
+        return code;
+    }
+
+    @Override
+    public CodeObject visit(ReturnStatement returnStatement) {
+        CodeObject code = new CodeObject();
+        if(returnStatement.getExpr() != null) {
+            CodeObject retStCode = returnStatement.getExpr().accept(this);
+            code.addCode(retStCode);
+            String regResult =  getRegisterForRead(retStCode.getResultVar());
+            code.addCode(emitter.ADR("r0", regResult, "ret"));
+        }
+        code.addCode(emitter.JMP(currentFunctionEndLabel));
         return code;
     }
 
