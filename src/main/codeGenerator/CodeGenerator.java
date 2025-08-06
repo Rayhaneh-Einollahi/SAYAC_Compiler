@@ -456,13 +456,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String operand = (unaryExpr.getOperand() != null) ? unaryExpr.getOperand().getName() : "";
 
-        String operandReg = (operand != "") ? this.getRegisterForRead(operand) : "";
+        String operandReg = (operand != "") ? this.getRegisterForRead(operand, code) : "";
 
         String destRegName = registerManager.newTmpVarName();
-        String destReg = this.getRegisterForWrite(destRegName);
+        String destReg = this.getRegisterForWrite(destRegName, code);
         String label = "";
         String zeroName = registerManager.newTmpVarName();
-        String zeroReg = this.getRegisterForWrite(zeroName);
+        String zeroReg = this.getRegisterForWrite(zeroName, code);
         switch (op) {
             case UnaryOperator.PRE_INC:
                 code.addCode(emitter.MSI("0", zeroReg));
@@ -532,18 +532,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String firstOperand = (binaryExpr.getFirstOperand() != null) ? binaryExpr.getFirstOperand().getName() : "";
         String secondOperand = (binaryExpr.getSecondOperand() != null) ? binaryExpr.getSecondOperand().getName() : "";
 
-        String firstOperandReg = (firstOperand != "") ? this.getRegisterForRead(firstOperand) : "";
-        String secondOperandReg = (secondOperand != "") ? this.getRegisterForRead(secondOperand) : "";
+        String firstOperandReg = (firstOperand != "") ? this.getRegisterForRead(firstOperand, code) : "";
+        String secondOperandReg = (secondOperand != "") ? this.getRegisterForRead(secondOperand, code) : "";
         System.out.println(secondOperand);
         System.out.println(secondOperandReg);
 
         String destRegName = registerManager.newTmpVarName();
-        String destReg = this.getRegisterForWrite(destRegName);
+        String destReg = this.getRegisterForWrite(destRegName, code);
         String trueLabel = "";
         String falseLabel = "";
         String endLabel = "";
         String zeroName = registerManager.newTmpVarName();
-        String zeroReg = this.getRegisterForWrite(zeroName);
+        String zeroReg = this.getRegisterForWrite(zeroName, code);
         switch (op) {
             case BinaryOperator.AND:
                 code.addCode(emitter.ANR(firstOperandReg, secondOperandReg,destReg));
@@ -727,16 +727,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.setResultVar(destRegName);
             case BinaryOperator.XOR:
                 String notFirstName = registerManager.newTmpVarName();
-                String notFirst = this.getRegisterForWrite(notFirstName);
+                String notFirst = this.getRegisterForWrite(notFirstName, code);
 
                 String notSecondName = registerManager.newTmpVarName();
-                String notSecondReg = this.getRegisterForWrite(notSecondName);
+                String notSecondReg = this.getRegisterForWrite(notSecondName, code);
 
                 String temp1Name = registerManager.newTmpVarName();
-                String temp1Reg = this.getRegisterForWrite(temp1Name);
+                String temp1Reg = this.getRegisterForWrite(temp1Name, code);
 
                 String temp2Name = registerManager.newTmpVarName();
-                String temp2Reg = this.getRegisterForWrite(temp2Name);
+                String temp2Reg = this.getRegisterForWrite(temp2Name, code);
 
 
                 code.addCode(emitter.NTR(notFirst, firstOperandReg));
@@ -759,16 +759,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
             case BinaryOperator.XORASSIGN:
                 String _notFirstName = registerManager.newTmpVarName();
-                String _notFirst = this.getRegisterForWrite(_notFirstName);
+                String _notFirst = this.getRegisterForWrite(_notFirstName, code);
 
                 String _notSecondName = registerManager.newTmpVarName();
-                String _notSecondReg = this.getRegisterForWrite(_notSecondName);
+                String _notSecondReg = this.getRegisterForWrite(_notSecondName, code);
 
                 String _temp1Name = registerManager.newTmpVarName();
-                String _temp1Reg = this.getRegisterForWrite(_temp1Name);
+                String _temp1Reg = this.getRegisterForWrite(_temp1Name, code);
 
                 String _temp2Name = registerManager.newTmpVarName();
-                String _temp2Reg = this.getRegisterForWrite(_temp2Name);
+                String _temp2Reg = this.getRegisterForWrite(_temp2Name, code);
 
                 code.addCode(emitter.NTR(_notFirst, firstOperandReg));
                 code.addCode(emitter.NTR(_notSecondReg, secondOperandReg));
