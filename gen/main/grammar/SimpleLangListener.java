@@ -70,6 +70,16 @@ public interface SimpleLangListener extends ParseTreeListener {
 	 */
 	void exitDeclarationList(SimpleLangParser.DeclarationListContext ctx);
 	/**
+	 * Enter a parse tree produced by {@link SimpleLangParser#allExpression}.
+	 * @param ctx the parse tree
+	 */
+	void enterAllExpression(SimpleLangParser.AllExpressionContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SimpleLangParser#allExpression}.
+	 * @param ctx the parse tree
+	 */
+	void exitAllExpression(SimpleLangParser.AllExpressionContext ctx);
+	/**
 	 * Enter a parse tree produced by {@link SimpleLangParser#expression}.
 	 * @param ctx the parse tree
 	 */

@@ -4,7 +4,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class RegisterManager {
-    private int tmpVarCounter;
     public enum RegisterState { FREE, USED, RESERVED }
     private final Map<String, RegisterState> registerStates = new HashMap<>();
     private final List<String> allRegisters = Arrays.asList("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11");
@@ -19,16 +18,8 @@ public class RegisterManager {
     public RegisterManager(MemoryManager memoryManager) {
         this.memoryManager = memoryManager;
         this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
-        this.tmpVarCounter = 0;
     }
 
-    /**
-     * when needing a temp register, create a temporary varName that points to the result
-     */
-    public String newTmpVarName(){
-        tmpVarCounter++;
-        return "tmp"+tmpVarCounter;
-    }
 
     /**
      * get a register for the purpose of writing into it that refers to the variable varName
