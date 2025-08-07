@@ -46,7 +46,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
     /** Register commands:*/
-    private String getRegisterForRead(String varName, CodeObject code){
+    private String getRegisterForRead(CodeObject code, String varName){
         List<RegisterAction> actions = new ArrayList<>();
         String reg = registerManager.allocateForRead(varName, actions);
 
@@ -59,9 +59,15 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return reg;
     }
 
-    private String getRegisterForWrite(String varName, CodeObject code){
+    private String getRegisterForWrite( CodeObject code, String... varNames){
         List<RegisterAction> actions = new ArrayList<>();
-        String reg = registerManager.allocateForWrite(varName, actions);
+        String reg;
+        if (varNames.length == 1){
+            reg = registerManager.allocateForWrite(varNames[0], actions);
+        }
+        else{
+            reg = registerManager.allocateSeveralForWrite(Arrays.asList(varNames), actions).getFirst();
+        }
 
         for (RegisterAction action : actions) {
             switch (action.type) {
@@ -89,9 +95,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
                 if (!insideFunction) {
                     String tempVal = nameManager.newTmpVarName();
-                    String tempReg = getRegisterForWrite(tempVal, code);
+                    String tempReg = getRegisterForWrite(code,tempVal);
                     String adressVal = nameManager.newTmpVarName();
-                    String adressReg = getRegisterForWrite(adressVal, code);
+                    String adressReg = getRegisterForWrite(code, adressVal);
 
                     int adress = memoryManager.allocateGlobal(varName, 2);
                     code.addCode(emitter.MSI(initValue, tempReg));
@@ -103,7 +109,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
                 } else {
                     if (initValue != null) {
-                        String reg = getRegisterForWrite(varName, code);
+                        String reg = getRegisterForWrite(code, varName);
                         code.addCode(emitter.MSI(initValue, reg));
                     }
                 }
@@ -201,7 +207,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             CodeObject retStCode = returnStatement.getExpr().accept(this);
             code.addCode(retStCode);
             String resultVar = retStCode.getResultVar();
-            String regResult =  getRegisterForRead(resultVar , code);
+            String regResult =  getRegisterForRead(code, resultVar);
             code.addCode(emitter.ADR("r0", regResult, "ret"));
             if(nameManager.isTmp(resultVar)) registerManager.freeRegister(resultVar);
         }
@@ -233,7 +239,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         for (int offset : tempOffsets) {
             String tmpName = nameManager.newTmpVarName();
-            String tmpReg = getRegisterForWrite(tmpName, code);
+            String tmpReg = getRegisterForWrite(code, tmpName);
             code.addCode(emitter.LW(tmpReg, "fp", offset));
 
             code.addCode(emitter.STR(tmpReg, "sp"));
@@ -394,7 +400,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 if (binaryExpr.getFirstOperand() instanceof IntVal intVal){
                     CodeObject right = binaryExpr.getSecondOperand().accept(this);
                     String resultVar = right.getResultVar();
-                    String rightReg = getRegisterForRead(resultVar, code);
+                    String rightReg = getRegisterForRead(code, resultVar);
                     code.addCode(emitter.CMI(intVal.getInt(), rightReg));
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
 
@@ -403,7 +409,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 else if(binaryExpr.getSecondOperand() instanceof IntVal intVal){
                     CodeObject left = binaryExpr.getFirstOperand().accept(this);
                     String resultVar = left.getResultVar();
-                    String leftReg = getRegisterForRead(resultVar, code);
+                    String leftReg = getRegisterForRead(code, resultVar);
                     code.addCode(emitter.CMI(intVal.getInt(), leftReg));
                     code.addCode(emitter.BRR(binaryExpr.getOperator().flip().getSymbol(), trueLabel));
 
@@ -414,8 +420,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     CodeObject right = binaryExpr.getSecondOperand().accept(this);
                     String leftVar = left.getResultVar();
                     String rightVar = right.getResultVar();
-                    String leftReg = getRegisterForRead(leftVar , code);
-                    String rightReg = getRegisterForRead(rightVar, code);
+                    String leftReg = getRegisterForRead(code, leftVar);
+                    String rightReg = getRegisterForRead(code, rightVar);
                     code.addCode(emitter.CMR(leftReg, rightReg));
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
 
@@ -461,13 +467,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String operand = (unaryExpr.getOperand() != null) ? unaryExpr.getOperand().getName() : "";
 
-        String operandReg = (operand != "") ? this.getRegisterForRead(operand, code) : "";
+        String operandReg = (operand != "") ? this.getRegisterForRead(code, operand) : "";
 
         String destRegName = nameManager.newTmpVarName();
-        String destReg = this.getRegisterForWrite(destRegName, code);
+        String destReg = this.getRegisterForWrite(code, destRegName);
         String label = "";
         String zeroName = nameManager.newTmpVarName();
-        String zeroReg = this.getRegisterForWrite(zeroName, code);
+        String zeroReg = this.getRegisterForWrite(code, zeroName);
         switch (op) {
             case UnaryOperator.PRE_INC:
                 code.addCode(emitter.MSI("0", zeroReg));
@@ -537,16 +543,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String firstOperand = (binaryExpr.getFirstOperand() != null) ? binaryExpr.getFirstOperand().getName() : "";
         String secondOperand = (binaryExpr.getSecondOperand() != null) ? binaryExpr.getSecondOperand().getName() : "";
 
-        String firstOperandReg = (firstOperand != "") ? this.getRegisterForRead(firstOperand, code) : "";
-        String secondOperandReg = (secondOperand != "") ? this.getRegisterForRead(secondOperand, code) : "";
+        String firstOperandReg = (firstOperand != "") ? this.getRegisterForRead(code, firstOperand) : "";
+        String secondOperandReg = (secondOperand != "") ? this.getRegisterForRead(code, secondOperand) : "";
 
         String destRegName = nameManager.newTmpVarName();
-        String destReg = this.getRegisterForWrite(destRegName, code);
+        String destReg = this.getRegisterForWrite(code, destRegName);
         String trueLabel = "";
         String falseLabel = "";
         String endLabel = "";
         String zeroName = nameManager.newTmpVarName();
-        String zeroReg = this.getRegisterForWrite(zeroName, code);
+        String zeroReg = this.getRegisterForWrite(code, zeroName);
         switch (op) {
             case BinaryOperator.AND:
                 code.addCode(emitter.ANR(firstOperandReg, secondOperandReg,destReg));
@@ -728,16 +734,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.setResultVar(destRegName);
             case BinaryOperator.XOR:
                 String notFirstName = nameManager.newTmpVarName();
-                String notFirst = this.getRegisterForWrite(notFirstName, code);
+                String notFirst = this.getRegisterForWrite(code, notFirstName);
 
                 String notSecondName = nameManager.newTmpVarName();
-                String notSecondReg = this.getRegisterForWrite(notSecondName, code);
+                String notSecondReg = this.getRegisterForWrite(code, notSecondName);
 
                 String temp1Name = nameManager.newTmpVarName();
-                String temp1Reg = this.getRegisterForWrite(temp1Name, code);
+                String temp1Reg = this.getRegisterForWrite(code, temp1Name);
 
                 String temp2Name = nameManager.newTmpVarName();
-                String temp2Reg = this.getRegisterForWrite(temp2Name, code);
+                String temp2Reg = this.getRegisterForWrite(code, temp2Name);
 
 
                 code.addCode(emitter.NTR(notFirst, firstOperandReg));
@@ -760,16 +766,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
             case BinaryOperator.XORASSIGN:
                 String _notFirstName = nameManager.newTmpVarName();
-                String _notFirst = this.getRegisterForWrite(_notFirstName, code);
+                String _notFirst = this.getRegisterForWrite(code, _notFirstName);
 
                 String _notSecondName = nameManager.newTmpVarName();
-                String _notSecondReg = this.getRegisterForWrite(_notSecondName, code);
+                String _notSecondReg = this.getRegisterForWrite(code, _notSecondName);
 
                 String _temp1Name = nameManager.newTmpVarName();
-                String _temp1Reg = this.getRegisterForWrite(_temp1Name, code);
+                String _temp1Reg = this.getRegisterForWrite(code, _temp1Name);
 
                 String _temp2Name = nameManager.newTmpVarName();
-                String _temp2Reg = this.getRegisterForWrite(_temp2Name, code);
+                String _temp2Reg = this.getRegisterForWrite(code, _temp2Name);
 
                 code.addCode(emitter.NTR(_notFirst, firstOperandReg));
                 code.addCode(emitter.NTR(_notSecondReg, secondOperandReg));

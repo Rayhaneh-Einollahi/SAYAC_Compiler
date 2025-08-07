@@ -31,13 +31,15 @@ public class RegisterManager {
         }
         spilledVars.remove(varName);
 
-        String reg = findFreeRegister();
-        if (reg != null) {
+        List<String> regs = findFreeRegister(1);
+
+        if (regs != null) {
+            String reg = regs.getFirst();
             assignRegister(reg, varName);
             incrementUseCount(varName);
             return reg;
         }
-        return handleSpill(varName, actions);
+        return handleSpill(List.of(varName), actions).getFirst();
 
     }
     /**
@@ -55,13 +57,31 @@ public class RegisterManager {
             return loadSpilled(varName, actions);
         }
 
-        String reg = findFreeRegister();
-        if (reg != null) {
+        List<String> regs = findFreeRegister(1);
+
+        if (regs != null) {
+            String reg = regs.getFirst();
             assignRegister(reg, varName);
             incrementUseCount(varName);
             return reg;
         }
-        return handleSpill(varName, actions);
+        return handleSpill(List.of(varName), actions).getFirst();
+    }
+
+    public List<String> allocateSeveralForWrite(List<String> varNames, List<RegisterAction> actions){
+
+        int cnt = varNames.size();
+        List<String> regs = findFreeRegister(cnt);
+
+        if (regs != null) {
+            for (int i = 0; i < cnt; i++) {
+                assignRegister(regs.get(i), varNames.get(i));
+                incrementUseCount(varNames.get(i));
+            }
+            return regs;
+        }
+
+        return handleSpill(varNames, actions);
     }
 
 
@@ -169,30 +189,53 @@ public class RegisterManager {
 
 
 
-    private String findFreeRegister() {
-        for (String reg : allRegisters) {
-            if (registerStates.get(reg) == RegisterState.FREE) {
-                return reg;
+    private List<String> findFreeRegister(int cnt) {
+        List<String> freeRegs = new ArrayList<>();
+
+        for (int i = 0; i <= allRegisters.size() - cnt; i++) {
+            boolean allFree = true;
+
+            for (int j = 0; j < cnt; j++) {
+                String reg = allRegisters.get(i + j);
+                if (registerStates.get(reg) != RegisterState.FREE) {
+                    allFree = false;
+                    break;
+                }
+            }
+
+            if (allFree) {
+                for (int j = 0; j < cnt; j++) {
+                    freeRegs.add(allRegisters.get(i + j));
+                }
+                return freeRegs;
             }
         }
-        return null;
+        return freeRegs;
     }
 
-    private String handleSpill(String varName, List<RegisterAction> actions) {
-        String spillReg = chooseSpillCandidate();
-        String spilledVar = regToVar.get(spillReg);
+    private List<String> handleSpill(List<String> varNames, List<RegisterAction> actions) {
+        int cnt = varNames.size();
+        List<String> spillRegs = chooseSpillCandidate(cnt);
+        for (int i = 0; i < cnt; i++) {
+            String spillReg = spillRegs.get(i);
+            String varName = varNames.get(i);
 
-        int offset = memoryManager.getLocalOffset(spilledVar);
-        actions.add(new RegisterAction(RegisterAction.Type.SPILL, spillReg, spilledVar, offset));
+            String spilledVar = regToVar.get(spillReg);
+            int offset = memoryManager.getLocalOffset(spilledVar);
 
-        regToVar.remove(spillReg);
-        varToReg.remove(spilledVar);
-        spilledVars.put(spilledVar, offset);
-        registerStates.put(spillReg, RegisterState.FREE);
+            actions.add(new RegisterAction(RegisterAction.Type.SPILL, spillReg, spilledVar, offset));
 
-        assignRegister(spillReg, varName);
-        incrementUseCount(varName);
-        return spillReg;
+            regToVar.remove(spillReg);
+            varToReg.remove(spilledVar);
+            spilledVars.put(spilledVar, offset);
+            registerStates.put(spillReg, RegisterState.FREE);
+
+            assignRegister(spillReg, varName);
+            incrementUseCount(varName);
+        }
+
+
+        return spillRegs;
     }
 
     private void assignRegister(String reg, String varName) {
@@ -208,21 +251,38 @@ public class RegisterManager {
     /* Todo: include the registers needed for the operation in calling this function
         so they are kept untouched
      */
-    private String chooseSpillCandidate() {
-        // Don't spill pinned registers
-        List<String> candidates = allRegisters.stream()
-                .filter(reg -> registerStates.get(reg) == RegisterState.USED)
-                .filter(reg -> !pinnedRegisters.contains(reg))
-                .toList();
+    private List<String> chooseSpillCandidate(int cnt) {
+        int minUsageSum = Integer.MAX_VALUE;
+        List<String> bestBlock = null;
 
-        if (candidates.isEmpty()) {
-            throw new RuntimeException("No register to spill");
+        for (int i = 0; i <= allRegisters.size() - cnt; i++) {
+            List<String> block = allRegisters.subList(i, i + cnt);
+
+            boolean allEligible = block.stream().allMatch(reg ->
+                    registerStates.get(reg) == RegisterState.USED &&
+                            !pinnedRegisters.contains(reg)
+            );
+
+            if (!allEligible) continue;
+
+            int usageSum = 0;
+            for (String reg : block) {
+                String var = regToVar.get(reg);
+                int count = varUseCounts.getOrDefault(var, Integer.MAX_VALUE);
+                usageSum += count;
+            }
+
+            if (usageSum < minUsageSum) {
+                minUsageSum = usageSum;
+                bestBlock = new ArrayList<>(block);
+            }
         }
 
-        return candidates.stream()
-                .min(Comparator.comparingInt(reg ->
-                        varUseCounts.getOrDefault(regToVar.get(reg), Integer.MAX_VALUE)))
-                .orElse(candidates.getFirst());
+        if (bestBlock == null) {
+            throw new RuntimeException("No register block to spill");
+        }
+
+        return bestBlock;
     }
 
     public void clearRegisters() {
