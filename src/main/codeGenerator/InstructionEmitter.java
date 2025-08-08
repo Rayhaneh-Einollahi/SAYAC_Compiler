@@ -1,6 +1,9 @@
 package main.codeGenerator;
 
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class InstructionEmitter {
     private String emit(String opcode, String... operands) {
         StringBuilder line = new StringBuilder(opcode);
@@ -29,16 +32,33 @@ public class InstructionEmitter {
      * @param imm immediate that comes as an int value
      * @param destReg destination register
      */
-    public String MSI(String imm, String destReg){
+    public String MSI(int imm, String destReg){
         return this.emit("MSI", String.valueOf(imm), destReg);
     }
 
-    public String SW(String valueReg, String adrReg, int imm){
-        return this.emit(""); //Todo : generate instructions based on sayac limitation to handle immediate
+    /**
+     * SW is not a default instruction of SAYAC processor. To handle Reference to memory using offset
+     * this method generates three line of code. editing adrReg (sp in our case) to add with offset and after storing
+     * revert it to the original value.
+     */
+    public List<String> SW(String valueReg, int offset, String adrReg){
+        List<String> instructions = new ArrayList<String>();
+        instructions.add(ADI(offset, adrReg));
+        instructions.add(STR(valueReg, adrReg));
+        instructions.add(ADI(-offset, adrReg));
+        return instructions;
     }
-
-    public String LW(String valueReg, String adrReg, int imm){
-        return this.emit(""); //Todo : generate instructions based on sayac limitation to handle immediate
+    /**
+     * LW is not a default instruction of SAYAC processor. To handle Reference to memory using offset
+     * this method generates three line of code. editing adrReg (sp in our case) to add with offset and after storing
+     * revert it to the original value.
+     */
+    public List<String> LW(String adrReg, int offset, String destReg){
+        List<String> instructions = new ArrayList<String>();
+        instructions.add(ADI(offset, adrReg));
+        instructions.add(LDR(destReg, adrReg));
+        instructions.add(ADI(-offset, adrReg));
+        return instructions;
     }
 
 

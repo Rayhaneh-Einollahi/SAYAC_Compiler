@@ -30,6 +30,10 @@ public class CodeObject {
         code.addAll(other.code);
     }
 
+    public void addCode(List<String> instructions) {
+        code.addAll(instructions);
+    }
+
     public void addCode(String other){
         code.add(other);
     }

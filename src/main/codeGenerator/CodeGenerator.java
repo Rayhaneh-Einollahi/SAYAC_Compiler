@@ -52,8 +52,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         for (RegisterAction action : actions) {
             switch (action.type) {
-                case SPILL -> code.addCode(emitter.SW(action.register,"FP",action.offset));
-                case LOAD  -> code.addCode(emitter.LW(action.register,"FP",action.offset));
+                case SPILL -> code.addCode(emitter.SW(action.register, action.offset, "FP"));
+                case LOAD  -> code.addCode(emitter.LW(action.register, action.offset, "FP"));
             }
         }
         return reg;
@@ -71,8 +71,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         for (RegisterAction action : actions) {
             switch (action.type) {
-                case SPILL -> code.addCode(emitter.SW(action.register,"FP",action.offset));
-                case LOAD  -> code.addCode(emitter.LW(action.register,"FP",action.offset));
+                case SPILL -> code.addCode(emitter.SW(action.register, action.offset, "FP"));
+                case LOAD  -> code.addCode(emitter.LW(action.register, action.offset, "FP"));
             }
         }
         return reg;
@@ -85,11 +85,11 @@ public class CodeGenerator extends Visitor<CodeObject> {
             CodeObject code = new CodeObject();
             for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
                 String varName = initDeclarator.getDeclarator().getName();
-                String initValue = "0";
+                int initValue = 0;
                 if (initDeclarator.getInitializer() != null && initDeclarator.getInitializer().getExpr() != null) {
                     Expr expr = initDeclarator.getInitializer().getExpr();
-                    if (expr instanceof ConstantExpr constantExpr) {
-                        initValue = constantExpr.getStr();
+                    if (expr instanceof IntVal intVal) {
+                        initValue = intVal.getInt();
                     }
                 }
 
@@ -101,17 +101,17 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
                     int adress = memoryManager.allocateGlobal(varName, 2);
                     code.addCode(emitter.MSI(initValue, tempReg));
-                    code.addCode(emitter.MSI(String.valueOf(adress), adressReg));
+                    code.addCode(emitter.MSI(adress, adressReg));
                     code.addCode(emitter.STR(tempVal, adressReg));
                     this.registerManager.freeRegister(tempReg);
                     this.registerManager.freeRegister(adressReg);
 
 
                 } else {
-                    if (initValue != null) {
-                        String reg = getRegisterForWrite(code, varName);
-                        code.addCode(emitter.MSI(initValue, reg));
-                    }
+
+                    String reg = getRegisterForWrite(code, varName);
+                    code.addCode(emitter.MSI(initValue, reg));
+
                 }
             }
 
@@ -233,14 +233,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
             int offset = memoryManager.allocateLocal(".arg_"+ i,2);
             tempOffsets.add(offset);
 
-            code.addCode(emitter.SW(resultVar, "fp", offset));
+            code.addCode(emitter.SW(resultVar, offset, "fp"));
         }
 
 
         for (int offset : tempOffsets) {
             String tmpName = nameManager.newTmpVarName();
             String tmpReg = getRegisterForWrite(code, tmpName);
-            code.addCode(emitter.LW(tmpReg, "fp", offset));
+            code.addCode(emitter.LW(tmpReg, offset, "fp"));
 
             code.addCode(emitter.STR(tmpReg, "sp"));
             code.addCode(emitter.ADI(-2, "sp"));
@@ -476,7 +476,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String zeroReg = this.getRegisterForWrite(code, zeroName);
         switch (op) {
             case UnaryOperator.PRE_INC:
-                code.addCode(emitter.MSI("0", zeroReg));
+                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADI(1 , operandReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 this.registerManager.freeRegister(zeroReg);
@@ -484,14 +484,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.setResultVar(destRegName);
                 break;
             case UnaryOperator.POST_INC:
-                code.addCode(emitter.MSI("0", zeroReg));
+                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 code.addCode(emitter.ADI(1 , operandReg));
                 this.registerManager.freeRegister(zeroReg);
                 code.setResultVar(destRegName);
                 break;
             case UnaryOperator.PRE_DEC:
-                code.addCode(emitter.MSI("0", zeroReg));
+                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.SUI(1 , operandReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 this.registerManager.freeRegister(zeroReg);
@@ -499,7 +499,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.setResultVar(destRegName);
                 break;
             case UnaryOperator.POST_DEC:
-                code.addCode(emitter.MSI("0", zeroReg));
+                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 code.addCode(emitter.SUI(1 , operandReg));
                 this.registerManager.freeRegister(zeroReg);
@@ -572,19 +572,19 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMI("0",secondOperandReg));
                 code.addCode(emitter.BRR("==", falseLabel));
 
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
                 code.setResultVar(destRegName);
 
                 code.addCode(emitter.JMR(endLabel));
 
                 code.addCode(emitter.emitLabel(falseLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
 
                 code.addCode(emitter.emitLabel(endLabel));
 
 
             case BinaryOperator.ASSIGN:
-                code.addCode(emitter.MSI("0", zeroReg));
+                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, secondOperandReg, firstOperandReg));
                 code.setResultVar(destRegName);
             case BinaryOperator.DIVIDE:
@@ -598,10 +598,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
                 code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
                 code.addCode(emitter.BRR("==", trueLabel));
-                code.addCode(emitter.MSI("0", destReg));
+                code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
                 code.setResultVar(destRegName);
             case BinaryOperator.NOTEQUAL:
@@ -609,10 +609,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
                 code.addCode(emitter.BRR("!=", trueLabel));
-                code.addCode(emitter.MSI("0", destReg));
+                code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
 
                 code.setResultVar(destRegName);
@@ -621,10 +621,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR(">", trueLabel));
-                code.addCode(emitter.MSI("0", destReg));
+                code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
 
                 code.setResultVar(destRegName);
@@ -632,11 +632,11 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 trueLabel =  this.labelManager.generateTrueLabel();
                 endLabel = this.labelManager.generateEndLabel();                code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR(">=", trueLabel));
-                code.addCode(emitter.MSI("0", destReg));
+                code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
 
                 code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
 
                 code.setResultVar(destRegName);
@@ -645,10 +645,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR("<", trueLabel));
-                code.addCode(emitter.MSI("0", destReg));
+                code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
 
                 code.setResultVar(destRegName);
@@ -658,11 +658,11 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR("<=", trueLabel));
-                code.addCode(emitter.MSI("0", destReg));
+                code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
 
                 code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
 
                 code.setResultVar(destRegName);
@@ -721,14 +721,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMI("1",secondOperandReg));
                 code.addCode(emitter.BRR("==", trueLabel));
 
-                code.addCode(emitter.MSI("0", destReg));
+                code.addCode(emitter.MSI(0, destReg));
 
                 //dorosteh?
 
                 code.addCode(emitter.JMR(endLabel));
 
                 code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI("1", destReg));
+                code.addCode(emitter.MSI(1, destReg));
 
                 code.addCode(emitter.emitLabel(endLabel));
                 code.setResultVar(destRegName);
