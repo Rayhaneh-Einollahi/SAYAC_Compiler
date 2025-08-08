@@ -806,4 +806,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return null;
     }
 
+    public CodeObject visit(Identifier identifier) {
+        CodeObject code = new CodeObject();
+        code.setResultVar(identifier.getName());
+        return code;
+    }
+
 }

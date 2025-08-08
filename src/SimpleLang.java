@@ -41,8 +41,8 @@ public class SimpleLang {
 //        TestVisitor my6_visitor = new TestVisitor();
 //        my6_visitor.visit(program);
         CodeGenerator codeGenerator = new CodeGenerator();
-        codeGenerator.visit(program);
-//        codeGenerator.printAssembly();
+        System.out.print(codeGenerator.visit(program));
+
 
     }
 }
