@@ -115,28 +115,48 @@ public class InstructionEmitter {
 
 
     }
-    public String SUR(String valueReg2, String valueReg1, String destReg){
+    public String SUR(String valueReg2, String valueReg1, String destReg) {
         return this.emit("SUR", valueReg2, valueReg1, destReg);
     }
 
-
-
-    public String ANR(String valueReg2, String valueReg1, String destReg){
-        return this.emit("ANR",  destReg ,valueReg2, valueReg1);
+    public String ANR(String valueReg2, String valueReg1, String destReg) {
+        return this.emit("ANR", valueReg2, valueReg1, destReg);
     }
-    public String ANI(int imm, String destReg){
-        return this.emit("ANI", String.valueOf(imm) , destReg);
-    }
-    public String MUL(String destReg, String valueReg2, String valueReg1){return this.emit("MUL", valueReg2, valueReg1);}
-    public String Ret(){
-        return this.JMR("ra");}
 
-    public String CMI(String Imm, String valueReg){return this.emit("CMI", Imm, valueReg);}
-    public String DIV(String resReg, String dividandReg, String divisorReg){return this.emit("DIV", resReg ,dividandReg, divisorReg);}
-    public String SAR(String resReg, String reg1 , String reg2){return this.emit("SAR", resReg, reg1 , reg2);}
-    public String NTR(String resReg , String reg){return this.emit("NTR", resReg, reg);}
-    public String SUI(int imm, String destReg){
-        return this.emit("SUI", String.valueOf(imm) , destReg);
+    public String ANI(int imm, String destReg) {
+        return this.emit("ANI", String.valueOf(imm), destReg);
+    }
+
+    public String MUL(String valueReg2, String valueReg1, String destReg) {
+        return this.emit("MUL", valueReg2, valueReg1, destReg);
+    }
+
+    public String Ret() {
+        return this.JMR("ra");
+    }
+
+//    public String CMI(int imm, String valueReg) {
+//        return this.emit("CMI", String.valueOf(imm), valueReg);
+//    }
+
+    public String DIV(String valueReg2, String valueReg1, String destReg) {
+        return this.emit("DIV", valueReg2, valueReg1, destReg);
+    }
+
+    public String SAR(String valueReg2, String valueReg1, String destReg) {
+        return this.emit("SAR", valueReg2, valueReg1, destReg);
+    }
+
+    public String NTR(String valueReg, String destReg) {
+        return this.emit("NTR", valueReg, destReg);
+    }
+
+    public String NTR2(String valueReg, String destReg) {
+        return this.emit("NTR2", valueReg, destReg);
+    }
+
+    public String SUI(int imm, String destReg) {
+        return this.emit("SUI", String.valueOf(imm), destReg);
     }
 
 }

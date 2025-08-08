@@ -81,7 +81,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
     public CodeObject visit(Declaration declaration) {
-
+            Boolean isExpr = Boolean.FALSE;
             CodeObject code = new CodeObject();
             for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
                 String varName = initDeclarator.getDeclarator().getName();
@@ -90,7 +90,11 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     Expr expr = initDeclarator.getInitializer().getExpr();
                     if (expr instanceof IntVal intVal) {
                         initValue = intVal.getInt();
+                    }else{
+                        expr.accept(this);
+                        isExpr = Boolean.TRUE;
                     }
+
                 }
 
                 if (!insideFunction) {
@@ -100,9 +104,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     String adressReg = getRegisterForWrite(code, adressVal);
 
                     int adress = memoryManager.allocateGlobal(varName, 2);
-                    code.addCode(emitter.MSI(initValue, tempReg));
-                    code.addCode(emitter.MSI(adress, adressReg));
-                    code.addCode(emitter.STR(tempVal, adressReg));
+                    if(!isExpr){
+                        code.addCode(emitter.MSI(initValue, tempReg));
+                        code.addCode(emitter.MSI(adress, adressReg));
+                        code.addCode(emitter.STR(tempVal, adressReg));
+                    }
+
                     this.registerManager.freeRegister(tempReg);
                     this.registerManager.freeRegister(adressReg);
 
@@ -110,10 +117,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 } else {
 
                     String reg = getRegisterForWrite(code, varName);
-                    code.addCode(emitter.MSI(initValue, reg));
+                    if(!isExpr){
+                        code.addCode(emitter.MSI(initValue, reg));
+                    }
+
 
                 }
             }
+        System.out.println(code.toString());
 
         return code;
     }
@@ -460,88 +471,104 @@ public class CodeGenerator extends Visitor<CodeObject> {
         UnaryOperator op = unaryExpr.getOperator();
 
         CodeObject operandCode = unaryExpr.getOperand().accept(this);
-
+        String operand = "";
         if (operandCode != null){
             code.addCode(operandCode);
+            if (operandCode.getResultVar() != null){
+                operand = operandCode.getResultVar();
+            }
+            else {
+                operand = (unaryExpr.getOperand() != null) ? unaryExpr.getOperand().getName() : "";
+
+            }
         }
 
-        String operand = (unaryExpr.getOperand() != null) ? unaryExpr.getOperand().getName() : "";
 
         String operandReg = (operand != "") ? this.getRegisterForRead(code, operand) : "";
 
         String destRegName = nameManager.newTmpVarName();
         String destReg = this.getRegisterForWrite(code, destRegName);
         String label = "";
-        String zeroName = nameManager.newTmpVarName();
-        String zeroReg = this.getRegisterForWrite(code, zeroName);
+
+        String zeroReg = "R0";
         switch (op) {
             case UnaryOperator.PRE_INC:
                 code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADI(1 , operandReg));
-                code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
-                this.registerManager.freeRegister(zeroReg);
-
-                code.setResultVar(destRegName);
+                code.setResultVar(operandReg);
                 break;
             case UnaryOperator.POST_INC:
                 code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 code.addCode(emitter.ADI(1 , operandReg));
-                this.registerManager.freeRegister(zeroReg);
                 code.setResultVar(destRegName);
                 break;
             case UnaryOperator.PRE_DEC:
                 code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.SUI(1 , operandReg));
-                code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
-                this.registerManager.freeRegister(zeroReg);
-
-                code.setResultVar(destRegName);
+                code.setResultVar(operandReg);
                 break;
             case UnaryOperator.POST_DEC:
                 code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 code.addCode(emitter.SUI(1 , operandReg));
-                this.registerManager.freeRegister(zeroReg);
                 code.setResultVar(destRegName);
                 break;
             //bepors az bache ha
             case UnaryOperator.NOT:
-                code.addCode(emitter.NTR(destReg, operandReg));
+                code.addCode(emitter.NTR( operandReg, destReg));
                 code.setResultVar(destRegName);
                 break;
             case UnaryOperator.MINUS:
-                code.addCode(emitter.NTR(destReg, operandReg));
+                code.addCode(emitter.NTR2( operandReg, destReg));
                 code.setResultVar(destRegName);
                 break;
             case UnaryOperator.TILDE:
-                code.addCode(emitter.NTR(destReg, operandReg));
+                code.addCode(emitter.NTR( operandReg, destReg));
                 code.setResultVar(destRegName);
                 break;
         }
         //inja free konam??
-        return null;
+        if(nameManager.isTmp(operand)){
+            registerManager.freeRegister(operandReg);
+        }
+        System.out.println(code.toString());
+        return code;
     }
 
     public CodeObject visit(BinaryExpr binaryExpr) {
+        System.out.println("Visited");
         CodeObject code = new CodeObject();
         BinaryOperator op = binaryExpr.getOperator();
 
         CodeObject firstOperandCode = binaryExpr.getFirstOperand().accept(this);
+
+        String firstOperand = "";
+        String secondOperand = "";
         if (firstOperandCode != null){
             code.addCode(firstOperandCode);
+            if(firstOperandCode.getResultVar() != null){
+                firstOperand = firstOperandCode.getResultVar();
+            }else {
+                firstOperand = (binaryExpr.getFirstOperand() != null) ? binaryExpr.getFirstOperand().getName() : "";
+
+            }
         }
 
         CodeObject secondOperandCode = binaryExpr.getSecondOperand().accept(this);
 
         if (secondOperandCode != null){
             code.addCode(secondOperandCode);
+            if(secondOperandCode.getResultVar() != null){
+                secondOperand = secondOperandCode.getResultVar();
+            }else{
+                secondOperand = (binaryExpr.getSecondOperand() != null) ? binaryExpr.getSecondOperand().getName() : "";
+
+            }
+
         }
 
 
-
-        String firstOperand = (binaryExpr.getFirstOperand() != null) ? binaryExpr.getFirstOperand().getName() : "";
-        String secondOperand = (binaryExpr.getSecondOperand() != null) ? binaryExpr.getSecondOperand().getName() : "";
 
         String firstOperandReg = (firstOperand != "") ? this.getRegisterForRead(code, firstOperand) : "";
         String secondOperandReg = (secondOperand != "") ? this.getRegisterForRead(code, secondOperand) : "";
@@ -551,51 +578,72 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String trueLabel = "";
         String falseLabel = "";
         String endLabel = "";
-        String zeroName = nameManager.newTmpVarName();
-        String zeroReg = this.getRegisterForWrite(code, zeroName);
+        String zeroReg = "R0";
+        String tempName = nameManager.newTmpVarName();
+        String tempReg = this.getRegisterForWrite(code, tempName);
         switch (op) {
             case BinaryOperator.AND:
-                code.addCode(emitter.ANR(firstOperandReg, secondOperandReg,destReg));
+                code.addCode(emitter.ANR(firstOperandReg, secondOperandReg, destReg));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
                 break;
-            case  BinaryOperator.ANDASSIGN:
-                code.addCode(emitter.ANR(firstOperandReg, secondOperandReg,firstOperandReg));
-                code.setResultVar(destRegName);
+
+            case BinaryOperator.ANDASSIGN:
+                code.addCode(emitter.ANR(firstOperandReg, secondOperandReg, firstOperandReg));
+                code.setResultVar(firstOperandReg);
                 break;
+
             case BinaryOperator.ANDAND:
-                //jump
                 falseLabel = this.labelManager.generateFalseLabel();
                 endLabel = this.labelManager.generateEndLabel();
-                code.addCode(emitter.CMI("0",firstOperandReg));
+                code.addCode(emitter.CMI(0, firstOperandReg));
                 code.addCode(emitter.BRR("==", falseLabel));
-
-                code.addCode(emitter.CMI("0",secondOperandReg));
+                code.addCode(emitter.CMI(0, secondOperandReg));
                 code.addCode(emitter.BRR("==", falseLabel));
-
                 code.addCode(emitter.MSI(1, destReg));
                 code.setResultVar(destRegName);
-
                 code.addCode(emitter.JMR(endLabel));
-
                 code.addCode(emitter.emitLabel(falseLabel));
-                code.addCode(emitter.MSI(1, destReg));
-
+                code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
-
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
 
             case BinaryOperator.ASSIGN:
                 code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, secondOperandReg, firstOperandReg));
-                code.setResultVar(destRegName);
+                code.setResultVar(firstOperandReg);
+                break;
+
             case BinaryOperator.DIVIDE:
-                code.addCode(emitter.DIV(destReg, firstOperandReg, secondOperandReg));
+                code.addCode(emitter.DIV(firstOperandReg, secondOperandReg, destReg));
+                code.setResultVar(destReg);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.DIVASSIGN:
-                code.addCode(emitter.DIV(firstOperandReg, firstOperandReg, secondOperandReg));
+                code.addCode(emitter.DIV(firstOperandReg, secondOperandReg, firstOperandReg));
+                code.setResultVar(firstOperandReg);
+                break;
 
             case BinaryOperator.EQUAL:
-                trueLabel =  this.labelManager.generateTrueLabel();
+                trueLabel = this.labelManager.generateTrueLabel();
                 endLabel = this.labelManager.generateEndLabel();
-
                 code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
                 code.addCode(emitter.BRR("==", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
@@ -604,8 +652,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.NOTEQUAL:
-                trueLabel =  this.labelManager.generateTrueLabel();
+                trueLabel = this.labelManager.generateTrueLabel();
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
                 code.addCode(emitter.BRR("!=", trueLabel));
@@ -614,10 +670,17 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
-
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.GREATER:
-                trueLabel =  this.labelManager.generateTrueLabel();
+                trueLabel = this.labelManager.generateTrueLabel();
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR(">", trueLabel));
@@ -626,22 +689,24 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
-
                 code.setResultVar(destRegName);
+                break;
+
             case BinaryOperator.GREATEREQUAL:
-                trueLabel =  this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();                code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
+                trueLabel = this.labelManager.generateTrueLabel();
+                endLabel = this.labelManager.generateEndLabel();
+                code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR(">=", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
-
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
-
                 code.setResultVar(destRegName);
+                break;
+
             case BinaryOperator.LESS:
-                trueLabel =  this.labelManager.generateTrueLabel();
+                trueLabel = this.labelManager.generateTrueLabel();
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR("<", trueLabel));
@@ -650,107 +715,173 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
-
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
 
             case BinaryOperator.LESSEQUAL:
-                trueLabel =  this.labelManager.generateTrueLabel();
+                trueLabel = this.labelManager.generateTrueLabel();
                 endLabel = this.labelManager.generateEndLabel();
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR("<=", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.JMR(endLabel));
-
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
-
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
 
             case BinaryOperator.LEFTSHIFT:
-                code.addCode(emitter.SAR(destReg, firstOperandReg , "-" + secondOperandReg));
+                code.addCode(emitter.NTR2(secondOperandReg, tempReg));
+                code.addCode(emitter.SAR(tempReg, firstOperandReg, destReg));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.LEFTSHIFTASSIGN:
-                code.addCode(emitter.SAR(firstOperandReg, firstOperandReg , "-" + secondOperandReg));
-                code.setResultVar(destRegName);
+                code.addCode(emitter.NTR2(secondOperandReg, tempReg));
+                code.addCode(emitter.SAR(tempReg, firstOperandReg, firstOperandReg));
+                code.setResultVar(firstOperandReg);
+                break;
+
             case BinaryOperator.RIGHTSHIFT:
-                code.addCode(emitter.SAR(destReg, firstOperandReg , "+" + secondOperandReg));
+                code.addCode(emitter.SAR(secondOperandReg, destReg, firstOperandReg));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.RIGHTSHIFTASSIGN:
-                code.addCode(emitter.SAR(firstOperandReg, firstOperandReg , "+" + secondOperandReg));
-                code.setResultVar(destRegName);
+                code.addCode(emitter.SAR(secondOperandReg, firstOperandReg, firstOperandReg));
+                code.setResultVar(firstOperandReg);
+                break;
+
             case BinaryOperator.MINUS:
-                code.addCode(emitter.SUR(firstOperandReg, secondOperandReg,destReg));
+                code.addCode(emitter.SUR(firstOperandReg, secondOperandReg, destReg));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.MINUSASSIGN:
-                code.addCode(emitter.SUR(firstOperandReg, secondOperandReg,firstOperandReg));
-                code.setResultVar(destRegName);
+                code.addCode(emitter.SUR(firstOperandReg, secondOperandReg, firstOperandReg));
+                code.setResultVar(firstOperandReg);
+                break;
+
             case BinaryOperator.PLUS:
-                code.addCode(emitter.ADR(firstOperandReg, secondOperandReg,destReg));
+                code.addCode(emitter.ADR(firstOperandReg, secondOperandReg, destReg));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.PLUSASSIGN:
-                code.addCode(emitter.ADR(firstOperandReg, secondOperandReg,firstOperandReg));
-                code.setResultVar(destRegName);
+                code.addCode(emitter.ADR(firstOperandReg, secondOperandReg, firstOperandReg));
+                code.setResultVar(firstOperandReg);
+                break;
+
             case BinaryOperator.MULT:
-                //MSB ro chikar konam
-                code.addCode(emitter.MUL(destReg, secondOperandReg, firstOperandReg));
+                code.addCode(emitter.MUL(secondOperandReg, firstOperandReg, destReg));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.STARASSIGN:
-                code.addCode(emitter.MUL(firstOperandReg, secondOperandReg, firstOperandReg));
-                code.setResultVar(destRegName);
+                code.addCode(emitter.MUL(secondOperandReg, firstOperandReg, firstOperandReg));
+                code.setResultVar(firstOperandReg);
+                break;
+
             case BinaryOperator.OR:
+                System.out.println("orTest");
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
                 code.addCode(emitter.NTR(secondOperandReg, secondOperandReg));
                 code.addCode(emitter.ANR(secondOperandReg, firstOperandReg, destReg));
                 code.addCode(emitter.NTR(destReg, destReg));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.ORASSIGN:
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
                 code.addCode(emitter.NTR(secondOperandReg, secondOperandReg));
                 code.addCode(emitter.ANR(secondOperandReg, firstOperandReg, firstOperandReg));
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
-                code.setResultVar(destRegName);
+                code.setResultVar(firstOperandReg);
+                break;
+
             case BinaryOperator.OROR:
-                trueLabel =  this.labelManager.generateTrueLabel();
-
+                trueLabel = this.labelManager.generateTrueLabel();
                 endLabel = this.labelManager.generateEndLabel();
-
-                code.addCode(emitter.CMI("1",firstOperandReg));
+                code.addCode(emitter.CMI(1, firstOperandReg));
                 code.addCode(emitter.BRR("==", trueLabel));
-
-                code.addCode(emitter.CMI("1",secondOperandReg));
+                code.addCode(emitter.CMI(1, secondOperandReg));
                 code.addCode(emitter.BRR("==", trueLabel));
-
                 code.addCode(emitter.MSI(0, destReg));
-
-                //dorosteh?
-
                 code.addCode(emitter.JMR(endLabel));
-
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
-
                 code.addCode(emitter.emitLabel(endLabel));
                 code.setResultVar(destRegName);
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
+
             case BinaryOperator.XOR:
                 String notFirstName = nameManager.newTmpVarName();
                 String notFirst = this.getRegisterForWrite(code, notFirstName);
-
                 String notSecondName = nameManager.newTmpVarName();
                 String notSecondReg = this.getRegisterForWrite(code, notSecondName);
-
                 String temp1Name = nameManager.newTmpVarName();
                 String temp1Reg = this.getRegisterForWrite(code, temp1Name);
-
                 String temp2Name = nameManager.newTmpVarName();
                 String temp2Reg = this.getRegisterForWrite(code, temp2Name);
-
-
-                code.addCode(emitter.NTR(notFirst, firstOperandReg));
-                code.addCode(emitter.NTR(notSecondReg, secondOperandReg));
+                code.addCode(emitter.NTR(firstOperandReg, notFirst));
+                code.addCode(emitter.NTR(secondOperandReg, notSecondReg));
                 code.addCode(emitter.ANR(notFirst, secondOperandReg, temp1Reg));
                 code.addCode(emitter.ANR(notSecondReg, firstOperandReg, temp2Reg));
-
                 code.addCode(emitter.NTR(temp1Reg, temp1Reg));
                 code.addCode(emitter.NTR(temp2Reg, temp2Reg));
                 code.addCode(emitter.ANR(temp2Reg, temp1Reg, destReg));
@@ -759,51 +890,52 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 this.registerManager.freeRegister(notFirst);
                 this.registerManager.freeRegister(notSecondReg);
                 this.registerManager.freeRegister(temp1Reg);
-
-                this.registerManager.freeRegister(temp2Reg);
-
-
+                if (nameManager.isTmp(firstOperand)) {
+                    registerManager.freeRegister(firstOperandReg);
+                }
+                if (nameManager.isTmp(secondOperand)) {
+                    registerManager.freeRegister(secondOperandReg);
+                }
+                break;
 
             case BinaryOperator.XORASSIGN:
                 String _notFirstName = nameManager.newTmpVarName();
                 String _notFirst = this.getRegisterForWrite(code, _notFirstName);
-
                 String _notSecondName = nameManager.newTmpVarName();
                 String _notSecondReg = this.getRegisterForWrite(code, _notSecondName);
-
                 String _temp1Name = nameManager.newTmpVarName();
                 String _temp1Reg = this.getRegisterForWrite(code, _temp1Name);
-
                 String _temp2Name = nameManager.newTmpVarName();
                 String _temp2Reg = this.getRegisterForWrite(code, _temp2Name);
-
-                code.addCode(emitter.NTR(_notFirst, firstOperandReg));
+                code.addCode(emitter.NTR(firstOperandReg, _notFirst));
                 code.addCode(emitter.NTR(_notSecondReg, secondOperandReg));
                 code.addCode(emitter.ANR(_notFirst, secondOperandReg, _temp1Reg));
                 code.addCode(emitter.ANR(_notSecondReg, firstOperandReg, _temp1Reg));
-
                 code.addCode(emitter.NTR(_temp1Reg, _temp1Reg));
                 code.addCode(emitter.NTR(_temp2Reg, _temp2Reg));
                 code.addCode(emitter.ANR(_temp2Reg, _temp1Reg, firstOperandReg));
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
-                code.setResultVar(destRegName);
-
+                code.setResultVar(firstOperandReg);
                 this.registerManager.freeRegister(_notFirst);
                 this.registerManager.freeRegister(_notSecondReg);
                 this.registerManager.freeRegister(_temp1Reg);
-
                 this.registerManager.freeRegister(_temp2Reg);
-
-
-
-
+                break;
 
             case BinaryOperator.MOD:
-            case BinaryOperator.MODASSIGN:
-        }
-        this.registerManager.freeRegister(zeroReg);
+                // TODO: Implement MOD
+                break;
 
-        return null;
+            case BinaryOperator.MODASSIGN:
+                // TODO: Implement MODASSIGN
+                break;
+        }
+
+        registerManager.freeRegister(tempReg);
+        System.out.println(code.toString());
+
+
+        return code;
     }
 
     public CodeObject visit(Identifier identifier) {
