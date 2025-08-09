@@ -1272,7 +1272,7 @@ public class SimpleLangParser extends Parser {
 
 						setState(302);
 						match(RightParen);
-						((ExpressionContext)_localctx).expRet =  new FunctionExpr(((ExpressionContext)_localctx).e.expRet, ((ExpressionContext)_localctx).l!=null? ((ExpressionContext)_localctx).l.list: null); _localctx.expRet.setLine(_localctx.start.getLine());
+						((ExpressionContext)_localctx).expRet =  new FunctionExpr(((ExpressionContext)_localctx).e.expRet, ((ExpressionContext)_localctx).l!=null? ((ExpressionContext)_localctx).l.list: new ArrayList<>()); _localctx.expRet.setLine(_localctx.start.getLine());
 						}
 						break;
 					case 15:

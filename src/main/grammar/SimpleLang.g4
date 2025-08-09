@@ -60,7 +60,7 @@ expression returns [Expr expRet]
   | LeftParen e=expression RightParen {$expRet = $e.expRet; $expRet.setLine($ctx.start.getLine());}
   | LeftParen t=typeName RightParen LeftBrace i=initializerList Comma? RightBrace {$expRet = new IniListExpr($t.typeRet, $i.list); $expRet.setLine($ctx.start.getLine());}
   | e1=expression LeftBracket e2=expression RightBracket { $expRet = new ArrayExpr($e1.expRet, $e2.expRet); $expRet.setLine($ctx.start.getLine());}
-  | e=expression LeftParen l=argumentExpressionList? RightParen {$expRet = new FunctionExpr($e.expRet, $l.ctx!=null? $l.list: null); $expRet.setLine($ctx.start.getLine());}
+  | e=expression LeftParen l=argumentExpressionList? RightParen {$expRet = new FunctionExpr($e.expRet, $l.ctx!=null? $l.list: new ArrayList<>()); $expRet.setLine($ctx.start.getLine());}
   | e=expression PlusPlus    {$expRet = new UnaryExpr($e.expRet, UnaryOperator.POST_INC); $expRet.setLine($ctx.start.getLine());}
   | e=expression MinusMinus    {$expRet = new UnaryExpr($e.expRet, UnaryOperator.POST_DEC); $expRet.setLine($ctx.start.getLine());}
   | { List<Token> ops = new ArrayList<>(); }

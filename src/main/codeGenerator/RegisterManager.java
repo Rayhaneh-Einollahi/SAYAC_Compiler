@@ -239,6 +239,7 @@ public class RegisterManager {
     }
 
     private void assignRegister(String reg, String varName) {
+        //if we want to make this public, first free the register then assign it
         regToVar.put(reg, varName);
         varToReg.put(varName, reg);
         registerStates.put(reg, RegisterState.USED);

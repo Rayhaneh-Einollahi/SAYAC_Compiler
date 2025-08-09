@@ -11,11 +11,7 @@ public class FunctionExpr extends Expr {
 
     public FunctionExpr(Expr outside, List<Expr> arguments) {
         this.outside = outside;
-        if (arguments.getFirst() instanceof CommaExpr) {
-            this.arguments = arguments;
-        } else {
-            this.arguments = ((CommaExpr) arguments.getFirst()).getExpressions();
-        }
+        this.arguments = arguments;
     }
 
     public void removeArgs(List<Integer> inds) {
