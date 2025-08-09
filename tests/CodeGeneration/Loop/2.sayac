@@ -1,0 +1,84 @@
+STR R1 sp
+ADR -2 sp
+STR R2 sp
+ADR -2 sp
+STR R3 sp
+ADR -2 sp
+STR R4 sp
+ADR -2 sp
+STR R5 sp
+ADR -2 sp
+STR R6 sp
+ADR -2 sp
+STR R7 sp
+ADR -2 sp
+STR R8 sp
+ADR -2 sp
+STR R9 sp
+ADR -2 sp
+STR R10 sp
+ADR -2 sp
+STR R11 sp
+ADR -2 sp
+func_main:
+STR fp sp
+ADR r0 sp fp
+ADR -2 sp
+MSI 0 R1
+MSI 0 R0
+ADR R0 R1 R2
+MSI 4 R5
+for_condition_0:
+CMI 10 R5
+BRR > for_body_1
+JMP for_end_2
+for_body_1:
+CMI 6 R5
+BRR == If_4
+JMP After_If_6
+If_4:
+JMP for_step_3
+JMP After_If_6
+After_If_6:
+ADR R2 R5 R2
+CMI 15 R2
+BRR < If_7
+JMP After_If_9
+If_7:
+JMP for_end_2
+JMP After_If_9
+After_If_9:
+JMP for_step_3
+for_step_3:
+MSI 0 R0
+ADR R0 R5 R8
+ADR 1 R5
+JMP for_condition_0
+for_end_2:
+func_ret_main:
+ADR r0 fp sp
+LDR fp fp
+ADR 2 sp
+LDR sp R11
+ADR 2 sp
+LDR sp R10
+ADR 2 sp
+LDR sp R9
+ADR 2 sp
+LDR sp R8
+ADR 2 sp
+LDR sp R7
+ADR 2 sp
+LDR sp R6
+ADR 2 sp
+LDR sp R5
+ADR 2 sp
+LDR sp R4
+ADR 2 sp
+LDR sp R3
+ADR 2 sp
+LDR sp R2
+ADR 2 sp
+LDR sp R1
+ADR 0 sp
+JMR 0 ra r0

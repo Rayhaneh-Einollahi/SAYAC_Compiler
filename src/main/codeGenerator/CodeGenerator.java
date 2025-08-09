@@ -267,7 +267,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(WhileStatement whileStatement){
         CodeObject code = new CodeObject();
-
         String condLabel = labelManager.generateWhileConditionLabel();
         String bodyLabel = labelManager.generateWhileBodyLabel();
         String endLabel = labelManager.generateWhileEndLabel();
@@ -294,6 +293,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         loopEndLabels.pop();
         loopContinueLabels.pop();
+
 
         return code;
     }
@@ -452,18 +452,20 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String elseLabel = labelManager.generateElseLabel();
         String afterIfLabel = labelManager.generateAfterIfLabel();
 
+
         code.addCode(branch(selectionStatement.getCondition(), ifLabel,selectionStatement.getElseStatement() != null? elseLabel: afterIfLabel));
 
         code.addCode(emitter.emitLabel(ifLabel));
         code.addCode(selectionStatement.getIfStatement().accept(this));
         code.addCode(emitter.JMP(afterIfLabel));
 
+
         if (selectionStatement.getElseStatement() != null) {
             code.addCode(emitter.emitLabel(elseLabel));
             code.addCode(selectionStatement.getElseStatement().accept(this));
         }
         code.addCode(emitter.emitLabel(afterIfLabel));
-        return null;
+        return code;
     }
     public CodeObject visit(UnaryExpr unaryExpr) {
         CodeObject code = new CodeObject();

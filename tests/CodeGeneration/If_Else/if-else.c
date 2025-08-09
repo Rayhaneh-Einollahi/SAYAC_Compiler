@@ -4,6 +4,9 @@ int main(){
     if(a > 1){
         b = 2;
     }
+    else if(a == 0) {
+        b = 10;
+    }
     else{
         b = 3;
     }
