@@ -124,7 +124,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
                 }
             }
-        System.out.println(code.toString());
 
         return code;
     }
@@ -514,34 +513,40 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.SUI(1 , operandReg));
                 code.setResultVar(destRegName);
                 break;
-            //bepors az bache ha
             case UnaryOperator.NOT:
                 code.addCode(emitter.NTR( operandReg, destReg));
                 code.setResultVar(destRegName);
+                if(nameManager.isTmp(operand)){
+                    registerManager.freeRegister(operandReg);
+                }
                 break;
             case UnaryOperator.MINUS:
                 code.addCode(emitter.NTR2( operandReg, destReg));
                 code.setResultVar(destRegName);
+                if(nameManager.isTmp(operand)){
+                    registerManager.freeRegister(operandReg);
+                }
                 break;
             case UnaryOperator.TILDE:
                 code.addCode(emitter.NTR( operandReg, destReg));
                 code.setResultVar(destRegName);
+                if(nameManager.isTmp(operand)){
+                    registerManager.freeRegister(operandReg);
+                }
                 break;
         }
-        //inja free konam??
-        if(nameManager.isTmp(operand)){
-            registerManager.freeRegister(operandReg);
-        }
-        System.out.println(code.toString());
+
         return code;
     }
 
     public CodeObject visit(BinaryExpr binaryExpr) {
-        System.out.println("Visited");
         CodeObject code = new CodeObject();
         BinaryOperator op = binaryExpr.getOperator();
 
         CodeObject firstOperandCode = binaryExpr.getFirstOperand().accept(this);
+        CodeObject secondOperandCode = binaryExpr.getSecondOperand().accept(this);
+
+
 
         String firstOperand = "";
         String secondOperand = "";
@@ -555,7 +560,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
         }
 
-        CodeObject secondOperandCode = binaryExpr.getSecondOperand().accept(this);
 
         if (secondOperandCode != null){
             code.addCode(secondOperandCode);
@@ -607,7 +611,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.BRR("==", falseLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.setResultVar(destRegName);
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(falseLabel));
                 code.addCode(emitter.MSI(0, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -647,7 +651,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
                 code.addCode(emitter.BRR("==", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -666,7 +670,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
                 code.addCode(emitter.BRR("!=", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -685,7 +689,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR(">", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -698,7 +702,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR(">=", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -711,7 +715,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR("<", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -730,7 +734,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
                 code.addCode(emitter.BRR("<=", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -826,7 +830,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
 
             case BinaryOperator.OR:
-                System.out.println("orTest");
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
                 code.addCode(emitter.NTR(secondOperandReg, secondOperandReg));
                 code.addCode(emitter.ANR(secondOperandReg, firstOperandReg, destReg));
@@ -856,7 +859,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.CMI(1, secondOperandReg));
                 code.addCode(emitter.BRR("==", trueLabel));
                 code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMR(endLabel));
+                code.addCode(emitter.JMP(endLabel));
                 code.addCode(emitter.emitLabel(trueLabel));
                 code.addCode(emitter.MSI(1, destReg));
                 code.addCode(emitter.emitLabel(endLabel));
@@ -932,7 +935,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
 
         registerManager.freeRegister(tempReg);
-        System.out.println(code.toString());
 
 
         return code;
@@ -941,7 +943,20 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(Identifier identifier) {
         CodeObject code = new CodeObject();
         code.setResultVar(identifier.getName());
+
+        return code;
+    }
+    public CodeObject visit(IntVal intVal) {
+        CodeObject code = new CodeObject();
+        String destRegVar = nameManager.newTmpVarName();
+        String destReg = this.getRegisterForWrite(code, destRegVar);
+        int val = intVal.getInt();
+        code.addCode(emitter.MSI(val, destReg));
+        code.setResultVar(destRegVar);
+
         return code;
     }
 
 }
+
+
