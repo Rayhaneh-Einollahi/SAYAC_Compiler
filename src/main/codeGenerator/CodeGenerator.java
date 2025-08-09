@@ -81,49 +81,65 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
     public CodeObject visit(Declaration declaration) {
-            Boolean isExpr = Boolean.FALSE;
-            CodeObject code = new CodeObject();
-            for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
-                String varName = initDeclarator.getDeclarator().getName();
-                int initValue = 0;
-                if (initDeclarator.getInitializer() != null && initDeclarator.getInitializer().getExpr() != null) {
-                    Expr expr = initDeclarator.getInitializer().getExpr();
-                    if (expr instanceof IntVal intVal) {
-                        initValue = intVal.getInt();
-                    }else{
-                        expr.accept(this);
-                        isExpr = Boolean.TRUE;
-                    }
-
+        Boolean isExpr = Boolean.FALSE;
+        CodeObject code = new CodeObject();
+        for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
+            Expr expr ;
+            CodeObject exprCode = new CodeObject();
+            String varName = initDeclarator.getDeclarator().getName();
+            int initValue = 0;
+            if (initDeclarator.getInitializer() != null && initDeclarator.getInitializer().getExpr() != null) {
+                expr = initDeclarator.getInitializer().getExpr();
+                if (expr instanceof IntVal intVal) {
+                    initValue = intVal.getInt();
+                }else{
+                    exprCode = expr.accept(this);
+                    isExpr = Boolean.TRUE;
                 }
 
-                if (!insideFunction) {
-                    String tempVal = nameManager.newTmpVarName();
-                    String tempReg = getRegisterForWrite(code,tempVal);
-                    String adressVal = nameManager.newTmpVarName();
-                    String adressReg = getRegisterForWrite(code, adressVal);
-
-                    int adress = memoryManager.allocateGlobal(varName, 2);
-                    if(!isExpr){
-                        code.addCode(emitter.MSI(initValue, tempReg));
-                        code.addCode(emitter.MSI(adress, adressReg));
-                        code.addCode(emitter.STR(tempVal, adressReg));
-                    }
-
-                    this.registerManager.freeRegister(tempReg);
-                    this.registerManager.freeRegister(adressReg);
-
-
-                } else {
-
-                    String reg = getRegisterForWrite(code, varName);
-                    if(!isExpr){
-                        code.addCode(emitter.MSI(initValue, reg));
-                    }
-
-
-                }
             }
+
+            if (!insideFunction) {
+                String tempVal = nameManager.newTmpVarName();
+                String tempReg = getRegisterForWrite(code,tempVal);
+                String adressVal = nameManager.newTmpVarName();
+                String adressReg = getRegisterForWrite(code, adressVal);
+
+                int adress = memoryManager.allocateGlobal(varName, 2);
+                if(!isExpr){
+                    code.addCode(emitter.MSI(initValue, tempReg));
+                    code.addCode(emitter.MSI(adress, adressReg));
+                    code.addCode(emitter.STR(tempReg, adressReg));
+                }else {
+                    code.addCode(exprCode.toString());
+                    String resultReg = getRegisterForRead(code , exprCode.getResultVar());
+                    code.addCode(emitter.MSI(adress, adressReg));
+                    code.addCode(emitter.STR(resultReg, adressReg));
+
+                }
+
+                this.registerManager.freeRegister(tempReg);
+                this.registerManager.freeRegister(adressReg);
+
+
+            } else {
+
+                if(!isExpr){
+                    String reg = getRegisterForWrite(code, varName);
+                    code.addCode(emitter.MSI(initValue, reg));
+                }else {
+
+                    code.addCode(exprCode.toString());
+                    String resultReg = getRegisterForRead(code , exprCode.getResultVar());
+
+                    registerManager.assignRegister(resultReg, varName);
+
+                }
+
+
+
+            }
+        }
 
         return code;
     }
@@ -494,23 +510,19 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String zeroReg = "R0";
         switch (op) {
             case UnaryOperator.PRE_INC:
-                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADI(1 , operandReg));
                 code.setResultVar(operandReg);
                 break;
             case UnaryOperator.POST_INC:
-                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 code.addCode(emitter.ADI(1 , operandReg));
                 code.setResultVar(destRegName);
                 break;
             case UnaryOperator.PRE_DEC:
-                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.SUI(1 , operandReg));
                 code.setResultVar(operandReg);
                 break;
             case UnaryOperator.POST_DEC:
-                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
                 code.addCode(emitter.SUI(1 , operandReg));
                 code.setResultVar(destRegName);
@@ -626,7 +638,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
 
             case BinaryOperator.ASSIGN:
-                code.addCode(emitter.MSI(0, zeroReg));
                 code.addCode(emitter.ADR(zeroReg, secondOperandReg, firstOperandReg));
                 code.setResultVar(firstOperandReg);
                 break;

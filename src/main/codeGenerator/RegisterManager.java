@@ -238,7 +238,7 @@ public class RegisterManager {
         return spillRegs;
     }
 
-    private void assignRegister(String reg, String varName) {
+    public void assignRegister(String reg, String varName) {
         //if we want to make this public, first free the register then assign it
         regToVar.put(reg, varName);
         varToReg.put(varName, reg);
