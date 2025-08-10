@@ -1,0 +1,6 @@
+# Ignore IDE files
+.vscode/
+.idea/
+
+# Ignore out directory
+/out/
