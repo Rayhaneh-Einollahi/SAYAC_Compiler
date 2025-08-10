@@ -187,14 +187,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
-        code.addCode(emitter.STR("fp", "sp"));
-        code.addCode(emitter.ADR("r0", "sp", "fp"));
-        code.addCode(emitter.ADI(-2, "sp"));
+        code.addCode(emitter.STR("FP", "SP"));
+        code.addCode(emitter.ADR("R0", "SP", "FP"));
+        code.addCode(emitter.ADI(-2, "SP"));
 
         if(!functionDefinition.getName().equals( "main")){
             for (String reg : bodyUsedReg) {
-                code.addCode(emitter.STR( reg, "sp"));
-                code.addCode(emitter.ADI( -2, "sp"));
+                code.addCode(emitter.STR( reg, "SP"));
+                code.addCode(emitter.ADI( -2, "SP"));
             }
         }
 
@@ -202,22 +202,22 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
         code.addCode(emitter.emitLabel(currentFunctionEndLabel));
-        //set the sp to the (fp - bodyUsedReg.size()) to the begin of registers stored in stack
-        code.addCode(emitter.ADR("r0","fp", "sp"));
-        code.addCode(emitter.ADI(-bodyUsedReg.size(), "sp"));
+        //set the SP to the (FP - bodyUsedReg.size()) to the begin of registers stored in stack
+        code.addCode(emitter.ADR("R0","FP", "SP"));
+        code.addCode(emitter.ADI(-bodyUsedReg.size(), "SP"));
 
 
         if(!functionDefinition.getName().equals( "main")) {
             for (int i = bodyUsedReg.size() - 1; i >= 0; i--) {
                 String reg = bodyUsedReg.get(i);
-                code.addCode(emitter.ADI(2, "sp"));
-                code.addCode(emitter.LDR("sp", reg));
+                code.addCode(emitter.ADI(2, "SP"));
+                code.addCode(emitter.LDR("SP", reg));
             }
         }
 
-        code.addCode(emitter.LDR("fp", "fp"));
-        code.addCode(emitter.ADI(args.size(), "sp"));
-        code.addCode(emitter.JMR("ra"));
+        code.addCode(emitter.LDR("FP", "FP"));
+        code.addCode(emitter.ADI(args.size(), "SP"));
+        code.addCode(emitter.JMR("Ra"));
 
 
         return code;
@@ -231,7 +231,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(retStCode);
             String resultVar = retStCode.getResultVar();
             String regResult =  getRegisterForRead(code, resultVar);
-            code.addCode(emitter.ADR("r0", regResult, "ret"));
+            code.addCode(emitter.ADR("R0", regResult, "Ret"));
             if(nameManager.isTmp(resultVar)) registerManager.freeRegister(resultVar);
         }
         code.addCode(emitter.JMP(currentFunctionEndLabel));
@@ -258,22 +258,22 @@ public class CodeGenerator extends Visitor<CodeObject> {
             int offset = memoryManager.allocateLocal(".arg_"+ i,2);
             tempOffsets.add(offset);
 
-            code.addCode(emitter.SW(resultReg, offset, "fp"));
+            code.addCode(emitter.SW(resultReg, offset, "FP"));
         }
 
 
         for (int offset : tempOffsets) {
             String tmpName = nameManager.newTmpVarName();
             String tmpReg = getRegisterForWrite(code, tmpName);
-            code.addCode(emitter.LW("fp", offset, tmpReg));
+            code.addCode(emitter.LW("FP", offset, tmpReg));
 
-            code.addCode(emitter.STR(tmpReg, "sp"));
-            code.addCode(emitter.ADI(-2, "sp"));
+            code.addCode(emitter.STR(tmpReg, "SP"));
+            code.addCode(emitter.ADI(-2, "SP"));
         }
 
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
-        code.addCode(emitter.JMPS(funcLabel, "ra"));
-        code.addCode(emitter.ADI(2 * tempOffsets.size(), "sp"));
+        code.addCode(emitter.JMPS(funcLabel, "Ra"));
+        code.addCode(emitter.ADI(2 * tempOffsets.size(), "SP"));
 
         code.addCode(emitter.emitComment("FunctionCall_END", InstructionEmitter.Color.GREEN));
 
