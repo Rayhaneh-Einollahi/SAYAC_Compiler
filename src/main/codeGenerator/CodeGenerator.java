@@ -869,11 +869,24 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.MOD: {
-                // TODO: Implement MOD
+                String destVar = nameManager.newTmpVarName();
+                String destVar2 = nameManager.newTmpVarName();
+                String destReg = getRegisterForWrite(code, destVar, destVar2);
+                code.addCode(emitter.DIV(firstOperandReg, secondOperandReg, destReg));
+                registerManager.freeRegister(destVar);
+                code.setResultVar(destVar2);
                 break;
             }
             case BinaryOperator.MODASSIGN: {
-                // TODO: Implement MODASSIGN
+                //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
+                String destVar = nameManager.newTmpVarName();
+                String destVar2 = nameManager.newTmpVarName();
+                String destReg = getRegisterForWrite(code, destVar, destVar2);
+                code.addCode(emitter.DIV(firstOperandReg, secondOperandReg, destReg));
+                code.addCode(emitter.ADR("R0", registerManager.getRegisterByVar(destVar2), firstOperandReg));
+                registerManager.freeRegister(destVar);
+                registerManager.freeRegister(destVar2);
+                code.setResultVar(firstOperand);
                 break;
             }
         }
@@ -882,6 +895,11 @@ public class CodeGenerator extends Visitor<CodeObject> {
             if (nameManager.isTmp(firstOperand)) {
                 registerManager.freeRegister(firstOperandReg);
             }
+            if (nameManager.isTmp(secondOperand)) {
+                registerManager.freeRegister(secondOperandReg);
+            }
+        }
+        else{
             if (nameManager.isTmp(secondOperand)) {
                 registerManager.freeRegister(secondOperandReg);
             }

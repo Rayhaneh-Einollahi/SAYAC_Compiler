@@ -108,7 +108,9 @@ public class RegisterManager {
         return reg;
     }
 
-
+    public String getRegisterByVar(String varName){
+        return varToReg.get(varName);
+    }
     /**
      * Allocate a specific register (for special purposes)
      */
@@ -239,7 +241,7 @@ public class RegisterManager {
     }
 
     public void assignRegister(String reg, String varName) {
-        //if we want to make this public, first free the register then assign it
+        //Todo: first free the register then assign it
         regToVar.put(reg, varName);
         varToReg.put(varName, reg);
         registerStates.put(reg, RegisterState.USED);
