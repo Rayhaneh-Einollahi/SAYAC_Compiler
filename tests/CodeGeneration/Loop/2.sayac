@@ -25,7 +25,6 @@ STR fp sp
 ADR r0 sp fp
 ADR -2 sp
 MSI 0 R1
-MSI 0 R0
 ADR R0 R1 R2
 MSI 4 R5
 for_condition_0:
@@ -50,7 +49,6 @@ JMP After_If_9
 After_If_9:
 JMP for_step_3
 for_step_3:
-MSI 0 R0
 ADR R0 R5 R8
 ADR 1 R5
 JMP for_condition_0

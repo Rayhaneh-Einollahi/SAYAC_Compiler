@@ -24,28 +24,16 @@ func_main:
 STR fp sp
 ADR r0 sp fp
 ADR -2 sp
-MSI 0 R1
-MSI 1 R2
-CMI 1 R1
-BRR < If_0
-JMP Else_1
-If_0:
-MSI 2 R3
-ADR R0 R3 R2
-JMP After_If_2
-Else_1:
-CMI 0 R1
-BRR == If_3
-JMP Else_4
-If_3:
-MSI 10 R6
-ADR R0 R6 R2
-JMP After_If_5
-Else_4:
-MSI 3 R9
-ADR R0 R9 R2
-After_If_5:
-After_If_2:
+MSI 2 R1
+MSI 4 R2
+NTR R1 R5
+NTR R2 R6
+ANR R5 R2 R7
+ANR R6 R1 R8
+NTR R7 R7
+NTR R8 R8
+ANR R8 R7 R3
+NTR R3 R3
 func_ret_main:
 ADR r0 fp sp
 LDR fp fp
