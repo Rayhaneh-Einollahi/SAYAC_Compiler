@@ -485,6 +485,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
         UnaryOperator op = unaryExpr.getOperator();
 
+
         CodeObject operandCode = unaryExpr.getOperand().accept(this);
         String operandVar = operandCode.getResultVar();
         String operandReg = getRegisterForRead(code, operandVar);
@@ -551,6 +552,26 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
         BinaryOperator op = binaryExpr.getOperator();
 
+        if(op == BinaryOperator.ANDAND || op==BinaryOperator.OROR || op.isCompare()){
+
+            String trueLabel = labelManager.generateTrueLabel();
+            String falseLabel = labelManager.generateFalseLabel();
+            String endLabel = labelManager.generateEndLabel();
+            code.addCode(branch(binaryExpr, trueLabel, falseLabel));
+
+            String destVar = nameManager.newTmpVarName();
+            String destReg = getRegisterForWrite(code, destVar);
+            code.setResultVar(destVar);
+            code.addCode(emitter.emitLabel(trueLabel));
+            code.addCode(emitter.MSI(1, destReg));
+            code.addCode(emitter.JMP(endLabel));
+            code.addCode(emitter.emitLabel(falseLabel));
+            code.addCode(emitter.MSI(0, destReg));
+            code.addCode(emitter.emitLabel(endLabel));
+
+            return code;
+        }
+
         CodeObject firstOperandCode = binaryExpr.getFirstOperand().accept(this);
         CodeObject secondOperandCode = binaryExpr.getSecondOperand().accept(this);
 
@@ -561,7 +582,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String secondOperandReg = getRegisterForRead(code, secondOperand);
 
 
-        String trueLabel, falseLabel, endLabel;
         switch (op) {
             case BinaryOperator.AND:{
                 String destVar = nameManager.newTmpVarName();
@@ -574,24 +594,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
             case BinaryOperator.ANDASSIGN:{
                 code.addCode(emitter.ANR(firstOperandReg, secondOperandReg, firstOperandReg));
                 code.setResultVar(firstOperand);
-                break;
-            }
-            case BinaryOperator.ANDAND: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                falseLabel = labelManager.generateFalseLabel();
-                endLabel = labelManager.generateEndLabel();
-
-                code.addCode(emitter.CMI(0, firstOperandReg));
-                code.addCode(emitter.BRR("==", falseLabel));
-                code.addCode(emitter.CMI(0, secondOperandReg));
-                code.addCode(emitter.BRR("==", falseLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.setResultVar(destVar);
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(falseLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
                 break;
             }
             case BinaryOperator.ASSIGN: {
@@ -614,98 +616,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.setResultVar(firstOperand);
                 break;
             }
-            case BinaryOperator.EQUAL: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                trueLabel = this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();
 
-                code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
-                code.addCode(emitter.BRR("==", trueLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                code.setResultVar(destVar);
-                break;
-            }
-            case BinaryOperator.NOTEQUAL: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                trueLabel = this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();
-
-                code.addCode(emitter.CMR(firstOperandReg, secondOperandReg));
-                code.addCode(emitter.BRR("!=", trueLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                code.setResultVar(destVar);
-                break;
-            }
-            case BinaryOperator.GREATER: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                trueLabel = this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();
-                code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
-                code.addCode(emitter.BRR(">", trueLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                code.setResultVar(destVar);
-                break;
-            }
-            case BinaryOperator.GREATEREQUAL: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                trueLabel = this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();
-                code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
-                code.addCode(emitter.BRR(">=", trueLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                code.setResultVar(destVar);
-                break;
-            }
-            case BinaryOperator.LESS: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                trueLabel = this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();
-                code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
-                code.addCode(emitter.BRR("<", trueLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                code.setResultVar(destVar);
-                break;
-            }
-            case BinaryOperator.LESSEQUAL: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                trueLabel = this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();
-                code.addCode(emitter.CMR(secondOperandReg, firstOperandReg));
-                code.addCode(emitter.BRR("<=", trueLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                code.setResultVar(destVar);
-                break;
-            }
             case BinaryOperator.LEFTSHIFT: {
                 String destVar = nameManager.newTmpVarName();
                 String destReg = getRegisterForWrite(code, destVar);
@@ -795,24 +706,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ANR(secondOperandReg, firstOperandReg, firstOperandReg));
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
                 code.setResultVar(firstOperand);
-                break;
-            }
-            case BinaryOperator.OROR: {
-                String destVar = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar);
-                trueLabel = this.labelManager.generateTrueLabel();
-                endLabel = this.labelManager.generateEndLabel();
-
-                code.addCode(emitter.CMI(1, firstOperandReg));
-                code.addCode(emitter.BRR("==", trueLabel));
-                code.addCode(emitter.CMI(1, secondOperandReg));
-                code.addCode(emitter.BRR("==", trueLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                code.setResultVar(destVar);
                 break;
             }
             case BinaryOperator.XOR: {
