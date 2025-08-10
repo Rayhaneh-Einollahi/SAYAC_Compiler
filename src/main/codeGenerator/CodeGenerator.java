@@ -552,9 +552,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(BinaryExpr binaryExpr) {
         CodeObject code = new CodeObject();
-        System.out.println("bef-------");
-        System.out.println(code.toString());
-        System.out.println("aft-------");
+
         BinaryOperator op = binaryExpr.getOperator();
 
 
