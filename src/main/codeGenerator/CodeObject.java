@@ -2,13 +2,14 @@ package main.codeGenerator;
 
 import java.io.StringWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 public class CodeObject {
-    private List<String> code;
-    private Set<String> usedReg;    // Todo: to keep the used registers in each code object to have the registers used in
-                                    // in each scope.
+    private final List<String> code;
+    private final Set<String> usedReg;
+
     /**
      * if the result of this part of code is stored in a register the value of resultReg would be non-null.
 
@@ -17,6 +18,7 @@ public class CodeObject {
 
     public CodeObject(){
         code = new ArrayList<String>();
+        usedReg = new HashSet<String>();
     }
     public String getResultVar() {
         return resultVar;
@@ -26,8 +28,16 @@ public class CodeObject {
         this.resultVar = resultReg;
     }
 
+    public List<String> getUsedRegisters(){
+        return new ArrayList<>(usedReg);
+    }
     public void addCode(CodeObject other){
         code.addAll(other.code);
+        this.usedReg.addAll(other.usedReg);
+    }
+
+    public void addUsedRegister(String register){
+        usedReg.add(register);
     }
 
     public void addCode(List<String> instructions) {

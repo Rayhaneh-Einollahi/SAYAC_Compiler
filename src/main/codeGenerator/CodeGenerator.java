@@ -154,14 +154,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
     /// stack state during call: <p>
     /// <pre>
     ///     |              |
-    ///     |  return val  | <- top of stack would be the return value
     ///     |  ...         |
     ///     |  locals      |
-    ///     |  old fp      | <- new fp pointing here
     ///     |  reg 11(ra)  |
     ///     |  ...         |
     ///     |  reg 2       |
     ///     |  reg 1       |
+    ///     |  old fp      | <- new fp pointing here
     ///     |  arg n       |
     ///     |  ... .       |
     ///     |  arg2        |
@@ -172,53 +171,51 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(FunctionDefinition functionDefinition) {
         insideFunction = true;
         CodeObject code = new CodeObject();
-        List<String> usableRegisters = registerManager.getAllRegisters();    //Todo:[option 1(naive approach)] get all the
-                                                                             // registers except the ones in use like
-                                                                             // fp, sp, r0
-                                                                             // [option 2] get the code generated for this part
-                                                                             // and save only the registers used in this func
-                                                                             //
-        for (String reg : usableRegisters) {
-            code.addCode(emitter.STR( reg, "sp"));
-            code.addCode(emitter.ADI( -2, "sp"));
-        }
+
+        memoryManager.beginFunction();
         registerManager.clearRegisters();
+        currentFunctionEndLabel = labelManager.generateFunctionReturnLabel(functionDefinition.getName());
+        List<Declaration> args = functionDefinition.getArgDeclarations();
+        for(int i = 0; i < args.size(); i++){
+            Declaration arg = args.get(i);
+            memoryManager.setFunctionArgOffset(arg.getName(), args.size() - i);
+        }
+
+        CodeObject bodyCode = functionDefinition.getBody().accept(this);
+        List<String> bodyUsedReg = bodyCode.getUsedRegisters();
+
+
 
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
         code.addCode(emitter.STR("fp", "sp"));
         code.addCode(emitter.ADR("r0", "sp", "fp"));
         code.addCode(emitter.ADI(-2, "sp"));
 
-        List<Declaration> args = functionDefinition.getArgDeclarations();
-        for(int i = 0; i < args.size(); i++){
-            Declaration arg = args.get(i);
-            memoryManager.setFunctionArgOffset(arg.getName(), usableRegisters.size() + args.size() - i);
-        }
-        memoryManager.beginFunction();
-        currentFunctionEndLabel = labelManager.generateFunctionReturnLabel(functionDefinition.getName());
-
-        //----------------------------------------------
-        if (functionDefinition.getDeclarations() != null){
-            for (Declaration ds: functionDefinition.getDeclarations()){
-                ds.accept(this);
+        if(!functionDefinition.getName().equals( "main")){
+            for (String reg : bodyUsedReg) {
+                code.addCode(emitter.STR( reg, "sp"));
+                code.addCode(emitter.ADI( -2, "sp"));
             }
         }
-        if (functionDefinition.getBody() != null){
-            code.addCode(functionDefinition.getBody().accept(this));
-        }
-        //--------------------------------------------------
+
+        code.addCode(bodyCode);
+
 
         code.addCode(emitter.emitLabel(currentFunctionEndLabel));
-
-
+        //set the sp to the (fp - bodyUsedReg.size()) to the begin of registers stored in stack
         code.addCode(emitter.ADR("r0","fp", "sp"));
-        code.addCode(emitter.LDR("fp", "fp"));
-        for (int i = usableRegisters.size() - 1; i >= 0; i--) {
-            String reg = usableRegisters.get(i);
-            code.addCode(emitter.ADI( 2, "sp"));
-            code.addCode(emitter.LDR("sp", reg));
+        code.addCode(emitter.ADI(-bodyUsedReg.size(), "sp"));
+
+
+        if(!functionDefinition.getName().equals( "main")) {
+            for (int i = bodyUsedReg.size() - 1; i >= 0; i--) {
+                String reg = bodyUsedReg.get(i);
+                code.addCode(emitter.ADI(2, "sp"));
+                code.addCode(emitter.LDR("sp", reg));
+            }
         }
 
+        code.addCode(emitter.LDR("fp", "fp"));
         code.addCode(emitter.ADI(args.size(), "sp"));
         code.addCode(emitter.JMR("ra"));
 
