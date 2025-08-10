@@ -488,63 +488,59 @@ public class CodeGenerator extends Visitor<CodeObject> {
         UnaryOperator op = unaryExpr.getOperator();
 
         CodeObject operandCode = unaryExpr.getOperand().accept(this);
-        String operand = "";
-        if (operandCode != null){
-            code.addCode(operandCode);
-            if (operandCode.getResultVar() != null){
-                operand = operandCode.getResultVar();
-            }
-            else {
-                operand = (unaryExpr.getOperand() != null) ? unaryExpr.getOperand().getName() : "";
+        String operandVar = operandCode.getResultVar();
+        String operandReg = getRegisterForRead(code, operandVar);
+        code.addCode(operandCode);
 
-            }
-        }
-
-
-        String operandReg = (operand != "") ? this.getRegisterForRead(code, operand) : "";
-
-        String destRegName = nameManager.newTmpVarName();
-        String destReg = this.getRegisterForWrite(code, destRegName);
-        String label = "";
-
-        String zeroReg = "R0";
+        String destRegName;
+        String destReg;
         switch (op) {
             case UnaryOperator.PRE_INC:
                 code.addCode(emitter.ADI(1 , operandReg));
                 code.setResultVar(operandReg);
                 break;
-            case UnaryOperator.POST_INC:
-                code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
-                code.addCode(emitter.ADI(1 , operandReg));
-                code.setResultVar(destRegName);
-                break;
+
             case UnaryOperator.PRE_DEC:
                 code.addCode(emitter.SUI(1 , operandReg));
                 code.setResultVar(operandReg);
                 break;
+
+            case UnaryOperator.POST_INC:
+                destRegName = nameManager.newTmpVarName();
+                destReg = this.getRegisterForWrite(code, destRegName);
+
+                code.addCode(emitter.ADR("R0", operandReg, destReg));
+                code.addCode(emitter.ADI(1 , operandReg));
+                code.setResultVar(destRegName);
+                break;
+
             case UnaryOperator.POST_DEC:
-                code.addCode(emitter.ADR(zeroReg, operandReg, destReg));
+                destRegName = nameManager.newTmpVarName();
+                destReg = this.getRegisterForWrite(code, destRegName);
+
+                code.addCode(emitter.ADR("R0", operandReg, destReg));
                 code.addCode(emitter.SUI(1 , operandReg));
                 code.setResultVar(destRegName);
                 break;
-            case UnaryOperator.NOT:
+
+            case UnaryOperator.NOT, UnaryOperator.TILDE:
+                destRegName = nameManager.newTmpVarName();
+                destReg = this.getRegisterForWrite(code, destRegName);
+
                 code.addCode(emitter.NTR( operandReg, destReg));
                 code.setResultVar(destRegName);
-                if(nameManager.isTmp(operand)){
+                if(nameManager.isTmp(operandVar)){
                     registerManager.freeRegister(operandReg);
                 }
                 break;
+
             case UnaryOperator.MINUS:
+                destRegName = nameManager.newTmpVarName();
+                destReg = this.getRegisterForWrite(code, destRegName);
+
                 code.addCode(emitter.NTR2( operandReg, destReg));
                 code.setResultVar(destRegName);
-                if(nameManager.isTmp(operand)){
-                    registerManager.freeRegister(operandReg);
-                }
-                break;
-            case UnaryOperator.TILDE:
-                code.addCode(emitter.NTR( operandReg, destReg));
-                code.setResultVar(destRegName);
-                if(nameManager.isTmp(operand)){
+                if(nameManager.isTmp(operandVar)){
                     registerManager.freeRegister(operandReg);
                 }
                 break;
