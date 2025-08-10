@@ -61,6 +61,13 @@ public enum BinaryOperator {
           }
           return op;
      }
+     public boolean isAssign() {
+         return switch (this) {
+             case ASSIGN, STARASSIGN, DIVASSIGN, MODASSIGN, PLUSASSIGN, MINUSASSIGN, LEFTSHIFTASSIGN, RIGHTSHIFTASSIGN,
+                  ANDASSIGN, XORASSIGN, ORASSIGN -> true;
+             default -> false;
+         };
+     }
 
      public boolean isCompare() {
           return this == LESS ||
