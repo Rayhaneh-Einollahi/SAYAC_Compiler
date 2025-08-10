@@ -249,14 +249,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
             CodeObject argCode = arg.accept(this);
             code.addCode(argCode);
 
-            String resultVar = argCode.getResultVar();
-            if (resultVar == null)
+            String resultReg = getRegisterForRead(code, argCode.getResultVar());
+            if (resultReg == null)
                 throw new RuntimeException("Missing result register for argument");
 
             int offset = memoryManager.allocateLocal(".arg_"+ i,2);
             tempOffsets.add(offset);
 
-            code.addCode(emitter.SW(resultVar, offset, "fp"));
+            code.addCode(emitter.SW(resultReg, offset, "fp"));
         }
 
 
