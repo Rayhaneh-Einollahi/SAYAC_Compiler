@@ -665,39 +665,30 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.XOR: {
-                //Todo: use less registers
-                String destVar = nameManager.newTmpVarName();
+                String destVar = resolveDesVar(needFree);
                 String destReg = getRegisterForWrite(code, destVar);
-                String notFirstName = nameManager.newTmpVarName();
-                String notFirst = this.getRegisterForWrite(code, notFirstName);
-                String notSecondName = nameManager.newTmpVarName();
-                String notSecondReg = this.getRegisterForWrite(code, notSecondName);
-                String temp1Name = nameManager.newTmpVarName();
-                String temp1Reg = this.getRegisterForWrite(code, temp1Name);
-                String temp2Name = nameManager.newTmpVarName();
-                String temp2Reg = this.getRegisterForWrite(code, temp2Name);
-                code.addCode(emitter.NTR(operand1reg, notFirst));
-                code.addCode(emitter.NTR(operand2reg, notSecondReg));
-                code.addCode(emitter.ANR(notFirst, operand2reg, temp1Reg));
-                code.addCode(emitter.ANR(notSecondReg, operand1reg, temp2Reg));
-                code.addCode(emitter.NTR(temp1Reg, temp1Reg));
-                code.addCode(emitter.NTR(temp2Reg, temp2Reg));
-                code.addCode(emitter.ANR(temp2Reg, temp1Reg, destReg));
+                String tmpVar = resolveDesVar(needFree);
+                String tmpReg = this.getRegisterForWrite(code, tmpVar);
+                code.addCode(emitter.NTR(operand1reg, tmpReg));
+                code.addCode(emitter.NTR(operand2reg, destReg));
+                code.addCode(emitter.ANR(tmpReg, destReg, tmpReg));
+                code.addCode(emitter.NTR(tmpReg, tmpReg));
+                code.addCode(emitter.ANR(operand1reg, operand2reg, destReg));
                 code.addCode(emitter.NTR(destReg, destReg));
+                code.addCode(emitter.ANR(tmpReg, destReg, destReg));
                 code.setResultVar(destVar);
-                this.registerManager.freeRegister(notFirst);
-                this.registerManager.freeRegister(notSecondReg);
-                this.registerManager.freeRegister(temp1Reg);
+                needFree.add(tmpVar);
                 break;
             }
             case BinaryOperator.OR: {
-                //Todo: bug:we shouldn't change the register itself
-                String destVar = nameManager.newTmpVarName();
+                String destVar = resolveDesVar(needFree);
                 String destReg = getRegisterForWrite(code, destVar);
+                String tmpVar = resolveDesVar(needFree);
+                String tmpReg = getRegisterForWrite(code, tmpVar);
 
-                code.addCode(emitter.NTR(operand1reg, operand1reg));
-                code.addCode(emitter.NTR(operand2reg, operand2reg));
-                code.addCode(emitter.ANR(operand2reg, operand1reg, destReg));
+                code.addCode(emitter.NTR(operand1reg, tmpReg));
+                code.addCode(emitter.NTR(operand2reg, destReg));
+                code.addCode(emitter.ANR(tmpReg, destReg, destReg));
                 code.addCode(emitter.NTR(destReg, destReg));
                 code.setResultVar(destVar);
                 break;
