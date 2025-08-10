@@ -576,7 +576,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.ANDASSIGN:{
                 code.addCode(emitter.ANR(firstOperandReg, secondOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.ANDAND: {
@@ -599,7 +599,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.ASSIGN: {
                 code.addCode(emitter.ADR("R0", secondOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.DIVIDE: {
@@ -608,13 +608,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 String destReg = getRegisterForWrite(code, destVar, destVar2);
                 code.addCode(emitter.DIV(firstOperandReg, secondOperandReg, destReg));
                 registerManager.freeRegister(destVar2);
-                code.setResultVar(destReg);
+                code.setResultVar(destVar);
                 break;
             }
             case BinaryOperator.DIVASSIGN: {
                 //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
                 code.addCode(emitter.DIV(firstOperandReg, secondOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.EQUAL: {
@@ -724,7 +724,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR2(secondOperandReg, tmpReg));
                 code.addCode(emitter.SAR(tmpReg, firstOperandReg, firstOperandReg));
                 registerManager.freeRegister(tmpVar);
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.RIGHTSHIFT: {
@@ -736,7 +736,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.RIGHTSHIFTASSIGN: {
                 code.addCode(emitter.SAR(secondOperandReg, firstOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.MINUS: {
@@ -748,7 +748,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.MINUSASSIGN: {
                 code.addCode(emitter.SUR(firstOperandReg, secondOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.PLUS: {
@@ -760,7 +760,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.PLUSASSIGN: {
                 code.addCode(emitter.ADR(firstOperandReg, secondOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.MULT: {
@@ -776,7 +776,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             case BinaryOperator.STARASSIGN: {
                 //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
                 code.addCode(emitter.MUL(secondOperandReg, firstOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.OR: {
@@ -797,7 +797,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(secondOperandReg, secondOperandReg));
                 code.addCode(emitter.ANR(secondOperandReg, firstOperandReg, firstOperandReg));
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 break;
             }
             case BinaryOperator.OROR: {
@@ -861,7 +861,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(_temp2Reg, _temp2Reg));
                 code.addCode(emitter.ANR(_temp2Reg, _temp1Reg, firstOperandReg));
                 code.addCode(emitter.NTR(firstOperandReg, firstOperandReg));
-                code.setResultVar(firstOperandReg);
+                code.setResultVar(firstOperand);
                 this.registerManager.freeRegister(_notFirst);
                 this.registerManager.freeRegister(_notSecondReg);
                 this.registerManager.freeRegister(_temp1Reg);
