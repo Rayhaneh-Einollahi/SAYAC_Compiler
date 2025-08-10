@@ -241,12 +241,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
     @Override
     public CodeObject visit(FunctionExpr functionExpr) {
         CodeObject code = new CodeObject();
-
+        code.addCode(emitter.emitComment("FunctionCall", InstructionEmitter.Color.GREEN));
         List<Expr> arguments = functionExpr.getArguments();
         List<Integer> tempOffsets = new ArrayList<>();
         for (int i = 0; i< arguments.size(); i++) {
             Expr arg = arguments.get(i);
             CodeObject argCode = arg.accept(this);
+
+            code.addCode(emitter.emitComment("arg_" + i, InstructionEmitter.Color.BLUE));
             code.addCode(argCode);
 
             String resultReg = getRegisterForRead(code, argCode.getResultVar());
@@ -272,7 +274,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
         code.addCode(emitter.JMPS(funcLabel, "ra"));
         code.addCode(emitter.ADI(2 * tempOffsets.size(), "sp"));
-//        code.setResultReg("ra");
+
+        code.addCode(emitter.emitComment("FunctionCall_END", InstructionEmitter.Color.GREEN));
 
         return code;
     }

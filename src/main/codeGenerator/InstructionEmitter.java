@@ -1,6 +1,34 @@
 package main.codeGenerator;
 
 public class InstructionEmitter {
+    private final boolean debugMode = true;
+    public static class Color {
+        public static final String RESET  = "\u001B[0m";
+
+        // Regular colors
+        public static final String BLACK  = "\u001B[30m";
+        public static final String RED    = "\u001B[31m";
+        public static final String GREEN  = "\u001B[32m";
+        public static final String YELLOW = "\u001B[33m";
+        public static final String BLUE   = "\u001B[34m";
+        public static final String PURPLE = "\u001B[35m";
+        public static final String CYAN   = "\u001B[36m";
+        public static final String WHITE  = "\u001B[37m";
+
+        // Bright colors
+        public static final String BRIGHT_BLACK  = "\u001B[90m";
+        public static final String BRIGHT_RED    = "\u001B[91m";
+        public static final String BRIGHT_GREEN  = "\u001B[92m";
+        public static final String BRIGHT_YELLOW = "\u001B[93m";
+        public static final String BRIGHT_BLUE   = "\u001B[94m";
+        public static final String BRIGHT_PURPLE = "\u001B[95m";
+        public static final String BRIGHT_CYAN   = "\u001B[96m";
+        public static final String BRIGHT_WHITE  = "\u001B[97m";
+    }
+    private String colorIfDebug(String text, String color) {
+        return debugMode ? color + text + Color.RESET : text;
+    }
+
     private String emit(String opcode, String... operands) {
         StringBuilder line = new StringBuilder(opcode);
         for (String op : operands) {
@@ -31,7 +59,14 @@ public class InstructionEmitter {
     }
 
     public String emitLabel(String label){
-        return label + ":";
+        return colorIfDebug(label, Color.YELLOW) + ":";
+    }
+
+    public CodeObject emitComment(String comment, String color){
+        CodeObject code =  new CodeObject();
+        if(debugMode)
+            code.addCode(color + "    " + "//" + comment + "//" + Color.RESET);
+        return code;
     }
 
     /**
@@ -121,7 +156,7 @@ public class InstructionEmitter {
     }
 
     public String BRR(String operator, String label) {
-        return emit("BRR", operator, label);
+        return emit("BRR", operator, colorIfDebug(label, Color.YELLOW));
     }
     /**
      * JMP jumps without storing the return line
@@ -147,13 +182,13 @@ public class InstructionEmitter {
      * notice JMP and JMPS are macros and will be converted to JMI JMR and JMRS after interpreting the labels in assembler
      */
     public  String JMP(String label) {
-        return this.emit("JMP", label);
+        return this.emit("JMP", colorIfDebug(label, Color.YELLOW));
     }
 
     public  CodeObject JMPS(String label, String returnReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, returnReg);
-        code.addCode(emit("JMP", label, returnReg));
+        code.addCode(emit("JMPS", colorIfDebug(label, Color.YELLOW), returnReg));
         return code;
     }
     public CodeObject SUR(String valueReg2, String valueReg1, String destReg) {
