@@ -574,6 +574,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         CodeObject firstOperandCode = binaryExpr.getFirstOperand().accept(this);
         CodeObject secondOperandCode = binaryExpr.getSecondOperand().accept(this);
+        code.addCode(firstOperandCode);
+        code.addCode(secondOperandCode);
 
         String firstOperand = firstOperandCode.getResultVar();
         String secondOperand = secondOperandCode.getResultVar();
@@ -771,6 +773,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 String destVar2 = nameManager.newTmpVarName();
                 String destReg = getRegisterForWrite(code, destVar, destVar2);
                 code.addCode(emitter.DIV(firstOperandReg, secondOperandReg, destReg));
+
                 code.addCode(emitter.ADR("R0", registerManager.getRegisterByVar(destVar2), firstOperandReg));
                 registerManager.freeRegister(destVar);
                 registerManager.freeRegister(destVar2);
@@ -793,7 +796,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
         }
 
-
+        this.registerManager.printState();
         return code;
     }
 
@@ -803,6 +806,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         return code;
     }
+
     public CodeObject visit(IntVal intVal) {
         CodeObject code = new CodeObject();
         String destRegVar = nameManager.newTmpVarName();

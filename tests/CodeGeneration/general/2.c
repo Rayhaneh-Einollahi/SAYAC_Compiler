@@ -1,0 +1,15 @@
+int main() {
+
+    int a = 10;
+    int b = a++;
+    int f = e + d;
+    int g = f + 100;
+    int h = g + a;
+    int i = h + g;
+    int j = i + 1;
+    int j2 = i + 2;
+    for(i = 0; i < 10; i++) {
+        int j = i + 1;
+    }
+
+}

@@ -1,6 +1,6 @@
 void f0() {
     int x = 1;
-   int y = x + 2;
+    int y = x + 2;
 }
 
 void f1(int x) {
