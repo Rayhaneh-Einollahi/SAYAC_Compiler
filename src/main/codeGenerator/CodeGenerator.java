@@ -111,7 +111,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     code.addCode(emitter.MSI(adress, adressReg));
                     code.addCode(emitter.STR(tempReg, adressReg));
                 }else {
-                    code.addCode(exprCode.toString());
+                    code.addCode(exprCode);
                     String resultReg = getRegisterForRead(code , exprCode.getResultVar());
                     code.addCode(emitter.MSI(adress, adressReg));
                     code.addCode(emitter.STR(resultReg, adressReg));
@@ -129,7 +129,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     code.addCode(emitter.MSI(initValue, reg));
                 }else {
 
-                    code.addCode(exprCode.toString());
+                    code.addCode(exprCode);
                     String resultReg = getRegisterForRead(code , exprCode.getResultVar());
 
                     registerManager.assignRegister(resultReg, varName);
@@ -332,6 +332,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         else if (forStatement.getForCondition().getExpr() != null) {
             code.addCode(forStatement.getForCondition().getExpr().accept(this));
         }
+
 
         code.addCode(emitter.emitLabel(condLabel));
         code.addCode(branchFromAndList(forStatement.getForCondition().getConditions(), bodyLabel, endLabel));
@@ -551,10 +552,17 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(BinaryExpr binaryExpr) {
         CodeObject code = new CodeObject();
+        System.out.println("bef-------");
+        System.out.println(code.toString());
+        System.out.println("aft-------");
         BinaryOperator op = binaryExpr.getOperator();
+
+
 
         CodeObject firstOperandCode = binaryExpr.getFirstOperand().accept(this);
         CodeObject secondOperandCode = binaryExpr.getSecondOperand().accept(this);
+
+
 
 
 
@@ -595,6 +603,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String zeroReg = "R0";
         String tempName = nameManager.newTmpVarName();
         String tempReg = this.getRegisterForWrite(code, tempName);
+
         switch (op) {
             case BinaryOperator.AND:
                 code.addCode(emitter.ANR(firstOperandReg, secondOperandReg, destReg));
@@ -943,8 +952,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
         }
 
-        registerManager.freeRegister(tempReg);
 
+
+        registerManager.freeRegister(tempReg);
 
         return code;
     }
