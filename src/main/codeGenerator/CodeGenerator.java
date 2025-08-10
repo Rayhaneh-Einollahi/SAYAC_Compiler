@@ -53,7 +53,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         for (RegisterAction action : actions) {
             switch (action.type) {
                 case SPILL -> code.addCode(emitter.SW(action.register, action.offset, "FP"));
-                case LOAD  -> code.addCode(emitter.LW(action.register, action.offset, "FP"));
+                case LOAD  -> code.addCode(emitter.LW("FP", action.offset, action.register));
             }
         }
         return reg;
@@ -265,7 +265,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         for (int offset : tempOffsets) {
             String tmpName = nameManager.newTmpVarName();
             String tmpReg = getRegisterForWrite(code, tmpName);
-            code.addCode(emitter.LW(tmpReg, offset, "fp"));
+            code.addCode(emitter.LW("fp", offset, tmpReg));
 
             code.addCode(emitter.STR(tmpReg, "sp"));
             code.addCode(emitter.ADI(-2, "sp"));
