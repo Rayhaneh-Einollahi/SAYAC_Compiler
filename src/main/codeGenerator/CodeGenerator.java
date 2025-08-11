@@ -597,12 +597,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String operand1 = operand1Code.getResultVar();
         String operand2 = operand2Code.getResultVar();
-        String helperVar;
+        String helperVar = null;
 
         String operand1reg, operand2reg;
-        if(op == BinaryOperator.DIVASSIGN || op==BinaryOperator.STARASSIGN || op==BinaryOperator.MODASSIGN) {
+        if(op == BinaryOperator.DIVASSIGN || op==BinaryOperator.STARASSIGN) {
             helperVar = nameManager.newTmpVarName();
             operand1reg = getRegisterForRead(code, operand1, helperVar);
+        }
+        else if (op==BinaryOperator.MODASSIGN) {
+            helperVar = nameManager.newTmpVarName();
+            operand1reg = getRegisterForRead(code, helperVar, operand1);
         }
         else{
             operand1reg = getRegisterForRead(code, operand1);
@@ -682,9 +686,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.XOR: {
-                String destVar = resolveDesVar(needFree);
+                String destVar = nameManager.newTmpVarName();
                 String destReg = getRegisterForWrite(code, destVar);
-                String tmpVar = resolveDesVar(needFree);
+                String tmpVar = nameManager.newTmpVarName();
                 String tmpReg = getRegisterForWrite(code, tmpVar);
                 code.addCode(emitter.NTR(operand1reg, tmpReg));
                 code.addCode(emitter.NTR(operand2reg, destReg));
@@ -722,20 +726,19 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.DIVASSIGN: {
-                //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
                 code.addCode(emitter.DIV(operand1reg, operand2reg, operand1reg));
                 needFree.remove(operand1);
+                needFree.add(helperVar);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.LEFTSHIFTASSIGN: {
-                //Todo: if the secondOperator is tmp just use it's own register inplace
-                String tmpVar = nameManager.newTmpVarName();
+                needFree.remove(operand1);
+                String tmpVar = resolveDesVar(needFree);
                 String tmpReg = getRegisterForWrite(code, tmpVar);
                 code.addCode(emitter.NTR2(operand2reg, tmpReg));
                 code.addCode(emitter.SAR(tmpReg, operand1reg, operand1reg));
-                registerManager.freeRegister(tmpVar);
-                needFree.remove(operand1);
+                needFree.add(tmpVar);
                 code.setResultVar(operand1);
                 break;
             }
@@ -758,59 +761,46 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.STARASSIGN: {
-                //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
                 code.addCode(emitter.MUL(operand2reg, operand1reg, operand1reg));
                 needFree.remove(operand1);
+                needFree.add(helperVar);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.ORASSIGN: {
-                //Todo: here too
-                code.addCode(emitter.NTR(operand1reg, operand1reg));
-                code.addCode(emitter.NTR(operand2reg, operand2reg));
-                code.addCode(emitter.ANR(operand2reg, operand1reg, operand1reg));
-                code.addCode(emitter.NTR(operand1reg, operand1reg));
                 needFree.remove(operand1);
+                String tmpVar = resolveDesVar(needFree);
+                String tmpReg = getRegisterForWrite(code, tmpVar);
+                code.addCode(emitter.NTR(operand1reg, operand1reg));
+                code.addCode(emitter.NTR(operand2reg, tmpReg));
+                code.addCode(emitter.ANR(tmpReg, operand1reg, operand1reg));
+                code.addCode(emitter.NTR(operand1reg, operand1reg));
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.XORASSIGN: {
-                String _notFirstName = nameManager.newTmpVarName();
-                String _notFirst = this.getRegisterForWrite(code, _notFirstName);
-                String _notSecondName = nameManager.newTmpVarName();
-                String _notSecondReg = this.getRegisterForWrite(code, _notSecondName);
-                String _temp1Name = nameManager.newTmpVarName();
-                String _temp1Reg = this.getRegisterForWrite(code, _temp1Name);
-                String _temp2Name = nameManager.newTmpVarName();
-                String _temp2Reg = this.getRegisterForWrite(code, _temp2Name);
-                code.addCode(emitter.NTR(operand1reg, _notFirst));
-                code.addCode(emitter.NTR(_notSecondReg, operand2reg));
-                code.addCode(emitter.ANR(_notFirst, operand2reg, _temp1Reg));
-                code.addCode(emitter.ANR(_notSecondReg, operand1reg, _temp1Reg));
-                code.addCode(emitter.NTR(_temp1Reg, _temp1Reg));
-                code.addCode(emitter.NTR(_temp2Reg, _temp2Reg));
-                code.addCode(emitter.ANR(_temp2Reg, _temp1Reg, operand1reg));
-                code.addCode(emitter.NTR(operand1reg, operand1reg));
                 needFree.remove(operand1);
-                code.setResultVar(operand1);
-                this.registerManager.freeRegister(_notFirst);
-                this.registerManager.freeRegister(_notSecondReg);
-                this.registerManager.freeRegister(_temp1Reg);
-                this.registerManager.freeRegister(_temp2Reg);
+                String tmpVar = nameManager.newTmpVarName();
+                String tmpReg = getRegisterForWrite(code, tmpVar);
+                String tmp2Var = resolveDesVar(needFree);
+                String tmp2Reg = getRegisterForWrite(code, tmp2Var);
+                code.addCode(emitter.ANR(operand1reg, operand2reg, tmpReg));
+                code.addCode(emitter.NTR(tmpReg, tmpReg));
+                code.addCode(emitter.NTR(operand1reg, operand1reg));
+                code.addCode(emitter.NTR(operand2reg, tmp2Reg));
+                code.addCode(emitter.ANR(tmp2Reg, operand1reg, operand1reg));
+                code.addCode(emitter.NTR(operand1reg, operand1reg));
+                code.addCode(emitter.ANR(operand1reg, tmpReg, operand1reg));
+                code.setResultVar(operand1reg);
+                needFree.add(tmpVar);
+                needFree.add(tmp2Var);
                 break;
             }
             case BinaryOperator.MODASSIGN: {
-                //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
-                String destVar = nameManager.newTmpVarName();
-                String destVar2 = nameManager.newTmpVarName();
-                String destReg = getRegisterForWrite(code, destVar, destVar2);
-                code.addCode(emitter.DIV(operand1reg, operand2reg, destReg));
-
-                code.addCode(emitter.ADR("R0", registerManager.getRegisterByVar(destVar2), operand1reg));
-                registerManager.freeRegister(destVar);
-                registerManager.freeRegister(destVar2);
-                needFree.remove(operand1);
-                code.setResultVar(operand1);
+                code.addCode(emitter.DIV(helperVar, operand2reg, operand1reg));
+                needFree.remove(helperVar);
+                needFree.add(operand1);
+                code.setResultVar(helperVar);
                 break;
             }
         }

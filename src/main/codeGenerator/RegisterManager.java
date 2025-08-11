@@ -98,8 +98,18 @@ public class RegisterManager {
                 return mainReg;
             }
         }
+        if (varToReg.containsKey(helperVar)) {
+            incrementUseCount(helperVar);
+            String helperReg = varToReg.get(helperVar);
+            if (isPrevFree(helperVar))
+                return getPrevReg(helperReg);
+            if (allRegisters.indexOf(helperReg)!= 0){
+                handleSpill(List.of(mainVar), List.of(getPrevReg(helperReg)), actions).getFirst();
+                return getPrevReg(helperReg);
+            }
+        }
 
-        if (spilledVars.containsKey(mainVar)) {
+        if (spilledVars.containsKey(mainVar) || spilledVars.containsKey(helperVar)) {
             return loadSpilled(mainVar,helperVar, actions);
         }
 
@@ -126,14 +136,19 @@ public class RegisterManager {
     }
 
     public String loadSpilled(String mainVar, String helperVar, List<RegisterAction> actions) {
-        if (!spilledVars.containsKey(mainVar)) {
-            throw new RuntimeException("Variable not spilled: " + mainVar);
+        String reg = null;
+        if (spilledVars.containsKey(mainVar)) {
+            int offset = spilledVars.remove(mainVar);
+            reg = allocateTwoForRead(mainVar, helperVar, actions);
+            actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, mainVar, offset));
+            incrementUseCount(mainVar);
         }
-
-        int offset = spilledVars.remove(mainVar);
-        String reg = allocateTwoForRead(mainVar, helperVar, actions);
-        actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, mainVar, offset));
-        incrementUseCount(mainVar);
+        else if(spilledVars.containsKey(helperVar)){
+            int offset = spilledVars.remove(helperVar);
+            reg = allocateTwoForRead(mainVar, helperVar, actions);
+            actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, helperVar, offset));
+            incrementUseCount(helperVar);
+        }
         return reg;
     }
 
@@ -231,6 +246,21 @@ public class RegisterManager {
     }
 
 
+    public boolean isPrevFree(String regName) {
+        int index = allRegisters.indexOf(regName);
+        if (index == -1 || index == 0) {
+            return false;
+        }
+        String nextReg = allRegisters.get(index - 1);
+        return registerStates.get(nextReg) == RegisterState.FREE;
+    }
+    public String getPrevReg(String regName) {
+        int index = allRegisters.indexOf(regName);
+        if (index == -1 || index == 0) {
+            return null;
+        }
+        return allRegisters.get(index - 1);
+    }
     public boolean isNextFree(String regName) {
         int index = allRegisters.indexOf(regName);
         if (index == -1 || index == allRegisters.size() - 1) {
