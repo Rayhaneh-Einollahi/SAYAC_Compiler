@@ -1,8 +1,14 @@
 # Ignore IDE files
 .vscode/
 .idea/
+*.iml
 
 # Ignore out directory
 /out/
 
-*.iml
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db

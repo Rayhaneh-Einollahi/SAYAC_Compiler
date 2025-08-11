@@ -39,8 +39,8 @@ public class RegisterManager {
             incrementUseCount(varName);
             return reg;
         }
-        return handleSpill(List.of(varName), actions).getFirst();
-
+        List<String> spillRegs = chooseSpillCandidate(1);
+        return handleSpill(List.of(varName),spillRegs, actions).getFirst();
     }
     /**
      * get a register for the purpose of reading from it that refers to the variable varName
@@ -65,7 +65,8 @@ public class RegisterManager {
             incrementUseCount(varName);
             return reg;
         }
-        return handleSpill(List.of(varName), actions).getFirst();
+        List<String> spillRegs = chooseSpillCandidate(1);
+        return handleSpill(List.of(varName),spillRegs, actions).getFirst();
     }
 
     public List<String> allocateSeveralForWrite(List<String> varNames, List<RegisterAction> actions){
@@ -81,9 +82,38 @@ public class RegisterManager {
             return regs;
         }
 
-        return handleSpill(varNames, actions);
+        List<String> spillRegs = chooseSpillCandidate(varNames.size());
+        return handleSpill(varNames,spillRegs, actions);
     }
 
+    public String allocateTwoForRead(String mainVar,String helperVar, List<RegisterAction> actions) {
+
+        if (varToReg.containsKey(mainVar)) {
+            incrementUseCount(mainVar);
+            String mainReg = varToReg.get(mainVar);
+            if (isNextFree(mainReg))
+                return mainReg;
+            if (allRegisters.indexOf(mainReg)!= allRegisters.size()-1){
+                handleSpill(List.of(helperVar), List.of(getNextReg(mainReg)), actions).getFirst();
+                return mainReg;
+            }
+        }
+
+        if (spilledVars.containsKey(mainVar)) {
+            return loadSpilled(mainVar,helperVar, actions);
+        }
+
+        List<String> regs = findFreeRegister(2);
+
+        if (regs != null) {
+            String reg = regs.getFirst();
+            assignRegister(reg, mainVar);
+            incrementUseCount(mainVar);
+            return reg;
+        }
+        List<String> spillRegs = chooseSpillCandidate(2);
+        return handleSpill(List.of(mainVar),spillRegs, actions).getFirst();
+    }
 
     public void freeRegister(String varName) {
         if (!varToReg.containsKey(varName)) return;
@@ -95,6 +125,17 @@ public class RegisterManager {
         varUseCounts.remove(varName);
     }
 
+    public String loadSpilled(String mainVar, String helperVar, List<RegisterAction> actions) {
+        if (!spilledVars.containsKey(mainVar)) {
+            throw new RuntimeException("Variable not spilled: " + mainVar);
+        }
+
+        int offset = spilledVars.remove(mainVar);
+        String reg = allocateTwoForRead(mainVar, helperVar, actions);
+        actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, mainVar, offset));
+        incrementUseCount(mainVar);
+        return reg;
+    }
 
     public String loadSpilled(String varName, List<RegisterAction> actions) {
         if (!spilledVars.containsKey(varName)) {
@@ -190,6 +231,22 @@ public class RegisterManager {
     }
 
 
+    public boolean isNextFree(String regName) {
+        int index = allRegisters.indexOf(regName);
+        if (index == -1 || index == allRegisters.size() - 1) {
+            return false;
+        }
+        String nextReg = allRegisters.get(index + 1);
+        return registerStates.get(nextReg) == RegisterState.FREE;
+    }
+
+    public String getNextReg(String regName) {
+        int index = allRegisters.indexOf(regName);
+        if (index == -1 || index == allRegisters.size() - 1) {
+            return null;
+        }
+        return allRegisters.get(index + 1);
+    }
 
     private List<String> findFreeRegister(int cnt) {
         List<String> freeRegs = new ArrayList<>();
@@ -215,9 +272,8 @@ public class RegisterManager {
         return freeRegs;
     }
 
-    private List<String> handleSpill(List<String> varNames, List<RegisterAction> actions) {
+    private List<String> handleSpill(List<String> varNames, List<String> spillRegs, List<RegisterAction> actions) {
         int cnt = varNames.size();
-        List<String> spillRegs = chooseSpillCandidate(cnt);
         for (int i = 0; i < cnt; i++) {
             String spillReg = spillRegs.get(i);
             String varName = varNames.get(i);

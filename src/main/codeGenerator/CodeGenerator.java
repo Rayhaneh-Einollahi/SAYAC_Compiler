@@ -46,9 +46,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
     /** Register commands:*/
-    private String getRegisterForRead(CodeObject code, String varName){
+    private String getRegisterForRead(CodeObject code, String... varNames){
+        if(varNames.length>2){
+            throw new RuntimeException("More than two varNames passed");
+        }
         List<RegisterAction> actions = new ArrayList<>();
-        String reg = registerManager.allocateForRead(varName, actions);
+
+        String reg;
+        if (varNames.length == 1) {
+            reg = registerManager.allocateForRead(varNames[0], actions);
+        } else {
+            reg = registerManager.allocateTwoForRead(varNames[0], varNames[1], actions);
+        }
 
         for (RegisterAction action : actions) {
             switch (action.type) {
@@ -588,9 +597,17 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String operand1 = operand1Code.getResultVar();
         String operand2 = operand2Code.getResultVar();
+        String helperVar;
 
-        String operand1reg = getRegisterForRead(code, operand1);
-        String operand2reg = getRegisterForRead(code, operand2);
+        String operand1reg, operand2reg;
+        if(op == BinaryOperator.DIVASSIGN || op==BinaryOperator.STARASSIGN || op==BinaryOperator.MODASSIGN) {
+            helperVar = nameManager.newTmpVarName();
+            operand1reg = getRegisterForRead(code, operand1, helperVar);
+        }
+        else{
+            operand1reg = getRegisterForRead(code, operand1);
+        }
+        operand2reg = getRegisterForRead(code, operand2);
 
 
         List<String> needFree = new ArrayList<>();
@@ -668,7 +685,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 String destVar = resolveDesVar(needFree);
                 String destReg = getRegisterForWrite(code, destVar);
                 String tmpVar = resolveDesVar(needFree);
-                String tmpReg = this.getRegisterForWrite(code, tmpVar);
+                String tmpReg = getRegisterForWrite(code, tmpVar);
                 code.addCode(emitter.NTR(operand1reg, tmpReg));
                 code.addCode(emitter.NTR(operand2reg, destReg));
                 code.addCode(emitter.ANR(tmpReg, destReg, tmpReg));
@@ -685,7 +702,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 String destReg = getRegisterForWrite(code, destVar);
                 String tmpVar = resolveDesVar(needFree);
                 String tmpReg = getRegisterForWrite(code, tmpVar);
-
                 code.addCode(emitter.NTR(operand1reg, tmpReg));
                 code.addCode(emitter.NTR(operand2reg, destReg));
                 code.addCode(emitter.ANR(tmpReg, destReg, destReg));
@@ -695,17 +711,20 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.ASSIGN: {
                 code.addCode(emitter.ADR("R0", operand2reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.ANDASSIGN:{
                 code.addCode(emitter.ANR(operand1reg, operand2reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.DIVASSIGN: {
                 //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
                 code.addCode(emitter.DIV(operand1reg, operand2reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
@@ -716,27 +735,32 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR2(operand2reg, tmpReg));
                 code.addCode(emitter.SAR(tmpReg, operand1reg, operand1reg));
                 registerManager.freeRegister(tmpVar);
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.RIGHTSHIFTASSIGN: {
                 code.addCode(emitter.SAR(operand2reg, operand1reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.MINUSASSIGN: {
                 code.addCode(emitter.SUR(operand1reg, operand2reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.PLUSASSIGN: {
                 code.addCode(emitter.ADR(operand1reg, operand2reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.STARASSIGN: {
                 //Todo: there should be two consecutive registers, we can allocate firstOperandVar with a tmp register here instead
                 code.addCode(emitter.MUL(operand2reg, operand1reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
@@ -746,6 +770,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(operand2reg, operand2reg));
                 code.addCode(emitter.ANR(operand2reg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
@@ -766,6 +791,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(_temp2Reg, _temp2Reg));
                 code.addCode(emitter.ANR(_temp2Reg, _temp1Reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 this.registerManager.freeRegister(_notFirst);
                 this.registerManager.freeRegister(_notSecondReg);
@@ -783,6 +809,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ADR("R0", registerManager.getRegisterByVar(destVar2), operand1reg));
                 registerManager.freeRegister(destVar);
                 registerManager.freeRegister(destVar2);
+                needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
