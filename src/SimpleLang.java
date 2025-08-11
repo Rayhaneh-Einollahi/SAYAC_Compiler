@@ -23,8 +23,8 @@ public class SimpleLang {
         Program program = flParser.compilationUnit().programRet;
 
 //
-//        NameAnalyzer name_analyzer = new NameAnalyzer();
-//        name_analyzer.visit(program);
+        NameAnalyzer name_analyzer = new NameAnalyzer();
+        name_analyzer.visit(program);
 //
 //        UnusedRemover unusedRemover = new UnusedRemover();
 //        unusedRemover.visit(program);
@@ -43,6 +43,7 @@ public class SimpleLang {
         CodeGenerator codeGenerator = new CodeGenerator();
         System.out.print(codeGenerator.visit(program));
 
+        System.out.println(1);
 
     }
 }

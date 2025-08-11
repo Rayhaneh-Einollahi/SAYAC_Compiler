@@ -1,6 +1,5 @@
 package main.symbolTable;
 
-
 import main.ast.nodes.declaration.Declaration;
 import main.ast.nodes.declaration.ExternalDeclaration;
 import main.symbolTable.exceptions.ItemAlreadyExistsException;
@@ -12,19 +11,30 @@ import main.symbolTable.utils.Key;
 
 import java.util.*;
 
-
 public class SymbolTable {
 
-    //Start of static members
-
+    // --- Static members ---
     public static SymbolTable top;
     public static SymbolTable root;
-    private static Stack<SymbolTable> stack = new Stack<>();
-    private static Set<String> built_in_funcs  = new HashSet<>(Arrays.asList("printf", "scanf"));
+    private static final Stack<SymbolTable> stack = new Stack<>();
+    private static final Set<String> built_in_funcs  = new HashSet<>(Arrays.asList("printf", "scanf"));
+
+    // NEW: Counter for unique scope IDs
+    private static int NEXT_ID = 0; // if you need thread-safety, use AtomicInteger
+
+    // --- Instance members ---
+    public SymbolTable pre;
+    public Map<Key, SymbolTableItem> items;
+
+    // NEW: immutable unique id for this scope
+    public final int scope_id;
 
     public static Boolean isBuiltIn(String name){
         return built_in_funcs.contains(name);
     }
+
+    // (Removed your old addScope_id() which mutated the id; ids should be stable)
+
     public static void push(SymbolTable symbolTable) {
         if (top != null)
             stack.push(top);
@@ -35,9 +45,6 @@ public class SymbolTable {
         top = stack.pop();
     }
 
-    public SymbolTable pre;
-    public Map<Key, SymbolTableItem> items;
-
     public SymbolTable() {
         this(null);
     }
@@ -45,6 +52,7 @@ public class SymbolTable {
     public SymbolTable(SymbolTable pre) {
         this.pre = pre;
         this.items = new HashMap<>();
+        this.scope_id = NEXT_ID++; // NEW: assign unique id on creation
     }
 
     public static Stack<SymbolTable> getStack() {
@@ -60,7 +68,7 @@ public class SymbolTable {
     public List<Declaration> getUnused(){
         List<Declaration> declarations = new ArrayList<>();
         for (Map.Entry<Key, SymbolTableItem> entry : items.entrySet()) {
-            if (! (entry.getValue() instanceof DecSymbolTableItem item))
+            if (!(entry.getValue() instanceof DecSymbolTableItem item))
                 continue;
             if (!entry.getValue().isUsed()){
                 declarations.add(item.getDeclaration());
@@ -68,34 +76,48 @@ public class SymbolTable {
         }
         return declarations;
     }
+
     public SymbolTableItem getItem(Key key) throws ItemNotFoundException {
         SymbolTable currentSymbolTable = this;
-
         while(currentSymbolTable != null) {
             SymbolTableItem symbolTableItem = currentSymbolTable.items.get(key);
-            if( symbolTableItem != null ) {
+            if (symbolTableItem != null)
                 return symbolTableItem;
+            currentSymbolTable = currentSymbolTable.pre;
+        }
+        throw new ItemNotFoundException();
+    }
+
+    public SymbolTableItem getItem(Key key, boolean justName) throws ItemNotFoundException {
+        if (!justName)
+            return getItem(key);
+
+        SymbolTable currentSymbolTable = this;
+        while(currentSymbolTable != null) {
+            for (Map.Entry<Key, SymbolTableItem> entry : currentSymbolTable.items.entrySet()) {
+                if (key.getName().equals(entry.getValue().getKey().getName()))
+                    return entry.getValue();
             }
             currentSymbolTable = currentSymbolTable.pre;
         }
         throw new ItemNotFoundException();
     }
-    public SymbolTableItem getItem(Key key, boolean justName) throws ItemNotFoundException {
-        if (!justName){
-            return getItem(key);
-        }
 
-        SymbolTable currentSymbolTable = this;
-        while(currentSymbolTable != null) {
-            for (Map.Entry<Key, SymbolTableItem> entry : currentSymbolTable.items.entrySet()) {
-                if (key.getName().equals(entry.getValue().getKey().getName())) {
-                    return entry.getValue();
+    public int getNearestDeclScopeIdByName(String name) throws ItemNotFoundException {
+        SymbolTable cur = this;
+        while (cur != null) {
+            for (SymbolTableItem it : cur.items.values()) {
+                if (it.getKey().getName().equals(name)) {
+                    return cur.scope_id; // first (nearest) match found
                 }
             }
-
-            currentSymbolTable = currentSymbolTable.pre;
+            cur = cur.pre;
         }
         throw new ItemNotFoundException();
+    }
+
+    public int getScopeId() {
+        return this.scope_id;
     }
 
 

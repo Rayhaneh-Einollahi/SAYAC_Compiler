@@ -2,6 +2,10 @@ package main.visitor;
 
 import main.ast.nodes.Program;
 import main.ast.nodes.Statement.*;
+import main.ast.nodes.Statement.IterationStatement.DoWhileStatement;
+import main.ast.nodes.Statement.IterationStatement.ForCondition;
+import main.ast.nodes.Statement.IterationStatement.ForStatement;
+import main.ast.nodes.Statement.IterationStatement.WhileStatement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 import main.symbolTable.SymbolTable;
@@ -24,6 +28,7 @@ import main.symbolTable.utils.Key;
 
 public class NameAnalyzer extends Visitor<Void>{
     public boolean ok = true;
+    public boolean is_dec = false;
 
     @Override
     public Void visit(Program program) {
@@ -40,7 +45,7 @@ public class NameAnalyzer extends Visitor<Void>{
 
     @Override
     public Void visit(FunctionDefinition functionDefinition) {
-        
+
         FuncDecSymbolTableItem func_dec_item = new FuncDecSymbolTableItem(functionDefinition);
         try {
             SymbolTable.top.put(func_dec_item);
@@ -63,7 +68,6 @@ public class NameAnalyzer extends Visitor<Void>{
                 }
             }
         }
-
 
 
         if (functionDefinition.getDeclarator() != null){
@@ -105,7 +109,7 @@ public class NameAnalyzer extends Visitor<Void>{
 
     @Override
     public Void visit(Declaration declaration) {
-        
+        is_dec = true;
         DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
         try {
             SymbolTable.top.put(var_dec_item);
@@ -118,14 +122,20 @@ public class NameAnalyzer extends Visitor<Void>{
                 id.accept(this);
             }
         }
+        is_dec = false;
         return null;
     }
 
     @Override
     public Void visit(Identifier identifier) {
-        
         try {
+
             SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()), true);
+
+            String idStr = Integer.toString(SymbolTable.top.getNearestDeclScopeIdByName(identifier.getName()));
+            identifier.setSpecialName(identifier.getName() + idStr);
+
+
             symbolTableItem.incUsed();
         } catch (ItemNotFoundException e) {
             ok = false;
@@ -136,16 +146,72 @@ public class NameAnalyzer extends Visitor<Void>{
 
     public Void visit(CompoundStatement compoundStatement) {
 
-        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
-        compoundStatement.set_symbol_table(new_symbol_table);
-        SymbolTable.push(new_symbol_table);
+//        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
+//        compoundStatement.set_symbol_table(new_symbol_table);
+//        SymbolTable.push(new_symbol_table);
 
         if (compoundStatement.getBlockItems() != null) {
             for (BlockItem bi : compoundStatement.getBlockItems()) {
                 bi.accept(this);
             }
         }
+//        SymbolTable.pop();
+        return null;
+    }
+
+
+
+    public Void visit(ForStatement forStatement){
+        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
+        forStatement.set_symbol_table(new_symbol_table);
+        SymbolTable.push(new_symbol_table);
+        if (forStatement.getForCondition() != null) {
+            forStatement.getForCondition().accept(this);
+        }
+        if (forStatement.getBody() != null) {
+            forStatement.getBody().accept(this);
+        }
         SymbolTable.pop();
         return null;
     }
+
+
+    public Void visit(WhileStatement whileStatement){
+        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
+        whileStatement.set_symbol_table(new_symbol_table);
+        SymbolTable.push(new_symbol_table);
+        System.out.println(whileStatement.getBody().getStatementCount());
+        if (whileStatement.getCondition() != null) {
+            whileStatement.getCondition().accept(this);
+        }
+        if (whileStatement.getBody() != null) {
+            whileStatement.getBody().accept(this);
+        }
+        SymbolTable.pop();
+        return null;
+    }
+
+
+
+    public Void visit(SelectionStatement selectionStatement) {
+        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
+        selectionStatement.set_symbol_table(new_symbol_table);
+        SymbolTable.push(new_symbol_table);
+
+        if (selectionStatement.getCondition() != null) {
+            selectionStatement.getCondition().accept(this);
+        }
+        if (selectionStatement.getIfStatement() != null) {
+            selectionStatement.getIfStatement().accept(this);
+        }
+        if (selectionStatement.getElseStatement() != null) {
+            selectionStatement.getElseStatement().accept(this);
+        }
+        SymbolTable.pop();
+        return null;
+    }
+
+
+
+
 }

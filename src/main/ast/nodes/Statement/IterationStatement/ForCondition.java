@@ -3,6 +3,7 @@ package main.ast.nodes.Statement.IterationStatement;
 import main.ast.nodes.Node;
 import main.ast.nodes.declaration.Declaration;
 import main.ast.nodes.expr.Expr;
+import main.symbolTable.SymbolTable;
 import main.visitor.IVisitor;
 
 import java.util.List;
@@ -13,7 +14,6 @@ public class ForCondition extends Node {
     private Expr expr;
     private List<Expr> conditions;
     private List<Expr> steps;
-
     public void setDeclaration(Declaration forDeclaration) {
         this.forDeclaration = forDeclaration;
     }

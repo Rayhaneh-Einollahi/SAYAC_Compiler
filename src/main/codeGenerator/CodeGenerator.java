@@ -90,12 +90,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
     public CodeObject visit(Declaration declaration) {
+        this.registerManager.printState();
         Boolean isExpr = Boolean.FALSE;
         CodeObject code = new CodeObject();
         for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
             Expr expr ;
             CodeObject exprCode = new CodeObject();
-            String varName = initDeclarator.getDeclarator().getName();
+            String varName = initDeclarator.getDeclarator().getSpecialName();
+//            System.out.println(initDeclarator.getDeclarator().getSpecialName());
+
+            System.out.println(varName);
             int initValue = 0;
             if (initDeclarator.getInitializer() != null && initDeclarator.getInitializer().getExpr() != null) {
                 expr = initDeclarator.getInitializer().getExpr();
@@ -820,7 +824,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(Identifier identifier) {
         CodeObject code = new CodeObject();
-        code.setResultVar(identifier.getName());
+        code.setResultVar(identifier.getSpecialName());
+//        System.out.println(identifier.getSpecialName());
 
         return code;
     }

@@ -24,6 +24,20 @@ public class Declarator extends Node {
         }
         return null;
     }
+
+    public String getSpecialName(){
+        DirectDeclarator dd = this.getDirectDeclarator();
+        while (dd != null) {
+            if (dd.getIdentifier() != null) {
+                return dd.getIdentifier().getSpecialName();
+            }
+            Declarator inner = dd.getInnerDeclarator();
+            if (inner != null) {
+                dd = inner.getDirectDeclarator();
+            }
+        }
+        return null;
+    }
     public List<Declaration> getParamsDeclarations() {
         if (directDeclarator == null)
             return new ArrayList<>();

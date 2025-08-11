@@ -29,6 +29,14 @@ public class Declaration extends ExternalDeclaration {
         }
         return initDeclarators.getLast().getDeclarator().getName();
     }
+
+
+    public String getSpecialName(){
+        if (initDeclarators==null || initDeclarators.isEmpty()){
+            return this.types.getLast().getSpecialName();
+        }
+        return initDeclarators.getLast().getDeclarator().getSpecialName();
+    }
     public List<Type> getTypes() {
         return types;
     }

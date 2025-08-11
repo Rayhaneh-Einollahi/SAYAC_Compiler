@@ -28,5 +28,10 @@ public enum Type{
         if (this != IDENTIFIER) return null;
         return identifierName;
     }
+
+    public String getSpecialName() {
+        if (this != IDENTIFIER) return null;
+        return identifierName;
+    }
 }
 
