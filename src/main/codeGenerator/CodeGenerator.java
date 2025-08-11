@@ -714,7 +714,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.ASSIGN: {
-                code.addCode(emitter.ADR("R0", operand2reg, operand1reg));
+                if(nameManager.isTmp(operand2)){
+                    registerManager.freeRegister(operand2);
+                    registerManager.assignRegister(operand2reg, operand1);
+                }else {
+                    code.addCode(emitter.ADR("R0", operand2reg, operand1reg));
+                }
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
@@ -797,10 +802,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.MODASSIGN: {
-                code.addCode(emitter.DIV(helperVar, operand2reg, operand1reg));
-                needFree.remove(helperVar);
-                needFree.add(operand1);
-                code.setResultVar(helperVar);
+                code.addCode(emitter.DIV(operand1reg, operand2reg, helperVar));
+                needFree.remove(operand1);
+                needFree.add(helperVar);
+                code.setResultVar(operand1);
                 break;
             }
         }

@@ -327,7 +327,7 @@ public class RegisterManager {
     }
 
     public void assignRegister(String reg, String varName) {
-        //Todo: first free the register then assign it
+        regToVar.remove(varToReg.get(varName));
         regToVar.put(reg, varName);
         varToReg.put(varName, reg);
         registerStates.put(reg, RegisterState.USED);
