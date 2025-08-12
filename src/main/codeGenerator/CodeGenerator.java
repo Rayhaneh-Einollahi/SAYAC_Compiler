@@ -818,7 +818,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             registerManager.freeRegister(tmpVar);
         }
 
-        this.registerManager.printState();
+//        this.registerManager.printState();
         return code;
     }
 

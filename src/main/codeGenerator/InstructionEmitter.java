@@ -164,7 +164,7 @@ public class InstructionEmitter {
     public CodeObject JMR(String jmpReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, jmpReg);
-        code.addCode(emit("JMR", "0", jmpReg, "r0"));
+        code.addCode(emit("JMR", "0", jmpReg, "R0"));
         return code;
     }
 
