@@ -114,7 +114,6 @@ public class SymbolTable {
         return this.scope_id;
     }
 
-
     public int getItemsSize() {
         return this.items.size();
     }

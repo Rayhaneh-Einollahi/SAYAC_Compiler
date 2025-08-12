@@ -29,6 +29,10 @@ public class Declarator extends Node {
         return this.directDeclarator.isGlobal();
     }
 
+    public boolean isVar() {
+        return this.directDeclarator.isVar();
+    }
+
     public String getSpecialName(){
         DirectDeclarator dd = this.getDirectDeclarator();
         while (dd != null) {

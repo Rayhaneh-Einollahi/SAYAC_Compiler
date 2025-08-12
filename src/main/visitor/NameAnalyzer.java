@@ -16,19 +16,18 @@ import main.symbolTable.item.DecSymbolTableItem;
 import main.symbolTable.item.SymbolTableItem;
 import main.symbolTable.utils.Key;
 
-/*
+/**
  *   Main Changes:
  *       1.create a SymbolTable class to act as our symbol table
  *       2.create some symbolTableItems as the different nodes which are going to be stored in the SymbolTable
  *       3.create a new visitor as our NameAnalyzer
  *       4.add a symbolTable field in program, main, and func_dec AST nodes to store the corresponding symbol table
- * */
-
+ */
 
 
 public class NameAnalyzer extends Visitor<Void>{
     public boolean ok = true;
-    public boolean is_dec = false;
+    public boolean func_def = false;
 
     @Override
     public Void visit(Program program) {
@@ -71,7 +70,9 @@ public class NameAnalyzer extends Visitor<Void>{
 
 
         if (functionDefinition.getDeclarator() != null){
+            func_def = true;
             functionDefinition.getDeclarator().accept(this);
+            func_def = false;
         }
 
         if (functionDefinition.getDeclarations() != null){
@@ -109,7 +110,6 @@ public class NameAnalyzer extends Visitor<Void>{
 
     @Override
     public Void visit(Declaration declaration) {
-        is_dec = true;
         DecSymbolTableItem var_dec_item = new DecSymbolTableItem(declaration);
         try {
             SymbolTable.top.put(var_dec_item);
@@ -122,7 +122,6 @@ public class NameAnalyzer extends Visitor<Void>{
                 id.accept(this);
             }
         }
-        is_dec = false;
         return null;
     }
 
@@ -133,12 +132,13 @@ public class NameAnalyzer extends Visitor<Void>{
     @Override
     public Void visit(Identifier identifier) {
         try {
-
             SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()), true);
-            int scope_number = SymbolTable.top.getNearestDeclScopeIdByName(identifier.getName());
-            identifier.setSpecialName(identifier.getName() + Integer.toString(scope_number));
-            check_global_var(scope_number, identifier);
-
+            if(!func_def) {
+                int scope_number = SymbolTable.top.getNearestDeclScopeIdByName(identifier.getName());
+                identifier.setSpecialName(identifier.getName() + "%" + Integer.toString(scope_number));
+                check_global_var(scope_number, identifier);
+                identifier.setVar(true);
+            }
 
             symbolTableItem.incUsed();
         } catch (ItemNotFoundException e) {
@@ -147,16 +147,6 @@ public class NameAnalyzer extends Visitor<Void>{
         }
         return null;
     }
-
-    public Void visit(CompoundStatement compoundStatement) {
-        if (compoundStatement.getBlockItems() != null) {
-            for (BlockItem bi : compoundStatement.getBlockItems()) {
-                bi.accept(this);
-            }
-        }
-        return null;
-    }
-
 
 
     public Void visit(ForStatement forStatement){

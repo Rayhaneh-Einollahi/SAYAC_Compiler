@@ -20,7 +20,6 @@ public class RegisterManager {
         this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
     }
 
-
     /**
      * get a register for the purpose of writing into it that refers to the variable varName
      */

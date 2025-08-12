@@ -18,6 +18,10 @@ public class DirectDeclarator extends Node {
         return this.identifier.isGlobal();
     }
 
+    public Boolean isVar() {
+        return this.identifier.isVar();
+    }
+
     public static class DDStep {
         public enum Kind { ARRAY, FUNCTION_P, FUNCTION_I}
         public Kind kind;
