@@ -299,7 +299,7 @@ public class RegisterManager {
                 return freeRegs;
             }
         }
-        return freeRegs;
+        return null;
     }
 
     private List<String> handleSpill(List<String> varNames, List<String> spillRegs, List<RegisterAction> actions) {
