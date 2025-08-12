@@ -22,7 +22,6 @@ public class Identifier extends Expr{
         this.status = status;
     }
 
-
     public Identifier(String _name, Integer line) {name = _name; this.setLine(line); this.status = false;}
     public void setName(String name) {this.name = name;}
     public String getName(){return this.name;}
