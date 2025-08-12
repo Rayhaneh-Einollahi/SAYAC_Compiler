@@ -327,7 +327,11 @@ public class RegisterManager {
     }
 
     public void assignRegister(String reg, String varName) {
-        regToVar.remove(varToReg.get(varName));
+        //if it had a register before:
+        String prevReg = varToReg.get(varName);
+        if(prevReg!=null){
+            freeRegister(varName);
+        }
         regToVar.put(reg, varName);
         varToReg.put(varName, reg);
         registerStates.put(reg, RegisterState.USED);
