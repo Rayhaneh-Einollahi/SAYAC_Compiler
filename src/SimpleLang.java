@@ -43,7 +43,5 @@ public class SimpleLang {
         CodeGenerator codeGenerator = new CodeGenerator();
         System.out.print(codeGenerator.visit(program));
 
-        System.out.println(1);
-
     }
 }

@@ -126,14 +126,18 @@ public class NameAnalyzer extends Visitor<Void>{
         return null;
     }
 
+    public void check_global_var(int scope_number, Identifier identifier) {
+        identifier.setStatus(scope_number == 0);
+    }
+
     @Override
     public Void visit(Identifier identifier) {
         try {
 
             SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()), true);
-
-            String idStr = Integer.toString(SymbolTable.top.getNearestDeclScopeIdByName(identifier.getName()));
-            identifier.setSpecialName(identifier.getName() + idStr);
+            int scope_number = SymbolTable.top.getNearestDeclScopeIdByName(identifier.getName());
+            identifier.setSpecialName(identifier.getName() + Integer.toString(scope_number));
+            check_global_var(scope_number, identifier);
 
 
             symbolTableItem.incUsed();
@@ -145,17 +149,11 @@ public class NameAnalyzer extends Visitor<Void>{
     }
 
     public Void visit(CompoundStatement compoundStatement) {
-
-//        SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
-//        compoundStatement.set_symbol_table(new_symbol_table);
-//        SymbolTable.push(new_symbol_table);
-
         if (compoundStatement.getBlockItems() != null) {
             for (BlockItem bi : compoundStatement.getBlockItems()) {
                 bi.accept(this);
             }
         }
-//        SymbolTable.pop();
         return null;
     }
 

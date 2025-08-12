@@ -14,6 +14,10 @@ public class DirectDeclarator extends Node {
     private Declarator innerDeclarator;
     private final List<DDStep> steps = new ArrayList<>();
 
+    public boolean isGlobal() {
+        return this.identifier.isGlobal();
+    }
+
     public static class DDStep {
         public enum Kind { ARRAY, FUNCTION_P, FUNCTION_I}
         public Kind kind;

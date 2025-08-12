@@ -13,27 +13,21 @@ import java.util.*;
 
 public class SymbolTable {
 
-    // --- Static members ---
     public static SymbolTable top;
     public static SymbolTable root;
     private static final Stack<SymbolTable> stack = new Stack<>();
     private static final Set<String> built_in_funcs  = new HashSet<>(Arrays.asList("printf", "scanf"));
 
-    // NEW: Counter for unique scope IDs
-    private static int NEXT_ID = 0; // if you need thread-safety, use AtomicInteger
-
-    // --- Instance members ---
+    private static int NEXT_ID = 0;
     public SymbolTable pre;
     public Map<Key, SymbolTableItem> items;
 
-    // NEW: immutable unique id for this scope
     public final int scope_id;
 
     public static Boolean isBuiltIn(String name){
         return built_in_funcs.contains(name);
     }
 
-    // (Removed your old addScope_id() which mutated the id; ids should be stable)
 
     public static void push(SymbolTable symbolTable) {
         if (top != null)
@@ -52,7 +46,7 @@ public class SymbolTable {
     public SymbolTable(SymbolTable pre) {
         this.pre = pre;
         this.items = new HashMap<>();
-        this.scope_id = NEXT_ID++; // NEW: assign unique id on creation
+        this.scope_id = NEXT_ID++;
     }
 
     public static Stack<SymbolTable> getStack() {
@@ -108,7 +102,7 @@ public class SymbolTable {
         while (cur != null) {
             for (SymbolTableItem it : cur.items.values()) {
                 if (it.getKey().getName().equals(name)) {
-                    return cur.scope_id; // first (nearest) match found
+                    return cur.scope_id;
                 }
             }
             cur = cur.pre;

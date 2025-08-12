@@ -2,7 +2,7 @@ int main() {
 
     int a = 10;
     int b = a++;
-    int f = e + d;
+    int f = a + b;
 //    int g = f + 100;
 //    int h = g + a;
 //    int i = h + g;
