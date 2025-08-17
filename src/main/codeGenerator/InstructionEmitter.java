@@ -255,6 +255,13 @@ public class InstructionEmitter {
         return code;
     }
 
+    public CodeObject LDB(String destReg, String offsetReg){
+        CodeObject code = new CodeObject();
+        storeUsedReg(code, destReg, offsetReg);
+        code.addCode(emit("LDB", destReg, offsetReg));
+        return code;
+    }
+
 
 }
 

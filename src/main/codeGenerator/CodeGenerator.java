@@ -500,6 +500,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String destVar;
         String destReg;
+
+        String offsetReg;
+        String offestVar;
+
         switch (op) {
             case UnaryOperator.PRE_INC:
                 code.addCode(emitter.ADI(1 , operandReg));
@@ -550,6 +554,45 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     registerManager.freeRegister(operandVar);
                 }
                 break;
+            case UnaryOperator.AND:
+                if(memoryManager.isGlobal(operandVar)){
+                    code.setResultVar(String.valueOf((memoryManager.getGlobalAddress(operandVar))));
+                }else {
+                    destVar = nameManager.newTmpVarName();
+                    destReg = this.getRegisterForWrite(code, destVar);
+
+                    List<RegisterAction> actions = new ArrayList<>();
+                    List<String> varNames = new ArrayList<>();
+                    List<String> spillRegs = new ArrayList<>();
+                    varNames.add(operandVar);
+                    spillRegs.add(operandReg);
+
+                    registerManager.handleSpill(varNames, spillRegs, actions);
+                    this.generateRegActionCode(actions, code);
+                    code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), destReg));
+
+                    code.setResultVar(destVar);
+
+                    if(nameManager.isTmp(operandVar)){
+                        registerManager.freeRegister(operandReg);
+                    }
+                }
+                break;
+            case UnaryOperator.STAR:
+                destVar = nameManager.newTmpVarName();
+                destReg = this.getRegisterForWrite(code, destVar);
+
+                offestVar = nameManager.newTmpVarName();
+                offsetReg = this.getRegisterForWrite(code, offestVar);
+                code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), offsetReg));
+
+                code.addCode(emitter.LDB(destReg, offsetReg));
+                code.setResultVar(destVar);
+                if(nameManager.isTmp(operandVar)){
+                    registerManager.freeRegister(operandReg);
+                }
+                registerManager.freeRegister(offestVar);
+
         }
 
         return code;

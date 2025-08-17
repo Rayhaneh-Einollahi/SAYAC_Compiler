@@ -256,7 +256,7 @@ public class RegisterManager {
         return null;
     }
 
-    private List<String> handleSpill(List<String> varNames, List<String> spillRegs, List<RegisterAction> actions) {
+    public List<String> handleSpill(List<String> varNames, List<String> spillRegs, List<RegisterAction> actions) {
         int cnt = varNames.size();
         for (int i = 0; i < cnt; i++) {
             String spillReg = spillRegs.get(i);
