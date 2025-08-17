@@ -1,16 +1,16 @@
 package main.codeGenerator;
 
 public class RegisterAction {
-    public enum Type { LOAD, SPILL }
+    public enum Type { LOAD_G, LOAD_L, SPILL_G,SPILL_L }
     public final Type type;
     public final String register;
-    public final String variable;
-    public final int offset; // For memory operations
+    public final int offset;
+    public final int address;
 
-    public RegisterAction(Type type, String register, String variable, int offset) {
+    public RegisterAction(Type type, String register, int offset, int address) {
         this.type = type;
         this.register = register;
-        this.variable = variable;
         this.offset = offset;
+        this.address = address;
     }
 }

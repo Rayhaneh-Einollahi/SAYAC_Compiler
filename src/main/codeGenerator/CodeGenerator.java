@@ -53,41 +53,53 @@ public class CodeGenerator extends Visitor<CodeObject> {
         List<RegisterAction> actions = new ArrayList<>();
 
         String reg;
-        if (varNames.length == 1) {
+        if (varNames.length == 1)
             reg = registerManager.allocateForRead(varNames[0], actions);
-        } else {
+        else
             reg = registerManager.allocateTwoForRead(varNames[0], varNames[1], actions);
-        }
 
-        for (RegisterAction action : actions) {
-            switch (action.type) {
-                case SPILL -> code.addCode(emitter.SW(action.register, action.offset, "FP"));
-                case LOAD  -> code.addCode(emitter.LW("FP", action.offset, action.register));
-            }
-        }
+        generateRegActionCode(actions, code);
         return reg;
     }
 
     private String getRegisterForWrite( CodeObject code, String... varNames){
+        if(varNames.length>2){
+            throw new RuntimeException("More than two varNames passed");
+        }
         List<RegisterAction> actions = new ArrayList<>();
         String reg;
-        if (varNames.length == 1){
+        if (varNames.length == 1)
             reg = registerManager.allocateForWrite(varNames[0], actions);
-        }
-        else{
-            reg = registerManager.allocateSeveralForWrite(Arrays.asList(varNames), actions).getFirst();
-        }
+        else
+            reg = registerManager.getFreeRegister(Arrays.asList(varNames), actions);
 
-        for (RegisterAction action : actions) {
-            switch (action.type) {
-                case SPILL -> code.addCode(emitter.SW(action.register, action.offset, "FP"));
-                case LOAD  -> code.addCode(emitter.LW(action.register, action.offset, "FP"));
-            }
-        }
+        generateRegActionCode(actions, code);
         return reg;
     }
 
-
+    public void generateRegActionCode(List<RegisterAction> actions, CodeObject code){
+        for (RegisterAction action : actions) {
+            switch (action.type) {
+                case SPILL_L -> code.addCode(emitter.SW(action.register, action.offset, "FP"));
+                case LOAD_L  -> code.addCode(emitter.LW(action.register, action.offset, "FP"));
+                case SPILL_G -> {
+                    //Todo: Can we use R14 register here?
+                    String tmpVar = nameManager.newTmpVarName();
+                    String tmpReg = getRegisterForWrite(code, tmpVar);
+                    code.addCode(emitter.MSI(action.address, tmpReg));
+                    code.addCode(emitter.STR(action.register, tmpReg));
+                    registerManager.freeRegister(tmpVar);
+                }
+                case LOAD_G -> {
+                    String tmpVar = nameManager.newTmpVarName();
+                    String tmpReg = getRegisterForWrite(code, tmpVar);
+                    code.addCode(emitter.MSI(action.address, tmpReg));
+                    code.addCode(emitter.LDR(tmpReg, action.register));
+                    registerManager.freeRegister(tmpVar);
+                }
+            }
+        }
+    }
 
     public CodeObject visit(Declaration declaration) {
         CodeObject code = new CodeObject();

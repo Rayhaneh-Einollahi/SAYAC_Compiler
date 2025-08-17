@@ -2,6 +2,7 @@ package main.codeGenerator;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class RegisterManager {
     public enum RegisterState { FREE, USED, RESERVED }
@@ -11,7 +12,6 @@ public class RegisterManager {
     private final Set<String> pinnedRegisters = new HashSet<>();
     private  Map<String, String> regToVar = new HashMap<>();
     private  Map<String, String> varToReg = new HashMap<>();
-    private  Map<String, Integer> spilledVars = new HashMap<>();
     private  Map<String, Integer> varUseCounts = new HashMap<>();
 
 
@@ -28,18 +28,7 @@ public class RegisterManager {
             incrementUseCount(varName);
             return varToReg.get(varName);
         }
-        spilledVars.remove(varName);
-
-        List<String> regs = findFreeRegister(1);
-
-        if (regs != null) {
-            String reg = regs.getFirst();
-            assignRegister(reg, varName);
-            incrementUseCount(varName);
-            return reg;
-        }
-        List<String> spillRegs = chooseSpillCandidate(1);
-        return handleSpill(List.of(varName),spillRegs, actions).getFirst();
+        return getFreeRegister(List.of(varName), actions);
     }
     /**
      * get a register for the purpose of reading from it that refers to the variable varName
@@ -52,38 +41,13 @@ public class RegisterManager {
             return varToReg.get(varName);
         }
 
-        if (spilledVars.containsKey(varName)) {
-            return loadSpilled(varName, actions);
+        if (memoryManager.hasVariable(varName)) {
+            return loadSpilled(varName,null, actions);
         }
 
-        List<String> regs = findFreeRegister(1);
-
-        if (regs != null) {
-            String reg = regs.getFirst();
-            assignRegister(reg, varName);
-            incrementUseCount(varName);
-            return reg;
-        }
-        List<String> spillRegs = chooseSpillCandidate(1);
-        return handleSpill(List.of(varName),spillRegs, actions).getFirst();
+        return getFreeRegister(List.of(varName), actions);
     }
 
-    public List<String> allocateSeveralForWrite(List<String> varNames, List<RegisterAction> actions){
-
-        int cnt = varNames.size();
-        List<String> regs = findFreeRegister(cnt);
-
-        if (regs != null) {
-            for (int i = 0; i < cnt; i++) {
-                assignRegister(regs.get(i), varNames.get(i));
-                incrementUseCount(varNames.get(i));
-            }
-            return regs;
-        }
-
-        List<String> spillRegs = chooseSpillCandidate(varNames.size());
-        return handleSpill(varNames,spillRegs, actions);
-    }
 
     public String allocateTwoForRead(String mainVar,String helperVar, List<RegisterAction> actions) {
 
@@ -108,20 +72,26 @@ public class RegisterManager {
             }
         }
 
-        if (spilledVars.containsKey(mainVar) || spilledVars.containsKey(helperVar)) {
+        if (memoryManager.hasVariable(mainVar) || memoryManager.hasVariable(helperVar)) {
             return loadSpilled(mainVar,helperVar, actions);
         }
+        return getFreeRegister(List.of(mainVar, helperVar),actions);
 
-        List<String> regs = findFreeRegister(2);
+    }
 
+    public String getFreeRegister(List<String> varNames, List<RegisterAction> actions){
+        int cnt = varNames.size();
+        List<String> regs = findFreeRegister(cnt);
         if (regs != null) {
-            String reg = regs.getFirst();
-            assignRegister(reg, mainVar);
-            incrementUseCount(mainVar);
-            return reg;
+            String firstReg = regs.getFirst();
+            for(String var: varNames){
+                assignRegister(firstReg, var);
+                incrementUseCount(var);
+            }
+            return firstReg;
         }
-        List<String> spillRegs = chooseSpillCandidate(2);
-        return handleSpill(List.of(mainVar),spillRegs, actions).getFirst();
+        List<String> spillRegs = chooseSpillCandidate(cnt);
+        return handleSpill(varNames,spillRegs, actions).getFirst();
     }
 
     public void freeRegister(String varName) {
@@ -134,34 +104,28 @@ public class RegisterManager {
         varUseCounts.remove(varName);
     }
 
-    public String loadSpilled(String mainVar, String helperVar, List<RegisterAction> actions) {
+    public String loadSpilled(String var1, String var2, List<RegisterAction> actions) {
+        String needLoadVar = (var2 != null && memoryManager.hasVariable(var2)) ? var2 : var1;
+
+        if (!memoryManager.hasVariable(needLoadVar)) {
+            throw new RuntimeException("Variable not spilled: " + needLoadVar);
+        }
+        incrementUseCount(needLoadVar);
+
         String reg = null;
-        if (spilledVars.containsKey(mainVar)) {
-            int offset = spilledVars.remove(mainVar);
-            reg = allocateTwoForRead(mainVar, helperVar, actions);
-            actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, mainVar, offset));
-            incrementUseCount(mainVar);
+        if(memoryManager.isLocal(needLoadVar)){
+            int offset = memoryManager.getLocalOffset(needLoadVar);
+            reg = getFreeRegister(Stream.of(var1, var2).filter(Objects::nonNull).toList(), actions);
+            actions.add(new RegisterAction(RegisterAction.Type.LOAD_L, reg, offset,0));
         }
-        else if(spilledVars.containsKey(helperVar)){
-            int offset = spilledVars.remove(helperVar);
-            reg = allocateTwoForRead(mainVar, helperVar, actions);
-            actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, helperVar, offset));
-            incrementUseCount(helperVar);
+        else if(memoryManager.isGlobal(needLoadVar)){
+            int address = memoryManager.getGlobalAddress(needLoadVar);
+            reg = getFreeRegister(Stream.of(var1, var2).filter(Objects::nonNull).toList(), actions);
+            actions.add(new RegisterAction(RegisterAction.Type.LOAD_G, reg, 0,address));
         }
         return reg;
     }
 
-    public String loadSpilled(String varName, List<RegisterAction> actions) {
-        if (!spilledVars.containsKey(varName)) {
-            throw new RuntimeException("Variable not spilled: " + varName);
-        }
-
-        int offset = spilledVars.remove(varName);
-        String reg = allocateForRead(varName, actions);
-        actions.add(new RegisterAction(RegisterAction.Type.LOAD, reg, varName, offset));
-        incrementUseCount(varName);
-        return reg;
-    }
 
     public String getRegisterByVar(String varName){
         return varToReg.get(varName);
@@ -209,10 +173,6 @@ public class RegisterManager {
         return regToVar.keySet();
     }
 
-    public Set<String> getSpilledVariables() {
-        return spilledVars.keySet();
-    }
-
     public Set<String> getFreeRegisters() {
         return registerStates.entrySet().stream()
                 .filter(e -> e.getValue() == RegisterState.FREE)
@@ -237,11 +197,6 @@ public class RegisterManager {
             System.out.printf("%-4s -> %-10s %s%n", reg, var, state);
         }
 
-        if (!spilledVars.isEmpty()) {
-            System.out.println("\nSpilled Variables:");
-            spilledVars.forEach((var, offset) ->
-                    System.out.printf("%s -> [FP %d]%n", var, offset));
-        }
     }
 
 
@@ -308,13 +263,18 @@ public class RegisterManager {
             String varName = varNames.get(i);
 
             String spilledVar = regToVar.get(spillReg);
-            int offset = memoryManager.getLocalOffset(spilledVar);
+            if(memoryManager.isGlobal(spilledVar)){
+                int address = memoryManager.getGlobalAddress(spilledVar);
+                actions.add(new RegisterAction(RegisterAction.Type.SPILL_G, spillReg, 0,address));
+            }
+            else{
+                int offset = memoryManager.getLocalOffset(spilledVar);
+                actions.add(new RegisterAction(RegisterAction.Type.SPILL_G, spillReg, offset, 0));
+            }
 
-            actions.add(new RegisterAction(RegisterAction.Type.SPILL, spillReg, spilledVar, offset));
 
             regToVar.remove(spillReg);
             varToReg.remove(spilledVar);
-            spilledVars.put(spilledVar, offset);
             registerStates.put(spillReg, RegisterState.FREE);
 
             assignRegister(spillReg, varName);
@@ -381,7 +341,6 @@ public class RegisterManager {
         this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
         regToVar = new HashMap<>();
         varToReg = new HashMap<>();
-        spilledVars = new HashMap<>();
         varUseCounts = new HashMap<>();
     }
 

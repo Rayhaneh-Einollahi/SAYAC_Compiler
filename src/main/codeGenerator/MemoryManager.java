@@ -15,6 +15,17 @@ public class MemoryManager {
     private Map<String, Integer> localOffsets;
     private final Map<String, Map<String, Integer>> functionslocalOffsets = new HashMap<>();
 
+    public boolean hasVariable(String varname){
+        if (globalAddresses.containsKey(varname)) return true;
+        return localOffsets.containsKey(varname);
+    }
+    public boolean isGlobal(String varname){
+        return globalAddresses.containsKey(varname);
+    }
+    public boolean isLocal(String varname){
+        return localOffsets.containsKey(varname);
+    }
+
     public int allocateGlobal(String name, int size) {
         if (globalAddresses.containsKey(name)) {
             return globalAddresses.get(name);
@@ -50,7 +61,7 @@ public class MemoryManager {
     public int getLocalOffset(String name) {
         Integer offset = localOffsets.get(name);
         if (offset == null) {
-            int size = 2; // int
+            int size = 2;
             offset = allocateLocal(name, size);
         }
         return offset;
