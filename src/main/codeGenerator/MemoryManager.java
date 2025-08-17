@@ -1,5 +1,6 @@
 package main.codeGenerator;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -11,7 +12,8 @@ public class MemoryManager {
     private int frameOffset = 0;
 
     private final Map<String, Integer> globalAddresses = new HashMap<>();
-    private final Map<String, Integer> localOffsets = new HashMap<>();
+    private Map<String, Integer> localOffsets;
+    private final Map<String, Map<String, Integer>> functionslocalOffsets = new HashMap<>();
 
     public int allocateGlobal(String name, int size) {
         if (globalAddresses.containsKey(name)) {
@@ -58,12 +60,26 @@ public class MemoryManager {
         localOffsets.put(name, offset);
     }
 
-    public void beginFunction() {
+    public void beginFunctionSetOffset(String name) {
         frameOffset = 0;
-        localOffsets.clear();
+        localOffsets = new HashMap<>();
+        functionslocalOffsets.put(name, localOffsets);
+
+    }
+    public void beginFunction(String name){
+        localOffsets = functionslocalOffsets.get(name);
+        frameOffset = Collections.min(localOffsets.values()) + 2;
     }
 
     private int align(int size) {
         return (size + 1) & ~1;
+    }
+
+    public int getCurrentOffset() {
+        return  frameOffset;
+    }
+
+    public void setCurrentOffset(int scopesBase) {
+        frameOffset = scopesBase;
     }
 }

@@ -40,7 +40,10 @@ public class SimpleLang {
 
 //        TestVisitor my6_visitor = new TestVisitor();
 //        my6_visitor.visit(program);
-        CodeGenerator codeGenerator = new CodeGenerator();
+        MemoryManager memoryManager = new MemoryManager();
+        LocalOffsetAssigner localOffsetAssigner = new LocalOffsetAssigner(memoryManager);
+        localOffsetAssigner.visit(program);
+        CodeGenerator codeGenerator = new CodeGenerator(memoryManager);
         System.out.print(codeGenerator.visit(program));
 
         System.out.println(1);

@@ -396,9 +396,6 @@ public class TestVisitor extends Visitor<Void>{
         if (initializer.getInitializerlist() != null) {
             initializer.getInitializerlist().accept(this);
         }
-        if (initializer.getDesignation() != null) {
-            initializer.getDesignation().accept(this);
-        }
         return null;
     }
 

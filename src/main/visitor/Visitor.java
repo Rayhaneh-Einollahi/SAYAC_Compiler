@@ -159,9 +159,6 @@ public abstract class Visitor<T> implements IVisitor<T> {
         if (initializer.getInitializerlist() != null) {
             merge(result, initializer.getInitializerlist().accept(this));
         }
-        if (initializer.getDesignation() != null) {
-            merge(result, initializer.getDesignation().accept(this));
-        }
         return result;
     }
     public T visit(InitializerList initializerList) {
