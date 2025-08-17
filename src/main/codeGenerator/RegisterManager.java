@@ -256,12 +256,10 @@ public class RegisterManager {
         return null;
     }
 
-    public List<String> handleSpill(List<String> varNames, List<String> spillRegs, List<RegisterAction> actions) {
-        int cnt = varNames.size();
+    public List<String> handleSpill(List<String> varsToAssign, List<String> spillRegs, List<RegisterAction> actions) {
+        int cnt = spillRegs.size();
         for (int i = 0; i < cnt; i++) {
             String spillReg = spillRegs.get(i);
-            String varName = varNames.get(i);
-
             String spilledVar = regToVar.get(spillReg);
             if(memoryManager.isGlobal(spilledVar)){
                 int address = memoryManager.getGlobalAddress(spilledVar);
@@ -272,13 +270,15 @@ public class RegisterManager {
                 actions.add(new RegisterAction(RegisterAction.Type.SPILL_G, spillReg, offset, 0));
             }
 
-
             regToVar.remove(spillReg);
             varToReg.remove(spilledVar);
             registerStates.put(spillReg, RegisterState.FREE);
 
-            assignRegister(spillReg, varName);
-            incrementUseCount(varName);
+            if(varsToAssign!=null) {
+                String varName = varsToAssign.get(i);
+                assignRegister(spillReg, varName);
+                incrementUseCount(varName);
+            }
         }
 
 

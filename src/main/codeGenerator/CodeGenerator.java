@@ -562,12 +562,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     destReg = this.getRegisterForWrite(code, destVar);
 
                     List<RegisterAction> actions = new ArrayList<>();
-                    List<String> varNames = new ArrayList<>();
                     List<String> spillRegs = new ArrayList<>();
-                    varNames.add(operandVar);
                     spillRegs.add(operandReg);
 
-                    registerManager.handleSpill(varNames, spillRegs, actions);
+                    registerManager.handleSpill(null, spillRegs, actions);
                     this.generateRegActionCode(actions, code);
                     code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), destReg));
 
