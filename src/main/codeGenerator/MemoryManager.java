@@ -13,7 +13,7 @@ public class MemoryManager {
 
     private final Map<String, Integer> globalAddresses = new HashMap<>();
     private Map<String, Integer> localOffsets;
-    private final Map<String, Map<String, Integer>> functionslocalOffsets = new HashMap<>();
+    private final Map<String, Map<String, Integer>> functionsLocalOffsets = new HashMap<>();
 
     public boolean hasVariable(String varname){
         if (globalAddresses.containsKey(varname)) return true;
@@ -74,11 +74,11 @@ public class MemoryManager {
     public void beginFunctionSetOffset(String name) {
         frameOffset = 0;
         localOffsets = new HashMap<>();
-        functionslocalOffsets.put(name, localOffsets);
+        functionsLocalOffsets.put(name, localOffsets);
 
     }
     public void beginFunction(String name){
-        localOffsets = functionslocalOffsets.get(name);
+        localOffsets = functionsLocalOffsets.get(name);
         frameOffset = Collections.min(localOffsets.values()) + 2;
     }
 

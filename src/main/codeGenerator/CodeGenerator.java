@@ -420,11 +420,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
             if(binaryExpr.getOperator() == BinaryOperator.ANDAND){
                 String nextLabel = labelManager.generateNextLabel();
                 code.addCode(branch(binaryExpr.getFirstOperand(), nextLabel, falseLabel));
+                code.addCode(emitter.emitLabel(nextLabel));
                 code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
             }
             else if(binaryExpr.getOperator() == BinaryOperator.OROR) {
                 String nextLabel = labelManager.generateNextLabel();
                 code.addCode(branch(binaryExpr.getFirstOperand(), trueLabel, nextLabel));
+                code.addCode(emitter.emitLabel(nextLabel));
                 code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
             }
             else if(binaryExpr.getOperator().isCompare()){
@@ -463,6 +465,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.JMP(falseLabel));
                 
             }
+        }
+        else{
+            //Todo is a single integer or a single variable
         }
         return code;
     }
