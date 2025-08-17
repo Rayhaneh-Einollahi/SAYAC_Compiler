@@ -92,27 +92,31 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(Declaration declaration) {
         CodeObject code = new CodeObject();
         for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
-            String varName = initDeclarator.getDeclarator().getName();
+            String varName = initDeclarator.getDeclarator().getSpecialName();
 
             CodeObject exprCode;
+            if(initDeclarator.getInitializer() == null)
+                continue;
             if (initDeclarator.getInitializer().getExpr() != null)
                 exprCode = initDeclarator.getInitializer().getExpr().accept(this);
             else
-                exprCode = initDeclarator.getInitializer().getInitializerlist().accept(this);
+                throw new RuntimeException("Initializer List not supported");
+
 
             code.addCode(exprCode);
             String resultVar = exprCode.getResultVar();
             String resultReg = getRegisterForRead(code , resultVar);
             if (!insideFunction) {
-                String addressReg = getRegisterForWrite(code, nameManager.newTmpVarName());
+                String addressVar = nameManager.newTmpVarName();
+                String addressReg = getRegisterForWrite(code, addressVar);
                 int address = memoryManager.allocateGlobal(varName, 2);
 
                 code.addCode(emitter.MSI(address, addressReg));
                 code.addCode(emitter.STR(resultReg, addressReg));
 
 
-                this.registerManager.freeRegister(resultReg);
-                this.registerManager.freeRegister(addressReg);
+                this.registerManager.freeRegister(resultVar);
+                this.registerManager.freeRegister(addressVar);
 
             } else {
                 if(nameManager.isTmp(resultVar)){
@@ -164,7 +168,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         List<Declaration> args = functionDefinition.getArgDeclarations();
         for(int i = 0; i < args.size(); i++){
             Declaration arg = args.get(i);
-            memoryManager.setFunctionArgOffset(arg.getName(), args.size() - i);
+            memoryManager.setFunctionArgOffset(arg.getSpecialName(), args.size() - i);
         }
 
         CodeObject bodyCode = functionDefinition.getBody().accept(this);
@@ -441,7 +445,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
 
                     if(nameManager.isTmp(leftVar)) registerManager.freeRegister(leftVar);
-                    if(nameManager.isTmp(rightReg)) registerManager.freeRegister(rightReg);
+                    if(nameManager.isTmp(rightVar)) registerManager.freeRegister(rightVar);
                 }
                 
                 code.addCode(emitter.JMP(falseLabel));
@@ -520,7 +524,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR( operandReg, destReg));
                 code.setResultVar(destVar);
                 if(nameManager.isTmp(operandVar)){
-                    registerManager.freeRegister(operandReg);
+                    registerManager.freeRegister(operandVar);
                 }
                 break;
 
@@ -531,7 +535,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR2( operandReg, destReg));
                 code.setResultVar(destVar);
                 if(nameManager.isTmp(operandVar)){
-                    registerManager.freeRegister(operandReg);
+                    registerManager.freeRegister(operandVar);
                 }
                 break;
         }
