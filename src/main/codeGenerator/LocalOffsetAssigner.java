@@ -34,7 +34,14 @@ public class LocalOffsetAssigner extends Visitor<Void>{
 
     public Void visit(Declaration declaration) {
         for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
-            memoryManager.allocateLocal(initDeclarator.getDeclarator().getName(), 2);
+            if (initDeclarator.getDeclarator().isArray()) {
+                // just handle int a[SIZE];
+                int array_size = initDeclarator.getDeclarator().getDirectDeclarator().getArraySize();
+                memoryManager.allocateLocal(initDeclarator.getDeclarator().getSpecialName(), 2 * array_size);
+            }
+            else {
+                memoryManager.allocateLocal(initDeclarator.getDeclarator().getSpecialName(), 2);
+            }
         }
         return null;
     }

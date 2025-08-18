@@ -86,4 +86,8 @@ public class Declarator extends Node {
                 && this.directDeclarator.equals(other.directDeclarator);
     }
 
+    public boolean isArray() {
+        return this.directDeclarator.isArray();
+    }
+
 }

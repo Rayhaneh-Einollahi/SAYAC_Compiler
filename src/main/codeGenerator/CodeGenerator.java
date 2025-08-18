@@ -104,43 +104,52 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(Declaration declaration) {
         CodeObject code = new CodeObject();
         for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
+
             String varName = initDeclarator.getDeclarator().getSpecialName();
-
             CodeObject exprCode;
-            if(initDeclarator.getInitializer() == null)
-                continue;
-            if (initDeclarator.getInitializer().getExpr() != null)
-                exprCode = initDeclarator.getInitializer().getExpr().accept(this);
-            else
-                throw new RuntimeException("Initializer List not supported");
+
+            if(initDeclarator.getDeclarator().isArray()) {
+                int array_size = initDeclarator.getDeclarator().getDirectDeclarator().getArraySize();
+            }
+            else {
+
+                if(initDeclarator.getInitializer() == null)
+                    continue;
+                if (initDeclarator.getInitializer().getExpr() != null)
+                    exprCode = initDeclarator.getInitializer().getExpr().accept(this);
+                else
+                    throw new RuntimeException("Initializer List not supported");
 
 
-            code.addCode(exprCode);
-            String resultVar = exprCode.getResultVar();
-            String resultReg = getRegisterForRead(code , resultVar);
-            if (!insideFunction) {
-                String addressVar = nameManager.newTmpVarName();
-                String addressReg = getRegisterForWrite(code, addressVar);
-                int address = memoryManager.allocateGlobal(varName, 2);
+                code.addCode(exprCode);
+                String resultVar = exprCode.getResultVar();
+                String resultReg = getRegisterForRead(code , resultVar);
+                if (!insideFunction) {
+                    String addressVar = nameManager.newTmpVarName();
+                    String addressReg = getRegisterForWrite(code, addressVar);
+                    int address = memoryManager.allocateGlobal(varName, 2);
 
-                code.addCode(emitter.MSI(address, addressReg));
-                code.addCode(emitter.STR(resultReg, addressReg));
+                    code.addCode(emitter.MSI(address, addressReg));
+                    code.addCode(emitter.STR(resultReg, addressReg));
 
 
-                this.registerManager.freeRegister(resultVar);
-                this.registerManager.freeRegister(addressVar);
+                    this.registerManager.freeRegister(resultVar);
+                    this.registerManager.freeRegister(addressVar);
 
-            } else {
-                if(nameManager.isTmp(resultVar)){
-                    registerManager.freeRegister(resultVar);
-                    registerManager.assignRegister(resultReg, varName);
-                }
-                else{
-                    String desVar = nameManager.newTmpVarName();
-                    String desReg = getRegisterForWrite(code, desVar);
-                    code.addCode(emitter.ADR("RO", resultReg, desReg));
+                } else {
+                    if(nameManager.isTmp(resultVar)){
+                        registerManager.freeRegister(resultVar);
+                        registerManager.assignRegister(resultReg, varName);
+                    }
+                    else{
+                        String desVar = nameManager.newTmpVarName();
+                        String desReg = getRegisterForWrite(code, desVar);
+                        code.addCode(emitter.ADR("RO", resultReg, desReg));
+                    }
                 }
             }
+
+            this.memoryManager.printState();
         }
 
         return code;

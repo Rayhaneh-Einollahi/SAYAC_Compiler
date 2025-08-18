@@ -4,6 +4,7 @@ package main.ast.nodes.declaration;
 import main.ast.nodes.Node;
 import main.ast.nodes.expr.Expr;
 import main.ast.nodes.expr.Identifier;
+import main.ast.nodes.expr.primitives.IntVal;
 import main.visitor.IVisitor;
 
 import java.util.ArrayList;
@@ -13,6 +14,7 @@ public class DirectDeclarator extends Node {
     private Identifier identifier;
     private Declarator innerDeclarator;
     private final List<DDStep> steps = new ArrayList<>();
+
 
     public boolean isGlobal() {
         return this.identifier.isGlobal();
@@ -28,6 +30,10 @@ public class DirectDeclarator extends Node {
         public Expr arrayExpr;
         public List<Parameter> params;
         public List<Identifier> identifiers;
+
+        public Expr getArrayExpr() {
+            return this.arrayExpr;
+        }
 
         public DDStep(){}
         public List<Declaration> getParamsDeclarations(){
@@ -112,5 +118,17 @@ public class DirectDeclarator extends Node {
         return this.identifier.equals(other.identifier)
                 && this.innerDeclarator.equals(other.innerDeclarator)
                 && this.steps.equals(other.steps);
+    }
+
+
+    public boolean isArray() {
+        return this.steps.size() != 0;
+    }
+
+    public int getArraySize() {
+        if(this.steps.getFirst().getArrayExpr() instanceof IntVal) {
+            return ((IntVal) this.steps.getFirst().getArrayExpr()).getInt();
+        }
+        return 0;
     }
 }

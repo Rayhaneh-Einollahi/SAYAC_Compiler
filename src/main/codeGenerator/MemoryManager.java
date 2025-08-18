@@ -14,6 +14,11 @@ public class MemoryManager {
     private final Map<String, Integer> globalAddresses = new HashMap<>();
     private Map<String, Integer> localOffsets;
     private final Map<String, Map<String, Integer>> functionsLocalOffsets = new HashMap<>();
+    private final Map<String, Integer> globalSizes = new HashMap<>();
+    private Map<String, Integer> localSizes;
+    private final Map<String, Map<String, Integer>> functionsLocalSizes = new HashMap<>();
+    private final Map<String, Integer> globalStarts = new HashMap<>();
+    private Map<String, Integer> localStarts = new HashMap<>();
 
     public boolean hasVariable(String varname){
         if (globalAddresses.containsKey(varname)) return true;
@@ -36,6 +41,8 @@ public class MemoryManager {
             throw new RuntimeException("Out of data memory for global allocation.");
         }
         globalAddresses.put(name, addr);
+        globalSizes.put(name, alignedSize);
+        globalStarts.put(name, alignedSize + addr);
         nextGlobalAddr += alignedSize;
         return addr;
     }
@@ -53,9 +60,28 @@ public class MemoryManager {
             return localOffsets.get(name);
         }
         int alignedSize = align(size);
+        localStarts.put(name, frameOffset);
         frameOffset -= alignedSize;
         localOffsets.put(name, frameOffset);
+        localSizes.put(name, alignedSize);
+
         return frameOffset;
+    }
+
+    public int getLocalStart(String name) {
+        if (localStarts != null) {
+            Integer sz = localStarts.get(name);
+            if (sz != null) return sz;
+        }
+        return 0;
+    }
+
+    public int getLocalSize(String name) {
+        if (localSizes != null) {
+            Integer sz = localSizes.get(name);
+            if (sz != null) return sz;
+        }
+        return 2;
     }
 
     public int getLocalOffset(String name) {
@@ -74,11 +100,14 @@ public class MemoryManager {
     public void beginFunctionSetOffset(String name) {
         frameOffset = 0;
         localOffsets = new HashMap<>();
+        localSizes = new HashMap<>();
         functionsLocalOffsets.put(name, localOffsets);
+        functionsLocalSizes.put(name, localSizes);
 
     }
     public void beginFunction(String name){
         localOffsets = functionsLocalOffsets.get(name);
+        localSizes = functionsLocalSizes.get(name);
         frameOffset = Collections.min(localOffsets.values()) + 2;
     }
 
@@ -93,4 +122,34 @@ public class MemoryManager {
     public void setCurrentOffset(int scopesBase) {
         frameOffset = scopesBase;
     }
+
+    public void printState() {
+        System.out.println("\nMemory State:");
+        System.out.println("-------------");
+
+        // Globals
+        System.out.println("Globals (absolute addresses):");
+        if (globalAddresses.isEmpty()) {
+            System.out.println("  (none)");
+        } else {
+            for (var e : globalAddresses.entrySet()) {
+                System.out.printf("  %-15s -> 0x%04X (%d)%n",
+                        e.getKey(), e.getValue(), e.getValue());
+            }
+        }
+
+        // Locals
+        System.out.println("\nLocals (FP-relative offsets):");
+        if (localOffsets == null || localOffsets.isEmpty()) {
+            System.out.println("  (none)");
+        } else {
+            for (var e : localOffsets.entrySet()) {
+                System.out.printf("  %-15s -> %d%n", e.getKey(), e.getValue());
+            }
+        }
+
+        System.out.println("\nCurrent frameOffset: " + frameOffset);
+    }
+
+
 }
