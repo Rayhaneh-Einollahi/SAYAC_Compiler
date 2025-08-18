@@ -29,7 +29,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         emitter = new InstructionEmitter();
         labelManager = new LabelManager();
         nameManager = new NameManager();
-        
+
     }
 
     @Override
@@ -409,25 +409,27 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject branch(Expr expr, String trueLabel, String falseLabel) {
         CodeObject code = new CodeObject();
-        
+
         if(expr instanceof UnaryExpr unaryexpr) {
-            if(unaryexpr.getOperator() == UnaryOperator.NOT)
+            if(unaryexpr.getOperator() == UnaryOperator.NOT) {
                 code.addCode(branch(unaryexpr.getOperand(), falseLabel, trueLabel));
-            else
-                code.addCode(expr.accept(this));
-        }
+                return code;
+            }
+        }//base case where it reaches compare operations:
         else if(expr instanceof BinaryExpr binaryExpr) {
             if(binaryExpr.getOperator() == BinaryOperator.ANDAND){
                 String nextLabel = labelManager.generateNextLabel();
                 code.addCode(branch(binaryExpr.getFirstOperand(), nextLabel, falseLabel));
                 code.addCode(emitter.emitLabel(nextLabel));
                 code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
+                return code;
             }
             else if(binaryExpr.getOperator() == BinaryOperator.OROR) {
                 String nextLabel = labelManager.generateNextLabel();
                 code.addCode(branch(binaryExpr.getFirstOperand(), trueLabel, nextLabel));
                 code.addCode(emitter.emitLabel(nextLabel));
                 code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
+                return code;
             }
             else if(binaryExpr.getOperator().isCompare()){
                 if (binaryExpr.getFirstOperand() instanceof IntVal intVal){
@@ -461,14 +463,19 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     if(nameManager.isTmp(leftVar)) registerManager.freeRegister(leftVar);
                     if(nameManager.isTmp(rightVar)) registerManager.freeRegister(rightVar);
                 }
-                
+
                 code.addCode(emitter.JMP(falseLabel));
-                
+                return code;
             }
         }
-        else{
-            //Todo is a single integer or a single variable
-        }
+        //base case where it reaches other expressions:
+        CodeObject resultCode = expr.accept(this);
+        code.addCode(resultCode);
+        String resultVar = resultCode.getResultVar();
+        String resultReg = getRegisterForRead(code, resultVar);
+        code.addCode(emitter.CMI(0,resultReg));
+        code.addCode(emitter.BRR("!=", trueLabel));
+        code.addCode(emitter.JMP(falseLabel));
         return code;
     }
 
@@ -538,7 +545,25 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.setResultVar(destVar);
                 break;
 
-            case UnaryOperator.NOT, UnaryOperator.TILDE:
+            case UnaryOperator.NOT:
+                String trueLabel = labelManager.generateTrueLabel();
+                String falseLabel = labelManager.generateFalseLabel();
+                String endLabel = labelManager.generateEndLabel();
+                code.addCode(branch(unaryExpr, trueLabel, falseLabel));
+
+                destVar = nameManager.newTmpVarName();
+                destReg = getRegisterForWrite(code, destVar);
+
+                code.setResultVar(destVar);
+                code.addCode(emitter.emitLabel(trueLabel));
+                code.addCode(emitter.MSI(1, destReg));
+                code.addCode(emitter.JMP(endLabel));
+                code.addCode(emitter.emitLabel(falseLabel));
+                code.addCode(emitter.MSI(0, destReg));
+                code.addCode(emitter.emitLabel(endLabel));
+                break;
+
+            case UnaryOperator.TILDE:
                 destVar = nameManager.newTmpVarName();
                 destReg = this.getRegisterForWrite(code, destVar);
 
