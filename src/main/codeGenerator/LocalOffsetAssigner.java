@@ -31,7 +31,6 @@ public class LocalOffsetAssigner extends Visitor<Void>{
         return null;
     }
 
-
     public Void visit(Declaration declaration) {
         for (InitDeclarator initDeclarator : declaration.getInitDeclarators()) {
             if (initDeclarator.getDeclarator().isArray()) {

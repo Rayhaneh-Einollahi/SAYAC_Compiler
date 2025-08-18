@@ -45,6 +45,6 @@ public class SimpleLang {
         localOffsetAssigner.visit(program);
         CodeGenerator codeGenerator = new CodeGenerator(memoryManager);
         System.out.print(codeGenerator.visit(program));
-
+        System.out.println(1);
     }
 }

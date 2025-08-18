@@ -15,6 +15,7 @@ public class CodeObject {
 
      */
     private String resultVar = null;
+    private String address = null;
 
     public CodeObject(){
         code = new ArrayList<String>();
@@ -26,6 +27,14 @@ public class CodeObject {
 
     public void setResultVar(String resultReg) {
         this.resultVar = resultReg;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getAddress() {
+        return this.address;
     }
 
     public List<String> getUsedRegisters(){
