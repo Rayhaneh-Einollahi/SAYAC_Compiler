@@ -37,9 +37,6 @@ public class InstructionEmitter {
         return line.toString();
 
     }
-    public void emitLoadAddress(String reg, String label) {
-        emitRaw("ldr " + reg + " =" + label);
-    }
 
     /**
      * This method is for storing the registers used in a command so that
@@ -50,12 +47,9 @@ public class InstructionEmitter {
      */
     private void storeUsedReg(CodeObject code, String... regs) {
         for (String r : regs) {
-            code.addUsedRegister(r);
+            if(!r.equals("R0") && !r.equals("SP") && !r.equals("FP") )
+                code.addUsedRegister(r);
         }
-    }
-
-    public String emitRaw(String line) {
-        return line;
     }
 
     public String emitLabel(String label){

@@ -188,7 +188,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
     ///     |              |
     ///     |  ...         |
     ///     |  locals      |
-    ///     |  reg 11(ra)  |
+    ///     |  reg 11(RA)  |
     ///     |  ...         |
     ///     |  reg 2       |
     ///     |  reg 1       |
@@ -215,6 +215,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         CodeObject bodyCode = functionDefinition.getBody().accept(this);
         List<String> bodyUsedReg = bodyCode.getUsedRegisters();
+        bodyUsedReg.add("RA");
 
 
 
@@ -249,9 +250,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
 
         code.addCode(emitter.LDR("FP", "FP"));
-        if(!args.isEmpty())
-            code.addCode(emitter.ADI(args.size() * 2, "SP"));
-        code.addCode(emitter.JMR("Ra"));
+
+        code.addCode(emitter.JMR("RA"));
 
 
         return code;
@@ -265,7 +265,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(retStCode);
             String resultVar = retStCode.getResultVar();
             String regResult =  getRegisterForRead(code, resultVar);
-            code.addCode(emitter.ADR("R0", regResult, "Ret"));
+            code.addCode(emitter.ADR("R0", regResult, "RT"));
             if(nameManager.isTmp(resultVar)) registerManager.freeRegister(resultVar);
         }
         code.addCode(emitter.JMP(currentFunctionEndLabel));
@@ -306,11 +306,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
 
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
-        code.addCode(emitter.JMPS(funcLabel, "Ra"));
+        code.addCode(emitter.JMPS(funcLabel, "RA"));
         code.addCode(emitter.ADI(2 * tempOffsets.size(), "SP"));
 
-        code.addCode(emitter.emitComment("FunctionCall_END", InstructionEmitter.Color.GREEN));
 
+        String tmpVar = nameManager.newTmpVarName();
+        String tmpReg = getRegisterForWrite(code, tmpVar);
+        code.addCode(emitter.ADR("R0", "RT", tmpReg));
+        code.setResultVar(tmpVar);
+
+        code.addCode(emitter.emitComment("FunctionCall_END", InstructionEmitter.Color.GREEN));
         return code;
     }
 
@@ -644,7 +649,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 offsetReg = this.getRegisterForWrite(code, offestVar);
                 code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), offsetReg));
 
-                code.addCode(emitter.LDB(destReg, offsetReg));
+                code.addCode(emitter.LDR(destReg, offsetReg));
                 code.setResultVar(destVar);
                 if(nameManager.isTmp(operandVar)){
                     registerManager.freeRegister(operandReg);
