@@ -155,6 +155,27 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return code;
     }
 
+
+    @Override
+    public CodeObject visit(ArrayExpr arrayExpr) {
+        CodeObject code = new CodeObject();
+        CodeObject Inside = arrayExpr.getInside().accept(this);
+        code.addCode(Inside);
+        String resultInside = Inside.getResultVar();
+        String regInside =  getRegisterForRead(code, resultInside);
+        String array_name = ((Identifier)arrayExpr.getOutside()).getSpecialName();
+
+        String tmpVar = nameManager.newTmpVarName();
+        String tmpReg = getRegisterForWrite(code, tmpVar);
+        code.addCode(emitter.ADI(memoryManager.getLocalStart(array_name) / 2, tmpReg));
+        code.addCode(emitter.SUR(regInside, tmpReg, tmpReg));
+        code.addCode(emitter.ADR(tmpReg, tmpReg, tmpReg));
+        code.addCode(emitter.ADR(tmpReg, "FP", tmpReg));
+        code.addCode(emitter.LDR(tmpReg, tmpReg));
+        code.setResultVar(tmpReg);
+        return code;
+    }
+
     /// generate code for Function:
     /// 1 - generate a label for the beginning of function definition
     /// 2 - store the current frame-pointer to the stack
