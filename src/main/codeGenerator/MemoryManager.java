@@ -108,7 +108,10 @@ public class MemoryManager {
     public void beginFunction(String name){
         localOffsets = functionsLocalOffsets.get(name);
         localSizes = functionsLocalSizes.get(name);
-        frameOffset = Collections.min(localOffsets.values()) + 2;
+        frameOffset = localOffsets.keySet().stream()
+                .mapToInt(k -> localOffsets.get(k) - localSizes.get(k))
+                .min()
+                .orElse(0) - 2;
     }
 
     private int align(int size) {

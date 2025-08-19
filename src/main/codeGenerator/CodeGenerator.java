@@ -144,8 +144,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     }
                 }
             }
-
-            this.memoryManager.printState();
         }
 
         return code;
@@ -210,11 +208,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
     ///     |              |
     ///     |  ...         |
     ///     |  locals      |
+    ///     |  old fp      | <- new fp pointing here
     ///     |  reg 11(RA)  |
     ///     |  ...         |
     ///     |  reg 2       |
     ///     |  reg 1       |
-    ///     |  old fp      | <- new fp pointing here
+    ///     |--------------|
     ///     |  arg n       |
     ///     |  ... .       |
     ///     |  arg2        |
@@ -230,52 +229,40 @@ public class CodeGenerator extends Visitor<CodeObject> {
         registerManager.clearRegisters();
         currentFunctionEndLabel = labelManager.generateFunctionReturnLabel(functionDefinition.getName());
         List<Declaration> args = functionDefinition.getArgDeclarations();
-        for(int i = 0; i < args.size(); i++){
-            Declaration arg = args.get(i);
-            memoryManager.setFunctionArgOffset(arg.getSpecialName(), args.size() - i);
-        }
-
         CodeObject bodyCode = functionDefinition.getBody().accept(this);
-        List<Register> bodyUsedReg = bodyCode.getUsedRegisters();
-        bodyUsedReg.add(RA);
-
-
-
+        List<Register> bodyUsedReg = new ArrayList<>();
+        if(!functionDefinition.getName().equals( "main")){
+            bodyUsedReg = bodyCode.getUsedRegisters();
+            bodyUsedReg.add(RA);
+        }
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
+        for (Register reg : bodyUsedReg) {
+            code.addCode(emitter.STR( reg, SP));
+            code.addCode(emitter.ADI( -2, SP));
+        }
         code.addCode(emitter.STR(FP, SP));
         code.addCode(emitter.ADR(ZR, SP, FP));
         code.addCode(emitter.ADI(-2, SP));
-
-        if(!functionDefinition.getName().equals( "main")){
-            for (Register reg : bodyUsedReg) {
-                code.addCode(emitter.STR( reg, SP));
-                code.addCode(emitter.ADI( -2, SP));
-            }
+        for(int i = 0; i < args.size(); i++){
+            Declaration arg = args.get(i);
+            memoryManager.setFunctionArgOffset(arg.getSpecialName(), (args.size() - i + bodyUsedReg.size())*2);
         }
+
 
         code.addCode(bodyCode);
 
 
         code.addCode(emitter.emitLabel(currentFunctionEndLabel));
-        //set the SP to the (FP - bodyUsedReg.size()) to the begin of registers stored in stack
         code.addCode(emitter.ADR(ZR,FP, SP));
-        if(!functionDefinition.getName().equals( "main"))
-            code.addCode(emitter.ADI(-bodyUsedReg.size() * 2, SP));
-
-
-        if(!functionDefinition.getName().equals( "main")) {
-            for (int i = bodyUsedReg.size() - 1; i >= 0; i--) {
-                Register reg = bodyUsedReg.get(i);
-                code.addCode(emitter.ADI(2, SP));
-                code.addCode(emitter.LDR(SP, reg));
-            }
+        for (int i = bodyUsedReg.size() - 1; i >= 0; i--) {
+            Register reg = bodyUsedReg.get(i);
+            code.addCode(emitter.ADI(2, SP));
+            code.addCode(emitter.LDR(SP, reg));
         }
-
         code.addCode(emitter.LDR(FP, FP));
-
         code.addCode(emitter.JMR(RA));
 
-
+        this.memoryManager.printState();
         return code;
     }
 

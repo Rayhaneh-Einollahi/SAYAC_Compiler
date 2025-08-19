@@ -71,7 +71,7 @@ public class InstructionEmitter {
      */
     private void storeUsedReg(CodeObject code, Register... regs) {
         for (Register r : regs) {
-            if(r.purpose != Register.Purpose.OP)
+            if(r.purpose == Register.Purpose.OP)
                 code.addUsedRegister(r);
         }
     }
