@@ -127,12 +127,30 @@ public class InstructionEmitter {
         code.addCode(ADI(-offset, adrReg));
         return code;
     }
-
+    /**
+     * STI purpose is to store a Register Value in an immediate address,
+     * STI is not an official instruction of SAYAC processor, so to avoid using
+     * OP Registers (Operation Registers R1 - R9) R14 register will be used to store the value of
+     * immediate and later stored to the valueReg stored in the location of R14. This convertion is handled by assembler
+     * */
+    public CodeObject STI(Register valueReg, int addressImm){
+        CodeObject code = new CodeObject();
+        storeUsedReg(code, valueReg);
+        code.addCode(emit("STI", valueReg, String.valueOf(addressImm)));
+        return code;
+    }
 
     public CodeObject STR(Register valueReg, Register adrReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg, adrReg);
         code.addCode(emit("STR", valueReg, adrReg));
+        return code;
+    }
+
+    public CodeObject LDI(int addressImm, Register destReg){
+        CodeObject code = new CodeObject();
+        storeUsedReg(code, destReg);
+        code.addCode(emit("LDI", String.valueOf(addressImm), destReg));
         return code;
     }
 

@@ -1,3 +1,5 @@
+### TODO: STI and LDI handle in R14
+### TODO: USE R14 for Handling big immediate value
 def reg(val):
     return format(int(val[1:]), '04b')
 

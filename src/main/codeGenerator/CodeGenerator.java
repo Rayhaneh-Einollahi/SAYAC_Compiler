@@ -92,21 +92,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
             switch (action.type) {
                 case SPILL_L -> code.addCode(emitter.SW(action.register, action.offset, FP));
                 case LOAD_L  -> code.addCode(emitter.LW(action.register, action.offset, FP));
-                case SPILL_G -> {
-                    //Todo: Can we use R14 register here?
-                    String tmpVar = nameManager.newTmpVarName();
-                    Register tmpReg = getRegisterForWrite(code, tmpVar);
-                    code.addCode(emitter.MSI(action.address, tmpReg));
-                    code.addCode(emitter.STR(action.register, tmpReg));
-                    registerManager.freeRegister(tmpVar);
-                }
-                case LOAD_G -> {
-                    String tmpVar = nameManager.newTmpVarName();
-                    Register tmpReg = getRegisterForWrite(code, tmpVar);
-                    code.addCode(emitter.MSI(action.address, tmpReg));
-                    code.addCode(emitter.LDR(tmpReg, action.register));
-                    registerManager.freeRegister(tmpVar);
-                }
+                case SPILL_G -> code.addCode(emitter.STI(action.register, action.address));
+                case LOAD_G -> code.addCode(emitter.LDI(action.address, action.register));
             }
         }
     }
@@ -560,6 +547,24 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
         UnaryOperator op = unaryExpr.getOperator();
 
+        if(op == UnaryOperator.NOT ){
+            String trueLabel = labelManager.generateTrueLabel();
+            String falseLabel = labelManager.generateFalseLabel();
+            String endLabel = labelManager.generateEndLabel();
+            code.addCode(branch(unaryExpr, trueLabel, falseLabel));
+
+            String destVar = nameManager.newTmpVarName();
+            Register destReg = getRegisterForWrite(code, destVar);
+
+            code.setResultVar(destVar);
+            code.addCode(emitter.emitLabel(trueLabel));
+            code.addCode(emitter.MSI(1, destReg));
+            code.addCode(emitter.JMP(endLabel));
+            code.addCode(emitter.emitLabel(falseLabel));
+            code.addCode(emitter.MSI(0, destReg));
+            code.addCode(emitter.emitLabel(endLabel));
+            return code;
+        }
 
         CodeObject operandCode = unaryExpr.getOperand().accept(this);
         String operandVar = operandCode.getResultVar();
@@ -614,24 +619,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.setResultVar(destVar);
                 break;
 
-            case UnaryOperator.NOT:
-                String trueLabel = labelManager.generateTrueLabel();
-                String falseLabel = labelManager.generateFalseLabel();
-                String endLabel = labelManager.generateEndLabel();
-                code.addCode(branch(unaryExpr, trueLabel, falseLabel));
-
-                destVar = nameManager.newTmpVarName();
-                destReg = getRegisterForWrite(code, destVar);
-
-                code.setResultVar(destVar);
-                code.addCode(emitter.emitLabel(trueLabel));
-                code.addCode(emitter.MSI(1, destReg));
-                code.addCode(emitter.JMP(endLabel));
-                code.addCode(emitter.emitLabel(falseLabel));
-                code.addCode(emitter.MSI(0, destReg));
-                code.addCode(emitter.emitLabel(endLabel));
-                break;
-
             case UnaryOperator.TILDE:
                 destVar = nameManager.newTmpVarName();
                 destReg = this.getRegisterForWrite(code, destVar);
@@ -654,41 +641,43 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 }
                 break;
             case UnaryOperator.AND:
-                if(memoryManager.isGlobal(operandVar)){
-                    code.setResultVar(String.valueOf((memoryManager.getGlobalAddress(operandVar))));
-                }else {
-                    destVar = nameManager.newTmpVarName();
-                    destReg = this.getRegisterForWrite(code, destVar);
-
-                    List<RegisterAction> actions = new ArrayList<>();
-                    List<Register> spillRegs = new ArrayList<>();
-                    spillRegs.add(operandReg);
-
-                    registerManager.handleSpill(null, spillRegs, actions);
-                    this.generateRegActionCode(actions, code);
-                    code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), destReg));
-
-                    code.setResultVar(destVar);
-
-                    if(nameManager.isTmp(operandVar)){
-                        registerManager.freeRegister(operandVar);
-                    }
-                }
-                break;
+                throw new RuntimeException("Pointers Unsupported");
+//                if(memoryManager.isGlobal(operandVar)){
+//                    code.setResultVar(String.valueOf((memoryManager.getGlobalAddress(operandVar))));
+//                }else {
+//                    destVar = nameManager.newTmpVarName();
+//                    destReg = this.getRegisterForWrite(code, destVar);
+//
+//                    List<RegisterAction> actions = new ArrayList<>();
+//                    List<Register> spillRegs = new ArrayList<>();
+//                    spillRegs.add(operandReg);
+//
+//                    registerManager.handleSpill(null, spillRegs, actions);
+//                    this.generateRegActionCode(actions, code);
+//                    code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), destReg));
+//
+//                    code.setResultVar(destVar);
+//
+//                    if(nameManager.isTmp(operandVar)){
+//                        registerManager.freeRegister(operandVar);
+//                    }
+//                }
+//                break;
             case UnaryOperator.STAR:
-                destVar = nameManager.newTmpVarName();
-                destReg = this.getRegisterForWrite(code, destVar);
-
-                offsetVar = nameManager.newTmpVarName();
-                offsetReg = this.getRegisterForWrite(code, offsetVar);
-                code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), offsetReg));
-
-                code.addCode(emitter.LDR(destReg, offsetReg));
-                code.setResultVar(destVar);
-                if(nameManager.isTmp(operandVar)){
-                    registerManager.freeRegister(operandVar);
-                }
-                registerManager.freeRegister(offsetVar);
+                throw new RuntimeException("Pointers Unsupported");
+//                destVar = nameManager.newTmpVarName();
+//                destReg = this.getRegisterForWrite(code, destVar);
+//
+//                offsetVar = nameManager.newTmpVarName();
+//                offsetReg = this.getRegisterForWrite(code, offsetVar);
+//                code.addCode(emitter.MSI(memoryManager.getLocalOffset(operandVar), offsetReg));
+//
+//                code.addCode(emitter.LDR(destReg, offsetReg));
+//                code.setResultVar(destVar);
+//                if(nameManager.isTmp(operandVar)){
+//                    registerManager.freeRegister(operandVar);
+//                }
+//                registerManager.freeRegister(offsetVar);
 
         }
 

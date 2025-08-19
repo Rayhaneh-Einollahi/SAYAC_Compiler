@@ -1,7 +1,7 @@
 package main.codeGenerator;
 
 public class Register {
-    public String name;
+    public int id;
     public final Purpose purpose;
     private boolean isLock = false;
     private boolean isFree = true;
@@ -12,8 +12,8 @@ public class Register {
 
 
 
-    Register(String name, Purpose purpose){
-        this.name = name;
+    Register(int R, Purpose purpose){
+        this.id = R;
         this.purpose = purpose;
     }
 
@@ -33,7 +33,7 @@ public class Register {
     public String toString() {
         if(purpose != Purpose.OP)
             return purpose.toString();
-        return name;
+        return "R" + id;
     }
 
     public void free(){

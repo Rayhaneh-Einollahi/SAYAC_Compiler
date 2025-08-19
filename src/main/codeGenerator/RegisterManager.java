@@ -7,20 +7,19 @@ import java.util.stream.Stream;
 public class RegisterManager {
     private final List<Register> allOpRegisters = new ArrayList<>();
     private final MemoryManager memoryManager;
-    private final Set<Register> pinnedRegisters = new HashSet<>();
     private  Map<String, Register> varToReg = new HashMap<>();
     private  Map<String, Integer> varUseCounts = new HashMap<>();
 
-    public Register ZR = new Register("R0", Register.Purpose.ZR);
-    public Register RA = new Register("R10", Register.Purpose.RA);
-    public Register RT = new Register("R11", Register.Purpose.RT);
-    public Register FP = new Register("R12", Register.Purpose.FP);
-    public Register SP = new Register("R13", Register.Purpose.SP);
+    public Register ZR = new Register(0, Register.Purpose.ZR);
+    public Register RA = new Register(10, Register.Purpose.RA);
+    public Register RT = new Register(11, Register.Purpose.RT);
+    public Register FP = new Register(12, Register.Purpose.FP);
+    public Register SP = new Register(13, Register.Purpose.SP);
 
     public RegisterManager(MemoryManager memoryManager) {
         this.memoryManager = memoryManager;
-        for(int i=1; i<10; i++){
-            allOpRegisters.add(new Register("R"+i, Register.Purpose.OP));
+        for(int i=1; i<=9; i++){
+            allOpRegisters.add(new Register(i, Register.Purpose.OP));
         }
     }
 
@@ -58,9 +57,11 @@ public class RegisterManager {
         if (varToReg.containsKey(mainVar)) {
             incrementUseCount(mainVar);
             Register mainReg = varToReg.get(mainVar);
-            if (isNextFree(mainReg))
+            if (mainReg.id <= allOpRegisters.size() - 1 &&  getNextReg(mainReg).isFree()){
+                assignRegister(getNextReg(mainReg), helperVar);
                 return mainReg;
-            if (allOpRegisters.indexOf(mainReg)!= allOpRegisters.size()-1){
+            }
+            if (mainReg.id <= allOpRegisters.size()-1 && !getNextReg(mainReg).isLock()){ //check if it's not the last register
                 handleSpill(List.of(helperVar), List.of(getNextReg(mainReg)), actions).getFirst();
                 return mainReg;
             }
@@ -68,9 +69,11 @@ public class RegisterManager {
         if (varToReg.containsKey(helperVar)) {
             incrementUseCount(helperVar);
             Register helperReg = varToReg.get(helperVar);
-            if (isPrevFree(helperReg))
+            if (1 < helperReg.id && getPrevReg(helperReg).isFree()){
+                assignRegister(getPrevReg(helperReg), mainVar);
                 return getPrevReg(helperReg);
-            if (allOpRegisters.indexOf(helperReg)!= 0){
+            }
+            if (1 < helperReg.id && !getPrevReg(helperReg).isLock()){
                 handleSpill(List.of(mainVar), List.of(getPrevReg(helperReg)), actions).getFirst();
                 return getPrevReg(helperReg);
             }
@@ -131,9 +134,6 @@ public class RegisterManager {
     }
 
 
-    public Register getRegisterByVar(String varName){
-        return varToReg.get(varName);
-    }
     /**
      * Allocate a specific register (for special purposes)
      */
@@ -144,26 +144,6 @@ public class RegisterManager {
         freeRegister(varName);
     }
 
-    /**
-     * Reserve a register so it won't be allocated
-     */
-    public void reserveRegister(Register reg) {
-        if (reg.getVarName() == null) {
-            throw new RuntimeException("Cannot reserve register " + reg + " - it's currently in use");
-        }
-        reg.lock();
-        pinnedRegisters.add(reg);
-    }
-
-    /**
-     * Release a reserved register
-     */
-    public void releaseRegister(Register reg) {
-        if (pinnedRegisters.contains(reg)) {
-            reg.free();
-            pinnedRegisters.remove(reg);
-        }
-    }
 
 
     public void printState() {
@@ -173,23 +153,11 @@ public class RegisterManager {
         for (Register reg : allOpRegisters) {
             String var = reg.getVarName(); if(var == null) var = "-";
             String state = reg.isLock() ? "lock" : !reg.isFree() ? "free" : "used";
-            if (pinnedRegisters.contains(reg)) {
-                state += " (pinned)";
-            }
             System.out.printf("%-4s -> %-10s %s%n", reg, var, state);
         }
-
     }
 
 
-    public boolean isPrevFree(Register regName) {
-        int index = allOpRegisters.indexOf(regName);
-        if (index == -1 || index == 0) {
-            return false;
-        }
-        Register nextReg = allOpRegisters.get(index - 1);
-        return nextReg.isFree();
-    }
     public Register getPrevReg(Register regName) {
         int index = allOpRegisters.indexOf(regName);
         if (index == -1 || index == 0) {
@@ -197,21 +165,12 @@ public class RegisterManager {
         }
         return allOpRegisters.get(index - 1);
     }
-    public boolean isNextFree(Register regName) {
-        int index = allOpRegisters.indexOf(regName);
-        if (index == -1 || index == allOpRegisters.size() - 1) {
-            return false;
-        }
-        Register nextReg = allOpRegisters.get(index + 1);
-        return nextReg.isFree();
-    }
 
     public Register getNextReg(Register regName) {
-        int index = allOpRegisters.indexOf(regName);
-        if (index == -1 || index == allOpRegisters.size() - 1) {
-            return null;
+        if (regName.id == allOpRegisters.size() - 1) {
+            throw new RuntimeException("No operation Register after Input Reg");
         }
-        return allOpRegisters.get(index + 1);
+        return allOpRegisters.get(regName.id + 1);
     }
 
     private List<Register> findFreeRegister(int cnt) {
@@ -222,7 +181,7 @@ public class RegisterManager {
 
             for (int j = 0; j < cnt; j++) {
                 Register reg = allOpRegisters.get(i + j);
-                if (!reg.isFree()) {
+                if (reg.isLock() || !reg.isFree()) {
                     allFree = false;
                     break;
                 }
@@ -293,8 +252,7 @@ public class RegisterManager {
             List<Register> block = allOpRegisters.subList(i, i + cnt);
 
             boolean allEligible = block.stream().allMatch(reg ->
-                    !reg.isFree() &&
-                            !pinnedRegisters.contains(reg)
+                    !reg.isFree() && !reg.isLock()
             );
 
             if (!allEligible) continue;
@@ -320,7 +278,12 @@ public class RegisterManager {
     }
 
     public void clearRegisters() {
-        this.allOpRegisters.forEach(reg -> {reg.free(); reg.clearVarName();});
+        this.allOpRegisters.forEach(reg -> {
+            reg.free();
+            reg.clearVarName();
+            if(reg.isLock())
+                throw new RuntimeException("Locked Register Never UnLocked");
+            });
         varToReg = new HashMap<>();
         varUseCounts = new HashMap<>();
     }
