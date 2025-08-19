@@ -277,7 +277,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(emitter.ADR(ZR, regResult, RT));
             if(nameManager.isTmp(resultVar)) registerManager.freeRegister(resultVar);
         }
-        code.addCode(emitter.JMP(currentFunctionEndLabel));
+        code.addCode(emitter.JMP(currentFunctionEndLabel, ZR));
         return code;
     }
 
@@ -316,7 +316,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
 
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
-        code.addCode(emitter.JMPS(funcLabel, RA));
+        code.addCode(emitter.JMP(funcLabel, RA));
         code.addCode(emitter.ADI(2 * tempOffsets.size(), SP));
 
 
@@ -344,7 +344,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(branch(whileStatement.getCondition(), bodyLabel, endLabel));
         }
         else {
-            code.addCode(emitter.JMP(bodyLabel));
+            code.addCode(emitter.JMP(bodyLabel, ZR));
         }
 
 
@@ -352,7 +352,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         if (whileStatement.getBody() != null) {
             code.addCode(whileStatement.getBody().accept(this));
         }
-        code.addCode(emitter.JMP(condLabel));
+        code.addCode(emitter.JMP(condLabel, ZR));
 
         code.addCode(emitter.emitLabel(endLabel));
 
@@ -390,7 +390,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         if (forStatement.getBody() != null) {
             code.addCode(forStatement.getBody().accept(this));
         }
-        code.addCode(emitter.JMP(stepLabel));
+        code.addCode(emitter.JMP(stepLabel, ZR));
 
         code.addCode(emitter.emitLabel(stepLabel));
         if (forStatement.getForCondition().getSteps() != null) {
@@ -398,7 +398,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(step.accept(this));
             }
         }
-        code.addCode(emitter.JMP(condLabel));
+        code.addCode(emitter.JMP(condLabel, ZR));
 
         code.addCode(emitter.emitLabel(endLabel));
 
@@ -413,7 +413,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
 
         if (conditions == null || conditions.isEmpty()) {
-            code.addCode(emitter.JMP(trueLabel));
+            code.addCode(emitter.JMP(trueLabel, ZR));
             return code;
         }
 
@@ -438,14 +438,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(BreakStatement breakStatement) {
         CodeObject code = new CodeObject();
         String endLabel = loopEndLabels.peek();
-        code.addCode(emitter.JMP(endLabel));
+        code.addCode(emitter.JMP(endLabel, ZR));
         return code;
     }
 
     public CodeObject visit(ContinueStatement continueStmt) {
         CodeObject code = new CodeObject();
         String stepLabel = loopContinueLabels.peek();
-        code.addCode(emitter.JMP(stepLabel));
+        code.addCode(emitter.JMP(stepLabel, ZR));
         return code;
     }
 
@@ -508,7 +508,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     if(nameManager.isTmp(rightVar)) registerManager.freeRegister(rightVar);
                 }
 
-                code.addCode(emitter.JMP(falseLabel));
+                code.addCode(emitter.JMP(falseLabel, ZR));
                 return code;
             }
         }
@@ -519,7 +519,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         Register resultReg = getRegisterForRead(code, resultVar);
         code.addCode(emitter.CMI(0,resultReg));
         code.addCode(emitter.BRR("!=", trueLabel));
-        code.addCode(emitter.JMP(falseLabel));
+        code.addCode(emitter.JMP(falseLabel, ZR));
         return code;
     }
 
@@ -534,7 +534,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         code.addCode(emitter.emitLabel(ifLabel));
         code.addCode(selectionStatement.getIfStatement().accept(this));
-        code.addCode(emitter.JMP(afterIfLabel));
+        code.addCode(emitter.JMP(afterIfLabel, ZR));
 
 
         if (selectionStatement.getElseStatement() != null) {
@@ -560,7 +560,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.setResultVar(destVar);
             code.addCode(emitter.emitLabel(trueLabel));
             code.addCode(emitter.MSI(1, destReg));
-            code.addCode(emitter.JMP(endLabel));
+            code.addCode(emitter.JMP(endLabel, ZR));
             code.addCode(emitter.emitLabel(falseLabel));
             code.addCode(emitter.MSI(0, destReg));
             code.addCode(emitter.emitLabel(endLabel));
@@ -712,7 +712,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.setResultVar(destVar);
             code.addCode(emitter.emitLabel(trueLabel));
             code.addCode(emitter.MSI(1, destReg));
-            code.addCode(emitter.JMP(endLabel));
+            code.addCode(emitter.JMP(endLabel, ZR));
             code.addCode(emitter.emitLabel(falseLabel));
             code.addCode(emitter.MSI(0, destReg));
             code.addCode(emitter.emitLabel(endLabel));

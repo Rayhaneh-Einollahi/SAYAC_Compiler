@@ -149,21 +149,22 @@ def expand_label_macros(lines, labels):
         op = parts[0].upper()
         if op == 'JMP':
             target = parts[1]
+            retReg = parts[2]
             approx_offset = labels[target] - pc + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc] + brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2
             if -32 <= approx_offset <= 31:
-                new_lines.append(f'JMI {target}')
+                new_lines.append(f'JMI {target} {retReg}')
             elif -128 <= approx_offset <= 127:
                 new_lines.extend([
                     f'PLACE_HOLDER',
-                    f'JMR {target}'
+                    f'JMR {target} {retReg}'
                 ])
             else:
                 new_lines.extend([
                     f'PLACE_HOLDER',
                     f'PLACE_HOLDER',
-                    f'JMR {target}'
+                    f'JMR {target} {retReg}'
                 ])
-        elif op == 'BRR':
+        elif op == 'BRR' and parts[2] in labels:
             target = parts[2]
             approx_offset = labels[target] - pc + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc] + brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2
             flag = parts[1]
@@ -191,28 +192,33 @@ def replace_placeholder(lines, labels):
         if not parts:
             continue
         op = parts[0].upper()
-        if op == 'JMI':
+        if op == 'JMI' and parts[1] in labels:
             target = parts[1]
             offset = labels[target] - pc
-            lines[i] = f'JMI {offset} r0'
-        elif op == 'JMR':
+            desReg = parts[2]
+
+            lines[i] = f'JMI {offset} {desReg}'
+
+        elif op == 'JMR' and parts[1] in labels:
             target = parts[1]
+            desReg = parts[2]
             offset = labels[target] - pc
             lo = offset & 0x00FF
             hi = (offset >> 8) & 0x00FF
+            
             if i>=2 and lines[i-1] == 'PLACE_HOLDER' and lines[i-2] == 'PLACE_HOLDER':
                 lines[i-1:i+1] = [
                     f'MSI {lo} r14',
-                    f'JMR 0 r14 r0'
+                    f'JMR 1 r14 {desReg}'
                 ]
             elif i>=1 and lines[i-1] == 'PLACE_HOLDER':
                 lines[i-2:i+1] = [
                     f'MSI {lo} r14',
                     f'MHI {hi} r14',
-                    f'JMR 0 r14 r0'
+                    f'JMR 1 r14 {desReg}'
                 ]
         
-        elif op == 'BRR':
+        elif op == 'BRR' and parts[2] in labels:
             flag = parts[1]
             target = parts[2]
             offset = labels[target] - pc

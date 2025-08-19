@@ -204,29 +204,10 @@ public class InstructionEmitter {
         return code;
     }
 
-    /**
-     * JMPS jump and store the return value
-     */
-    public CodeObject JMRS(Register jmpReg, Register storeReturnReg){
-        CodeObject code = new CodeObject();
-        storeUsedReg(code, jmpReg, storeReturnReg);
-        code.addCode(emit("JMR", "1", jmpReg, storeReturnReg));
-        return code;
+    public  String JMP(String label, Register returnReg) {
+        return this.emit("JMP", colorIfDebug(label, Color.YELLOW), returnReg);
     }
 
-    /**
-     * notice JMP and JMPS are macros and will be converted to JMI JMR and JMRS after interpreting the labels in assembler
-     */
-    public  String JMP(String label) {
-        return this.emit("JMP", colorIfDebug(label, Color.YELLOW));
-    }
-
-    public  CodeObject JMPS(String label, Register returnReg) {
-        CodeObject code = new CodeObject();
-        storeUsedReg(code, returnReg);
-        code.addCode(emit("JMPS", colorIfDebug(label, Color.YELLOW), returnReg));
-        return code;
-    }
     public CodeObject SUR(Register valueReg2, Register valueReg1, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
