@@ -139,8 +139,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                         registerManager.assignRegister(resultReg, varName);
                     }
                     else{
-                        String desVar = nameManager.newTmpVarName();
-                        Register desReg = getRegisterForWrite(code, desVar);
+                        Register desReg = getRegisterForWrite(code, varName);
                         code.addCode(emitter.ADR(ZR, resultReg, desReg));
                     }
                 }
@@ -157,23 +156,35 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
         CodeObject Inside = arrayExpr.getInside().accept(this);
         code.addCode(Inside);
+
         String resultInside = Inside.getResultVar();
         Register regInside =  getRegisterForRead(code, resultInside);
+        regInside.lock();
+
         //Todo: handle the cases outExpr is not identifier
         String array_name = ((Identifier)arrayExpr.getOutside()).getSpecialName();
         String tmpVar = nameManager.newTmpVarName();
         Register tmpReg = getRegisterForWrite(code, tmpVar);
+
         code.addCode(emitter.MSI(memoryManager.getLocalStart(array_name), tmpReg));
         code.addCode(emitter.ADR(regInside, regInside, regInside));
         code.addCode(emitter.SUR(regInside, tmpReg, tmpReg));
         code.addCode(emitter.ADR(tmpReg, FP, tmpReg));
         code.setAddress(tmpVar);
+
+        tmpReg.lock();
+        regInside.unlock();
+
         String addressVarName = nameManager.newTmpVarName();
         Register addressVarReg = getRegisterForWrite(code, addressVarName);
         code.addCode(emitter.ADR(ZR, tmpReg, addressVarReg));
         code.addCode(emitter.LDR(tmpReg, tmpReg));
         code.setResultVar(tmpVar);
         code.setAddress(addressVarName);
+
+        tmpReg.unlock();
+        registerManager.freeRegister(tmpVar);
+
         return code;
     }
 
@@ -297,8 +308,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(argCode);
 
             Register resultReg = getRegisterForRead(code, argCode.getResultVar());
-            if (resultReg == null)
-                throw new RuntimeException("Missing result register for argument");
+
 
             int offset = memoryManager.allocateLocal(".arg_"+ i,2);
             tempOffsets.add(offset);
@@ -314,6 +324,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
             code.addCode(emitter.STR(tmpReg, SP));
             code.addCode(emitter.ADI(-2, SP));
+
+            registerManager.freeRegister(tmpName);
         }
 
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
@@ -499,7 +511,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     String leftVar = left.getResultVar();
                     String rightVar = right.getResultVar();
                     Register leftReg = getRegisterForRead(code, leftVar);
+                    leftReg.lock();
                     Register rightReg = getRegisterForRead(code, rightVar);
+                    leftReg.unlock();
                     code.addCode(emitter.CMR(leftReg, rightReg));
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
 
@@ -569,8 +583,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject operandCode = unaryExpr.getOperand().accept(this);
         String operandVar = operandCode.getResultVar();
         Register operandReg = getRegisterForRead(code, operandVar);
+        operandReg.lock();
         code.addCode(operandCode);
-
 
         String address = null;
         boolean isArray = false;
@@ -582,8 +596,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String destVar;
         Register destReg;
 
-        String offsetVar;
-        Register offsetReg;
+
 
         switch (op) {
             case UnaryOperator.PRE_INC:
@@ -601,21 +614,24 @@ public class CodeGenerator extends Visitor<CodeObject> {
             case UnaryOperator.POST_INC:
                 destVar = nameManager.newTmpVarName();
                 destReg = this.getRegisterForWrite(code, destVar);
+                destReg.lock();
 
                 code.addCode(emitter.ADR(ZR, operandReg, destReg));
                 code.addCode(emitter.ADI(1 , operandReg));
                 code.addCode(ArrayStore(operandReg, address, isArray));
+                destReg.unlock();
                 code.setResultVar(destVar);
                 break;
 
             case UnaryOperator.POST_DEC:
                 destVar = nameManager.newTmpVarName();
                 destReg = this.getRegisterForWrite(code, destVar);
-
+                destReg.lock();
                 code.addCode(emitter.ADR(ZR, operandReg, destReg));
                 code.addCode(emitter.SUI(1 , operandReg));
 
                 code.addCode(ArrayStore(operandReg, address, isArray));
+                destReg.unlock();
                 code.setResultVar(destVar);
                 break;
 
@@ -665,6 +681,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
 //                break;
             case UnaryOperator.STAR:
                 throw new RuntimeException("Pointers Unsupported");
+//                String offsetVar;
+//                Register offsetReg;
 //                destVar = nameManager.newTmpVarName();
 //                destReg = this.getRegisterForWrite(code, destVar);
 //
@@ -680,6 +698,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 //                registerManager.freeRegister(offsetVar);
 
         }
+        operandReg.unlock();
 
         return code;
     }
@@ -730,25 +749,34 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String operand1 = operand1Code.getResultVar();
         String operand2 = operand2Code.getResultVar();
         String helperVar = null;
+        Register helperReg = null;
 
         Register operand1reg, operand2reg;
+        List<String> needFree = new ArrayList<>();
         if(op == BinaryOperator.DIVASSIGN || op==BinaryOperator.STARASSIGN) {
             helperVar = nameManager.newTmpVarName();
             operand1reg = getRegisterForRead(code, operand1, helperVar);
+            helperReg = registerManager.getNextReg(operand1reg);
+            helperReg.lock();
+            needFree.add(helperVar);
         }
         else if (op==BinaryOperator.MODASSIGN) {
             helperVar = nameManager.newTmpVarName();
-            operand1reg = getRegisterForRead(code, helperVar, operand1);
+            helperReg = getRegisterForRead(code, helperVar, operand1);
+            operand1reg = registerManager.getNextReg(helperReg);
+            helperReg.lock();
+            needFree.add(helperVar);
         }
         else {
             operand1reg = getRegisterForRead(code, operand1);
         }
+        operand1reg.lock();
         operand2reg = getRegisterForRead(code, operand2);
+        operand2reg.lock();
 
-
-        List<String> needFree = new ArrayList<>();
         if(nameManager.isTmp(operand1)) needFree.add(operand1);
         if(nameManager.isTmp(operand2)) needFree.add(operand2);
+
 
         switch (op) {
             case BinaryOperator.PLUS: {
@@ -819,6 +847,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             case BinaryOperator.XOR: {
                 String destVar = nameManager.newTmpVarName();
                 Register destReg = getRegisterForWrite(code, destVar);
+                destReg.lock();
                 String tmpVar = nameManager.newTmpVarName();
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
                 code.addCode(emitter.NTR(operand1reg, tmpReg));
@@ -830,11 +859,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ANR(tmpReg, destReg, destReg));
                 code.setResultVar(destVar);
                 needFree.add(tmpVar);
+                destReg.unlock();
                 break;
             }
             case BinaryOperator.OR: {
                 String destVar = resolveDesVar(needFree);
                 Register destReg = getRegisterForWrite(code, destVar);
+                destReg.lock();
                 String tmpVar = resolveDesVar(needFree);
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
                 code.addCode(emitter.NTR(operand1reg, tmpReg));
@@ -842,6 +873,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ANR(tmpReg, destReg, destReg));
                 code.addCode(emitter.NTR(destReg, destReg));
                 code.setResultVar(destVar);
+                destReg.unlock();
                 break;
             }
             case BinaryOperator.ASSIGN: {
@@ -867,7 +899,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.DIV(operand1reg, operand2reg, operand1reg));
                 code.addCode(ArrayStore(operand1reg, address, isArray));
                 needFree.remove(operand1);
-                needFree.add(helperVar);
                 code.setResultVar(operand1);
                 break;
             }
@@ -875,9 +906,11 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 needFree.remove(operand1);
                 String tmpVar = resolveDesVar(needFree);
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
+                tmpReg.lock();
                 code.addCode(emitter.NTR2(operand2reg, tmpReg));
                 code.addCode(emitter.SAR(tmpReg, operand1reg, operand1reg));
                 code.addCode(ArrayStore(operand1reg, address, isArray));
+                tmpReg.unlock();
                 needFree.add(tmpVar);
                 code.setResultVar(operand1);
                 break;
@@ -907,7 +940,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.MUL(operand2reg, operand1reg, operand1reg));
                 code.addCode(ArrayStore(operand1reg, address, isArray));
                 needFree.remove(operand1);
-                needFree.add(helperVar);
                 code.setResultVar(operand1);
                 break;
             }
@@ -915,11 +947,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 needFree.remove(operand1);
                 String tmpVar = resolveDesVar(needFree);
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
+                tmpReg.lock();
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand2reg, tmpReg));
                 code.addCode(emitter.ANR(tmpReg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
                 code.addCode(ArrayStore(operand1reg, address, isArray));
+                tmpReg.unlock();
                 code.setResultVar(operand1);
                 break;
             }
@@ -927,8 +961,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 needFree.remove(operand1);
                 String tmpVar = nameManager.newTmpVarName();
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
+                tmpReg.lock();
                 String tmp2Var = resolveDesVar(needFree);
                 Register tmp2Reg = getRegisterForWrite(code, tmp2Var);
+                tmp2Reg.lock();
                 code.addCode(emitter.ANR(operand1reg, operand2reg, tmpReg));
                 code.addCode(emitter.NTR(tmpReg, tmpReg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
@@ -937,21 +973,26 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
                 code.addCode(emitter.ANR(operand1reg, tmpReg, operand1reg));
                 code.addCode(ArrayStore(operand1reg, address, isArray));
+                tmpReg.unlock();
+                tmp2Reg.unlock();
                 code.setResultVar(operand1);
                 needFree.add(tmpVar);
                 needFree.add(tmp2Var);
                 break;
             }
             case BinaryOperator.MODASSIGN: {
-                Register helperReg = getRegisterForWrite(code,helperVar);
                 code.addCode(emitter.DIV(operand1reg, operand2reg, helperReg));
                 code.addCode(ArrayStore(operand1reg, address, isArray));
                 needFree.remove(operand1);
-                needFree.add(helperVar);
                 code.setResultVar(operand1);
                 break;
             }
         }
+
+        operand1reg.unlock();
+        operand2reg.unlock();
+        if(helperReg != null)
+            helperReg.unlock();
 
         for(String tmpVar: needFree){
             registerManager.freeRegister(tmpVar);
