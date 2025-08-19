@@ -27,8 +27,6 @@ import main.symbolTable.utils.Key;
 
 public class NameAnalyzer extends Visitor<Void>{
     public boolean ok = true;
-    public boolean func_def = false;
-
     @Override
     public Void visit(Program program) {
         SymbolTable.top = new SymbolTable();
@@ -70,9 +68,7 @@ public class NameAnalyzer extends Visitor<Void>{
 
 
         if (functionDefinition.getDeclarator() != null){
-            func_def = true;
             functionDefinition.getDeclarator().accept(this);
-            func_def = false;
         }
 
         if (functionDefinition.getDeclarations() != null){
@@ -133,12 +129,12 @@ public class NameAnalyzer extends Visitor<Void>{
     public Void visit(Identifier identifier) {
         try {
             SymbolTableItem symbolTableItem = SymbolTable.top.getItem(new Key(DecSymbolTableItem.START_KEY, identifier.getName()), true);
-            if(!func_def) {
-                int scope_number = SymbolTable.top.getNearestDeclScopeIdByName(identifier.getName());
-                identifier.setSpecialName(identifier.getName() + "%" + Integer.toString(scope_number));
-                check_global_var(scope_number, identifier);
-                identifier.setVar(true);
-            }
+
+            int scope_number = SymbolTable.top.getNearestDeclScopeIdByName(identifier.getName());
+            identifier.setSpecialName(identifier.getName() + "%" + Integer.toString(scope_number));
+            check_global_var(scope_number, identifier);
+            identifier.setVar(true);
+
 
             symbolTableItem.incUsed();
         } catch (ItemNotFoundException e) {

@@ -293,14 +293,15 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
             code.addCode(emitter.emitComment("arg_" + i, InstructionEmitter.Color.BLUE));
             code.addCode(argCode);
-
-            Register resultReg = getRegisterForRead(code, argCode.getResultVar());
-
-
-            int offset = memoryManager.allocateLocal(".arg_"+ i,2);
+            String resultVar = argCode.getResultVar();
+            Register resultReg = getRegisterForRead(code, resultVar);
+            int offset = memoryManager.allocateLocal(resultVar,2);
             tempOffsets.add(offset);
 
             code.addCode(emitter.SW(resultReg, offset, FP));
+            if(nameManager.isTmp(resultVar)){
+                registerManager.freeRegister(resultVar);
+            }
         }
 
 
@@ -308,7 +309,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             String tmpName = nameManager.newTmpVarName();
             Register tmpReg = getRegisterForWrite(code, tmpName);
             code.addCode(emitter.LW(FP, offset, tmpReg));
-
+            memoryManager.allocateLocal(tmpName, 2);
             code.addCode(emitter.STR(tmpReg, SP));
             code.addCode(emitter.ADI(-2, SP));
 

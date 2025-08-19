@@ -123,7 +123,7 @@ public class InstructionEmitter {
         CodeObject code = new CodeObject();
         storeUsedReg(code, adrReg, destReg);
         code.addCode(ADI(offset, adrReg));
-        code.addCode(LDR(destReg, adrReg));
+        code.addCode(LDR(adrReg, destReg));
         code.addCode(ADI(-offset, adrReg));
         return code;
     }
