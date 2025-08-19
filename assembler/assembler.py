@@ -111,9 +111,6 @@ def collect_labels(lines):
     pending_labels = []
     instruction_lines = []
     for line in lines:
-        line = line.strip()
-        if not line:
-            continue
         if line.endswith(':'):
             label = line[:-1].strip()
             pending_labels.append(label)
@@ -139,7 +136,7 @@ def compute_prefix(instruction, lines):
         i += 1
     return prefix_sum
 
-def expand_macros(lines, labels):
+def expand_label_macros(lines, labels):
     jmp_prefix = compute_prefix('JMP', lines)
     brr_prefix = compute_prefix('BRR', lines)
     pc = 0
@@ -147,7 +144,7 @@ def expand_macros(lines, labels):
     for i, line in enumerate(lines):
         line = line.strip()
         parts = line.split()
-        if (not parts) or line.endswith(':'):
+        if line.endswith(':'):
             new_lines.append(line)
             continue
         op = parts[0].upper()
@@ -156,26 +153,38 @@ def expand_macros(lines, labels):
             approx_offset = labels[target] - pc + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc] + brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2
             if -32 <= approx_offset <= 31:
                 new_lines.append(f'JMI {target}')
+            elif -128 <= approx_offset <= 127:
+                new_lines.extend([
+                    f'PLACE_HOLDER',
+                    f'JMR {target}'
+                ])
             else:
                 new_lines.extend([
-                    f'MSI r14',
-                    f'MHI r14',
+                    f'PLACE_HOLDER',
+                    f'PLACE_HOLDER',
                     f'JMR {target}'
                 ])
         elif op == 'BRR':
             target = parts[2]
+            approx_offset = labels[target] - pc + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc] + brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2
             flag = parts[1]
-            new_lines.extend([
-                f'MSI r14',
-                f'MHI r14',
-                f'BRR {flag} {target}'
-            ])
+            if -128 <= approx_offset <= 127:
+                new_lines.extend([
+                    f'PLACE_HOLDER',
+                    f'BRR {flag} {target}'
+                ])
+            else:
+                new_lines.extend([
+                    f'PLACE_HOLDER',
+                    f'PLACE_HOLDER',
+                    f'BRR {flag} {target}'
+                ])
         else:
             new_lines.append(line)
         pc += 1
     return new_lines
 
-def replace_labels(lines, labels):
+def replace_placeholder(lines, labels):
     pc = 0
     for i in range(len(lines)):
         line = lines[i].strip()
@@ -192,22 +201,36 @@ def replace_labels(lines, labels):
             offset = labels[target] - pc
             lo = offset & 0x00FF
             hi = (offset >> 8) & 0x00FF
-            lines[i-2:i+1] = [
-                f'MSI {lo} r14',
-                f'MHI {hi} r14',
-                f'JMR 0 r14 r0'
-            ]
+            if i>=2 and lines[i-1] == 'PLACE_HOLDER' and lines[i-2] == 'PLACE_HOLDER':
+                lines[i-1:i+1] = [
+                    f'MSI {lo} r14',
+                    f'JMR 0 r14 r0'
+                ]
+            elif i>=1 and lines[i-1] == 'PLACE_HOLDER':
+                lines[i-2:i+1] = [
+                    f'MSI {lo} r14',
+                    f'MHI {hi} r14',
+                    f'JMR 0 r14 r0'
+                ]
+        
         elif op == 'BRR':
             flag = parts[1]
             target = parts[2]
             offset = labels[target] - pc
             lo = offset & 0x00FF
             hi = (offset >> 8) & 0x00FF
-            lines[i-2:i+1] = [
-                f'MSI {lo} r14',
-                f'MHI {hi} r14',
-                f'BRR {flag} r14'
-            ]
+            if i>=2 and lines[i-1] == 'PLACE_HOLDER' and lines[i-2] == 'PLACE_HOLDER':
+                lines[i-2:i+1] = [
+                    f'MSI {lo} r14',
+                    f'BRR {flag} r14'
+                ]
+            elif i>=1 and lines[i-1] == 'PLACE_HOLDER':
+                lines[i-2:i+1] = [
+                    f'MSI {lo} r14',
+                    f'MHI {hi} r14',
+                    f'BRR {flag} r14'
+                ]
+            
         pc += 1
     return lines
 
@@ -222,9 +245,9 @@ def remove_comments(lines):
 def assemble_program(lines):
     lines = remove_comments(lines)
     labels, _ = collect_labels(lines)
-    expanded_lines = expand_macros(lines, labels)
+    expanded_lines = expand_label_macros(lines, labels)
     new_labels, new_lines = collect_labels(expanded_lines)
-    no_label_lines = replace_labels(new_lines, new_labels)
+    no_label_lines = replace_placeholder(new_lines, new_labels)
     binaries = []
     for line in no_label_lines:
         result = assemble_sayac(line)
