@@ -1,0 +1,602 @@
+\documentclass[12pt,a4paper]{report}
+
+% -------------------------------
+% Packages (safe for pdfLaTeX)
+% -------------------------------
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{geometry}
+\geometry{margin=1in}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{
+    colorlinks=true,
+    linkcolor=black,      % color of internal links
+    citecolor=blue,      % color of links to bibliography
+    filecolor=black,      % color of file links
+    urlcolor=blue,       % color of external links
+    pdfborder={0 0 0}    % remove border around links
+}
+\usepackage{amsmath, amssymb}
+\usepackage{array}
+\usepackage{tabularx}   % for tables with X column
+\usepackage{listings}   % code blocks
+
+% -------------------------------
+% Listings: global style + SAYAC asm
+% -------------------------------
+\lstdefinestyle{code}{
+  basicstyle=\ttfamily\footnotesize,
+  keywordstyle=\color{blue},
+  commentstyle=\color{gray},
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\tiny,
+  frame=single,
+  breaklines=true,
+  tabsize=2,
+  showstringspaces=false
+}
+
+% Define a simple SAYAC assembly language for listings
+\lstdefinelanguage{SAYACasm}{
+  morekeywords={
+    ADD,SUB,MUL,DIV,ADDI,SUBI,AND,OR,XOR,NOT,SHL,SHR,
+    LI,LW,SW,LA,MOV,JR,JMP,BZ,BNZ,BLT,BLE,BGT,BGE,BEQ,BNE,
+    CALL,RET,PUSH,POP,CMP
+  },
+  sensitive=true,
+  comment=[l]{;},
+  morestring=[b]"
+}
+
+% -------------------------------
+% Title metadata (edit these)
+% -------------------------------
+\newcommand{\OrgName}{University of Tehran}
+\newcommand{\DocTitle}{SAYAC Compiler Documentation}
+\newcommand{\DocSubtitle}{From Mini-C to SAYAC Assembly}
+\newcommand{\Authors}{Rayhaneh Einolahi, Bahareh Einolahi, Mahdis Mirzaei, Hasti Abolhasani}
+\newcommand{\Supervisor}{Professor Navabi}
+\newcommand{\VersionTag}{v1.0}
+\newcommand{\ReleaseDate}{\today}
+\renewcommand{\thesection}{\arabic{section}}
+
+% -------------------------------
+% Document
+% -------------------------------
+\begin{document}
+
+% --- Simple, elegant title page ---
+\begin{titlepage}
+  \centering
+  {\Large \OrgName\par}
+  \vspace{1.6cm}
+  {\Huge\bfseries \DocTitle\par}
+  \vspace{0.35cm}
+  {\Large\itshape \DocSubtitle\par}
+  \vspace{1.2cm}
+  \rule{\textwidth}{1pt}\par
+  \vspace{0.6cm}
+  {\large
+    \textbf{Project Members}\par
+    \vspace{0.2cm}
+    \textbf{Authors}\par
+    \vspace{0.2cm}
+    \Authors\par
+    \textbf{Supervisor}\par
+    \vspace{0.2cm}
+    \Supervisor\par
+  }
+  \vfill
+  {\small \VersionTag\quad\textbullet\quad \ReleaseDate\par}
+\end{titlepage}
+
+\tableofcontents
+\clearpage
+
+% =========================================================
+%                   CHAPTER: CODE GENERATION
+% =========================================================
+\chapter*{Code Generation for SAYAC}
+\addcontentsline{toc}{chapter}{Code Generation for SAYAC}
+\setcounter{section}{0}
+\label{chap:codegen}
+
+% ========================
+\section{Overview}
+Our compiler takes a validated \emph{Mini-C} AST from the semantic analysis stage and produces SAYAC assembly code.
+This process is divided into several cooperating components:
+\begin{itemize}
+    \item \textbf{Memory Manager} -- Manages stack frame layout and memory allocation.
+    \item \textbf{Register Manager} -- Allocates and tracks CPU registers.
+    \item \textbf{Instruction Emitter} -- Outputs SAYAC assembly syntax.
+    \item \textbf{CodeGenerator} -- Main conversion of c code to assembly.
+
+  \end{itemize}
+
+The main driver constructs these components once per compilation unit:
+\begin{lstlisting}[language=Java, style=code, caption={Back-end driver initialization}]
+public CodeGenerator() {
+    memoryManager  = new MemoryManager();
+    registerManager = new RegisterManager(memoryManager);
+    emitter         = new InstructionEmitter();
+    labelManager    = new LabelManager();
+    nameManager     = new NameManager();
+}
+\end{lstlisting}
+
+% ========================
+\section{Memory Manager}
+
+\subsection{Responsibilities}
+\begin{itemize}
+    \item Manages two storage domains:
+    \begin{itemize}
+        \item \textbf{Globals}: absolute addresses in data memory \([0x7000,\,0xDFFF]\).
+        \item \textbf{Locals/temps/params}: FP–relative stack slots inside the current frame.
+    \end{itemize}
+    \item Assigns stack slots for local variables and spilled registers (negative offsets from \texttt{FP}); records parameter offsets (typically positive from \texttt{FP}).
+    \item Computes total frame size and supports emitting function prologue/epilogue.
+    \item Enforces 2–byte alignment for all allocations.
+\end{itemize}
+
+\subsection{Calling Convention Notes}
+Fill in SAYAC ABI specifics here:
+\begin{itemize}
+    \item \textbf{Return register}: e.g., \texttt{RV}.
+    \item \textbf{Caller/Callee-saved sets}: e.g., caller saves \texttt{R1–R4}, callee saves \texttt{R5–R10}.
+    \item \textbf{Argument passing}: first \(N\) in registers, remaining on stack at \texttt{[FP+off]}.
+    \item \textbf{Stack direction}: \texttt{SP} grows down; locals live at negative \texttt{FP} offsets.
+\end{itemize}
+
+\subsection{Data Model \& State}
+\begin{itemize}
+    \item \texttt{nextGlobalAddr}: next free absolute address in \([0x7000,\,0xDFFF]\).
+    \item \texttt{frameOffset}: running size of current frame (starts at \(0\); becomes negative as locals are allocated).
+    \item Maps:
+    \begin{itemize}
+        \item \texttt{globalAddresses:\ name \(\to\) addr}
+        \item \texttt{localOffsets:\ name \(\to\) FP-relative offset}
+    \end{itemize}
+\end{itemize}
+
+\subsection{API Summary}
+\begin{itemize}
+    \item \texttt{beginFunction()}: reset frame (\texttt{frameOffset=0}) and clear local offsets; call once per function before allocating locals.
+    \item \texttt{allocateGlobal(name,size)}: idempotently reserve a 2–byte–aligned block in data memory; throws if \([0x7000,\,0xDFFF]\) is exhausted.
+    \item \texttt{getGlobalAddress(name)}: absolute address of a global; throws if unknown.
+    \item \texttt{allocateLocal(name,size)}: idempotently assign a new negative offset: \(\texttt{frameOffset} \mathrel{-=}\texttt{align(size)}\); returns that offset.
+    \item \texttt{getLocalOffset(name)}: returns existing offset, or lazily allocates a default 2–byte slot (e.g., for \texttt{int}).
+    \item \texttt{setFunctionArgOffset(name,offset)}: record parameter’s FP-relative (usually positive) offset.
+\end{itemize}
+
+\subsection{Invariants}
+\begin{itemize}
+    \item \(\textbf{frame\_size} = -\,\texttt{frameOffset}\) at codegen time.
+    \item Locals at \texttt{[FP + (negative\_offset)]}; params at \texttt{[FP + (positive\_offset)]}.
+    \item Per-name allocations are idempotent (repeat calls return the same address/offset).
+    \item \texttt{align(size)} \(=\) \((\texttt{size}+1)\ \&\ \sim1\) \(\Rightarrow\) even alignment.
+\end{itemize}
+
+\subsection{Example Prologue/Epilogue}
+\begin{lstlisting}[language=SAYACasm, style=code, caption={Prologue/Epilogue sketch}]
+PUSH FP
+MOV  FP, SP
+SUB  SP, SP, #frame_size      ; frame_size = -frameOffset
+
+; ... function body ...
+
+ADD  SP, SP, #frame_size
+POP  FP
+RET
+\end{lstlisting}
+
+\subsection{Access Examples}
+\paragraph{Local variable (offset = \texttt{MemoryManager.getLocalOffset("x")} e.g., \(-4\)).}
+\begin{lstlisting}[language=SAYACasm, style=code]
+LI   R1, #10
+SW   R1, [FP-4]         ; x = 10
+LW   R2, [FP-4]         ; r2 = x
+\end{lstlisting}
+
+\paragraph{Global variable (addr = \texttt{MemoryManager.getGlobalAddress("g")} e.g., \texttt{0x7000}).}
+\begin{lstlisting}[language=SAYACasm, style=code]
+LI   R3, #0x7000        ; address of g
+LW   R4, [R3+0]         ; r4 = g
+\end{lstlisting}
+
+
+% ========================
+% ========================
+\section{Register Manager}
+
+\subsection{Responsibilities}
+\begin{itemize}
+    \item Maintains a map of variable names to registers. 
+    \item Each register maps back to a variable name; if the variable is a temporary one, 
+          we use the tmp name generated by the \texttt{NameManager}.
+    \item Allocates registers for reading and writing variables.
+    \item Manages spilling and reloading registers when needed.
+\end{itemize}
+
+\subsection{Design Notes}
+In order to keep all code generation logic inside the \texttt{CodegenVisitor}, 
+we introduced the concept of \emph{register actions}.  
+Instead of immediately emitting assembly when registers are allocated or spilled, 
+the register manager records actions which are later translated into SAYAC instructions 
+by the code generator.  
+This design keeps the register allocation policy and actual instruction emission 
+cleanly separated.
+
+\subsection{Allocation Policy}
+We use linear-scan allocation, preferring free registers before spilling.  
+\begin{itemize}
+    \item For a \textbf{read}: reuse a resident register if available; otherwise reload 
+          the variable from its memory location into a free register.  
+          If no registers are available, spill the least-recently used variable.
+    \item For a \textbf{write}: assign a free register and defer writing it back to memory 
+          until necessary (no reload required when the value was spilled).
+\end{itemize}
+
+\subsection{Interface Methods}
+There are four key methods for acquiring registers:
+\begin{description}
+    \item[\texttt{allocateForRead(String varName, List<RegisterAction> actions)}]  
+    If a register is already assigned to \texttt{varName}, return it.  
+    If the variable was spilled, reload it into a register.  
+    Otherwise, use a free register or spill the least-used one.
+
+    \item[\texttt{allocateForWrite(String varName, List<RegisterAction> actions)}]  
+    Similar to \texttt{allocateForRead}, except that when the variable was spilled, 
+    no reload is needed; simply return a free register.
+
+    \item[\texttt{allocateTwoForRead(List<String> varNames, List<RegisterAction> actions)}]  
+    Returns two consecutive registers for instructions that require them.  
+    At least one of the variables should be a new temporary, 
+    so at most one reload from memory occurs.
+
+    \item[\texttt{allocateTwoForWrite(List<String> varNames, List<RegisterAction> actions)}]  
+    Same as \texttt{allocateTwoForRead}, except no reloads from memory are performed.
+\end{description}
+
+
+% ========================
+\section{Instruction Emitter}
+\subsection{Purpose}
+Centralizes SAYAC assembly syntax so codegen calls high-level methods rather than writing raw strings. This isolates ISA spelling/formatting and simplifies changes.
+
+\subsection{Main Methods}
+\begin{itemize}
+    \item ALU: \texttt{ADD(rd, rs1, rs2)}, \texttt{SUB}, \texttt{MUL}, \texttt{ADDI}, \texttt{AND}, \texttt{OR}, \texttt{XOR}, \texttt{NOT}, \texttt{SHL}, \texttt{SHR}
+    \item Memory: \texttt{LI(rd, \#imm)}, \texttt{LW(rd, [base+off])}, \texttt{SW(rs, [base+off])}
+    \item Control: \texttt{CMP(rs1, rs2)}, \texttt{Bxx(label)}, \texttt{JMP(label)}, \texttt{CALL(func)}, \texttt{RET()}
+    \item Labels: \texttt{emitLabel(name)}
+\end{itemize}
+
+% ========================
+\section{Operation Coverage}
+The table below lists SAYAC operations supported by our compiler. Adjust or extend rows to match your ISA.
+% put in preamble once:
+% \usepackage{tabularx,array}
+% \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+
+% % replace your table with this:
+% \begin{table}[h]
+% \centering
+% \renewcommand{\arraystretch}{1.2}
+% \begin{tabularx}{\textwidth}{|l|l|Y|}
+% \hline
+% \textbf{Operation} & \textbf{Format} & \textbf{Description / Lowering Rule} \\
+% \hline
+% ADD  & R-type & \texttt{ADD rd, rs1, rs2} (add two registers). \\
+% SUB  & R-type & \texttt{SUB rd, rs1, rs2}. \\
+% MUL  & R-type & \texttt{MUL rd, rs1, rs2} (or runtime call). \\
+% ADDI & I-type & \texttt{ADDI rd, rs, \#imm}. \\
+% AND  & R-type & \texttt{AND rd, rs1, rs2}. \\
+% OR   & R-type & \texttt{OR rd, rs1, rs2}. \\
+% XOR  & R-type & \texttt{XOR rd, rs1, rs2}. \\
+% NOT  & R-type & \texttt{NOT rd, rs}. \\
+% SHL  & R/I    & \texttt{SHL rd, rs, ry} or \texttt{SHL rd, rs, \#k}. \\
+% SHR  & R/I    & \texttt{SHR rd, rs, ry} or \texttt{SHR rd, rs, \#k}. \\
+% LW   & I-type & \texttt{LW rd, [base+off]}. \\
+% SW   & I-type & \texttt{SW rs, [base+off]}. \\
+% LI   & I-type & \texttt{LI rd, \#imm}. \\
+% CMP  & R-type & \texttt{CMP rs1, rs2} then branch with \texttt{Bxx}. \\
+% BEQ  & B-type & \texttt{BEQ label} (after \texttt{CMP}). \\
+% BNE  & B-type & \texttt{BNE label}. \\
+% BLT/BLE/BGT/BGE & B-type & Signed compares to labels after \texttt{CMP}. \\
+% BZ/BNZ & B-type & \texttt{BZ label} / \texttt{BNZ label}. \\
+% JMP  & J-type & \texttt{JMP label}. \\
+% CALL & J-type & \texttt{CALL func}, result in \texttt{RV}. \\
+% RET  & R-type & \texttt{RET}. \\
+% \hline
+% \end{tabularx}
+% \caption{SAYAC operations covered by the backend.}
+% \end{table}
+
+% ========================
+\section{Code Generation}
+\label{sec:codegen}
+
+This section describes how the compiler generates SAYAC assembly from the Mini-C AST.  
+All code generation occurs inside the \texttt{CodegenVisitor}, leveraging register actions and the previously defined managers.
+\subsection{Variable Declarations}
+\paragraph{Global Variables}  
+Memory manager assigns a global memory address.
+
+\paragraph{Local Variables}  
+\begin{itemize}
+    \item Offset from \texttt{FP} is precomputed.  
+    \item Lifespan analysis allows two non-overlapping locals to share the same offset.  
+    \item Optimized to minimize stack memory usage.
+\end{itemize}
+
+\subsection{Expression Code Generation}
+
+\subsubsection{Unary Expressions}
+Unary expressions (e.g., \texttt{-x}, \texttt{!x}) generate direct SAYAC instructions or simple register operations depending on the operator.
+
+\subsubsection{Binary Expressions}
+\paragraph{Boolean Expressions (comparisons, \texttt{\&\&})}  
+  For Boolean expressions, the compiler generates code using two labels: \texttt{true} and \texttt{false}.  
+\begin{itemize}
+    \item If the branch evaluates to true, the \texttt{true} label creates a register and loads 1.  
+    \item If false, the \texttt{false} label loads 0.
+\end{itemize}
+
+\paragraph{Arithmetic Expressions (\texttt{+}, \texttt{-}, shifts)}  
+For operators with direct SAYAC instructions (add, subtract, right shift):  
+\begin{itemize}
+    \item Code is generated directly.  
+    \item If one operand is a temporary variable, the same register and varname are reused for the result.
+\end{itemize}
+
+\paragraph{Left Shift}  
+\begin{itemize}
+    \item Complement 2 is applied, then \texttt{SAR} is used to perform the shift.
+\end{itemize}
+
+\paragraph{Multiplication, Division, Modulus}  
+\begin{itemize}
+    \item Allocate two temporary varnames and two consecutive registers.  
+    \item Free the register that is no longer needed after computation.
+\end{itemize}
+
+\paragraph{Bitwise XOR}  
+No direct instruction exists. Implemented as:  
+\[
+a \oplus b = \lnot (\lnot a \land \lnot b) \land \lnot (a \land b)
+\]
+
+\paragraph{Bitwise OR}  
+No direct instruction exists. Implemented as:  
+\[
+a \lor b = \lnot (\lnot a \land \lnot b)
+\]
+
+\paragraph{Assignment Expressions}  
+\begin{itemize}
+    \item If the right-hand operand is a temporary variable, the result simply reuses its register and varname.  
+    \item For compound assignments (\texttt{/=, *=, \%=}): a helper var is used; operand1’s register stores the result.  
+    \item For other assignment operators, operand1’s var and register are reused when possible.
+\end{itemize}
+
+\subsection{Function Call Expressions}
+\begin{itemize}
+    \item Arguments are evaluated and stored on the stack from bottom to top to avoid spilling.  
+    \item The special-purpose register \texttt{RA} is used for return addresses: \texttt{JMPS(functionLabel, "RA")}.
+\end{itemize}
+
+\subsection{Function Definitions}
+\begin{itemize}
+    \item Generate a label for the function name and an \texttt{end} label for exits.  
+    \item \texttt{return} statements jump to the function’s end label.  
+    \item Prologue stores the previous frame pointer (\texttt{FP}) and updates \texttt{FP = SP}.  
+    \item Only registers used in the body are saved.  
+    \item The \texttt{RA} register is saved to allow nested function calls without overwriting return addresses.
+\end{itemize}
+
+\subsection{Branching}
+\begin{itemize}
+    \item Used to implement control statements and short-circuit operators.  
+    \item Example: \texttt{expr1 \&\& expr2} evaluates \texttt{expr2} only if \texttt{expr1 != 0}, reducing jumps and labels.
+\end{itemize}
+
+
+\subsection{While Loops}
+\begin{enumerate}
+  \item Create labels: \texttt{condLabel}, \texttt{bodyLabel}, \texttt{endLabel}.
+  \item Push loop targets for nesting:
+    \begin{itemize}
+      \item \texttt{loopEndLabels.push(endLabel)} \(\rightarrow\) target for \texttt{break}.
+      \item \texttt{loopContinueLabels.push(condLabel)} \(\rightarrow\) target for \texttt{continue}.
+    \end{itemize}
+  \item At \texttt{condLabel}: 
+    \begin{itemize}
+      \item if \texttt{condition != null}: \texttt{branch(condition, bodyLabel, endLabel)}
+      \item else: \texttt{JMP bodyLabel} (infinite loop)
+    \end{itemize}
+  \item At \texttt{bodyLabel}: emit body, then \texttt{JMP condLabel}.
+  \item Emit \texttt{endLabel}; \texttt{pop()} both stacks.
+\end{enumerate}
+
+\paragraph{Break/Continue via stacks.}
+Inside the loop body:
+\begin{itemize}
+  \item \texttt{break;} \(\Rightarrow\) \texttt{JMP} to \texttt{loopEndLabels.peek()} (i.e., \texttt{endLabel} of the \emph{current} loop).
+  \item \texttt{continue;} \(\Rightarrow\) \texttt{JMP} to \texttt{loopContinueLabels.peek()} (here, \texttt{condLabel}).
+\end{itemize}
+This makes nested loops correct: each \texttt{peek()} refers to the innermost active loop.
+
+\begin{lstlisting}[language=SAYACasm, style=code]
+; === while ===
+condLabel:
+  ; if cond present: branch(cond) -> bodyLabel else endLabel
+  ; else: JMP bodyLabel
+
+bodyLabel:
+  ; ... code ...
+  ; continue;  ==>  JMP condLabel        (from loopContinueLabels.peek())
+  ; break;     ==>  JMP endLabel         (from loopEndLabels.peek())
+  JMP condLabel
+
+endLabel:
+\end{lstlisting}
+
+
+\subsection{For Loops}
+\begin{enumerate}
+  \item Create labels: \texttt{condLabel}, \texttt{bodyLabel}, \texttt{stepLabel}, \texttt{endLabel}.
+  \item Push loop targets:
+    \begin{itemize}
+      \item \texttt{loopEndLabels.push(endLabel)} \(\rightarrow\) target for \texttt{break}.
+      \item \texttt{loopContinueLabels.push(stepLabel)} \(\rightarrow\) target for \texttt{continue}.
+    \end{itemize}
+  \item Emit init (declaration or init expr) if present.
+  \item At \texttt{condLabel}: \texttt{branchFromAndList(conditions, bodyLabel, endLabel)}.
+  \item At \texttt{bodyLabel}: emit body; \texttt{JMP stepLabel}.
+  \item At \texttt{stepLabel}: emit all step expressions; \texttt{JMP condLabel}.
+  \item Emit \texttt{endLabel}; \texttt{pop()} both stacks.
+\end{enumerate}
+
+\paragraph{Break/Continue via stacks.}
+Inside the loop body:
+\begin{itemize}
+  \item \texttt{break;} \(\Rightarrow\) \texttt{JMP} \texttt{loopEndLabels.peek()} (the loop’s \texttt{endLabel}).
+  \item \texttt{continue;} \(\Rightarrow\) \texttt{JMP} \texttt{loopContinueLabels.peek()} (here, \texttt{stepLabel}, so the increment runs before re-checking the condition).
+\end{itemize}
+
+\begin{lstlisting}[language=SAYACasm, style=code]
+; === for ===
+; init:
+;   (declaration.accept(this)) or (expr.accept(this))
+
+condLabel:
+  ; branchFromAndList(conditions) -> bodyLabel else endLabel
+
+bodyLabel:
+  ; ... code ...
+  ; continue;  ==>  JMP stepLabel        (from loopContinueLabels.peek())
+  ; break;     ==>  JMP endLabel         (from loopEndLabels.peek())
+  JMP stepLabel
+
+stepLabel:
+  ; for each step: step.accept(this)
+  JMP condLabel
+
+endLabel:
+\end{lstlisting}
+
+
+
+\subsection{If / Else-if / Else}
+\begin{enumerate}
+    \item Evaluate condition.
+    \item Branch to \emph{else/next} if false.
+    \item Emit then block and jump to end.
+    \item Emit else/else-if block(s).
+    \item End label.
+\end{enumerate}
+\begin{lstlisting}[language=SAYACasm, style=code]
+; cond in R1
+CMP  R1, #0
+BEQ  L_else
+; then
+JMP  L_end
+L_else:
+; else
+L_end:
+\end{lstlisting}
+
+\subsection{Functions}
+\begin{itemize}
+    \item Emit prologue to establish frame.
+    \item Allocate locals and spill space.
+    \item Emit body; manage calls per ABI.
+    \item Move return value to \texttt{RV}, emit epilogue, \texttt{RET}.
+\end{itemize}
+
+% ========================
+\section{Example End-to-End}
+\subsection*{Mini-C Input}
+\begin{lstlisting}[language=C, style=code]
+int main() {
+    int i;
+    for (i = 0; i < 5; i++) {
+        if (i == 3)
+            break;
+    }
+    return 0;
+}
+\end{lstlisting}
+
+\subsection*{Generated SAYAC Assembly (sketch)}
+\begin{lstlisting}[language=SAYACasm, style=code]
+main:
+    PUSH FP
+    MOV  FP, SP
+    SUB  SP, SP, #frame_size
+
+    ; i = 0
+    LI   R1, #0
+    SW   R1, [FP-4]
+
+for_cond:
+    LW   R1, [FP-4]
+    CMP  R1, #5
+    BGE  for_end
+
+    ; if (i == 3) break;
+    LW   R1, [FP-4]
+    CMP  R1, #3
+    BEQ  for_end
+
+    ; i++
+    LW   R1, [FP-4]
+    ADDI R1, R1, #1
+    SW   R1, [FP-4]
+    JMP  for_cond
+
+for_end:
+    LI   RV, #0
+    ADD  SP, SP, #frame_size
+    POP  FP
+    RET
+\end{lstlisting}
+
+
+% ========================
+\section{Assembler}
+\label{sec:assembler}
+
+The assembler translates the compiler-generated SAYAC assembly into machine code executable by the SAYAC processor.  
+It fully supports all instructions defined in the SAYAC ISA.
+
+\subsection{Supported Instructions}
+\begin{itemize}
+    \item All standard SAYAC instructions: \texttt{ADD, SUB, MUL, DIV, ADDI, SUBI, AND, OR, XOR, NOT, SHL, SHR, LI, LW, SW, LA, MOV, JR, CALL, RET, PUSH, POP, CMP, BZ, BNZ, BLT, BLE, BGT, BGE, BEQ, BNE}.
+    \item Additional assembler-specific instructions:
+    \begin{itemize}
+        \item \texttt{JMP label} -- Unconditional jump to a label.
+        \item \texttt{BRR label} -- Conditional branch to a label.
+    \end{itemize}
+\end{itemize}
+
+\subsection{Label Handling}
+\begin{itemize}
+    \item Labels are used to mark locations in the code for jumps and branches.  
+    \item The assembler resolves labels to absolute instruction addresses during assembly.  
+    \item Both \texttt{JMP} and \texttt{BRR} rely on these labels to transfer control correctly.
+\end{itemize}
+
+\subsection{Functionality Notes}
+\begin{itemize}
+    \item Ensures that all instructions generated by the compiler are correctly encoded into machine code.  
+    \item Supports all control flow constructs (loops, conditionals, function calls) via labels and jumps.  
+    \item Maintains a mapping from label names to instruction offsets to allow forward and backward jumps.
+\end{itemize}
+
+\end{document}
