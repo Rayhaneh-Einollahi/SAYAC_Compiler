@@ -1,4 +1,3 @@
-### TODO: STI and LDI handle in R14
 ### TODO: USE R14 for Handling big immediate value
 def reg(val):
     return format(int(val[1:]), '04b')
@@ -234,6 +233,34 @@ def replace_placeholder(lines, labels):
         pc += 1
     return lines
 
+def expand_other_macros(lines):
+    pc = 0
+    new_lines = []
+    for i in range(len(lines)):
+        line = lines[i].strip()
+        parts = line.split()
+        if not parts:
+            continue
+        op = parts[0].upper()
+        if op == 'LDI':
+            addImm = int(parts[1])
+            desReg = parts[2]
+            new_lines.extend([
+                f'MSI {addImm} R14',
+                f'LDR R14 {desReg}'
+            ])
+        elif op == 'STI':
+            valueReg = parts[1]
+            addImm = parts[2]
+            new_lines.extend([
+                f'MSI {addImm} R14',
+                f'STR {valueReg} R14'
+            ])
+        else:
+            new_lines.append(line)
+        pc += 1
+    return new_lines
+
 def remove_comments(lines):
     cleaned_lines = []
     for line in lines:
@@ -244,6 +271,7 @@ def remove_comments(lines):
 
 def assemble_program(lines):
     lines = remove_comments(lines)
+    lines = expand_other_macros(lines)
     labels, _ = collect_labels(lines)
     expanded_lines = expand_label_macros(lines, labels)
     new_labels, new_lines = collect_labels(expanded_lines)
