@@ -5,25 +5,29 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RegisterManager {
-    public enum RegisterState { FREE, USED, RESERVED }
-    private final Map<String, RegisterState> registerStates = new HashMap<>();
-    private final List<String> allRegisters = Arrays.asList("R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11");
+    private final List<Register> allOpRegisters = new ArrayList<>();
     private final MemoryManager memoryManager;
-    private final Set<String> pinnedRegisters = new HashSet<>();
-    private  Map<String, String> regToVar = new HashMap<>();
-    private  Map<String, String> varToReg = new HashMap<>();
+    private final Set<Register> pinnedRegisters = new HashSet<>();
+    private  Map<String, Register> varToReg = new HashMap<>();
     private  Map<String, Integer> varUseCounts = new HashMap<>();
 
+    public Register ZR = new Register("R0", Register.Purpose.ZR);
+    public Register RA = new Register("R10", Register.Purpose.RA);
+    public Register RT = new Register("R11", Register.Purpose.RT);
+    public Register FP = new Register("R12", Register.Purpose.FP);
+    public Register SP = new Register("R13", Register.Purpose.SP);
 
     public RegisterManager(MemoryManager memoryManager) {
         this.memoryManager = memoryManager;
-        this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
+        for(int i=1; i<10; i++){
+            allOpRegisters.add(new Register("R"+i, Register.Purpose.OP));
+        }
     }
 
     /**
      * get a register for the purpose of writing into it that refers to the variable varName
      */
-    public String allocateForWrite(String varName, List<RegisterAction> actions){
+    public Register allocateForWrite(String varName, List<RegisterAction> actions){
         if (varToReg.containsKey(varName)) {
             incrementUseCount(varName);
             return varToReg.get(varName);
@@ -34,7 +38,7 @@ public class RegisterManager {
      * get a register for the purpose of reading from it that refers to the variable varName
      * so if it's not in a register we undo spilling it from memory
      */
-    public String allocateForRead(String varName, List<RegisterAction> actions) {
+    public Register allocateForRead(String varName, List<RegisterAction> actions) {
 
         if (varToReg.containsKey(varName)) {
             incrementUseCount(varName);
@@ -49,24 +53,24 @@ public class RegisterManager {
     }
 
 
-    public String allocateTwoForRead(String mainVar,String helperVar, List<RegisterAction> actions) {
+    public Register allocateTwoForRead(String mainVar,String helperVar, List<RegisterAction> actions) {
 
         if (varToReg.containsKey(mainVar)) {
             incrementUseCount(mainVar);
-            String mainReg = varToReg.get(mainVar);
+            Register mainReg = varToReg.get(mainVar);
             if (isNextFree(mainReg))
                 return mainReg;
-            if (allRegisters.indexOf(mainReg)!= allRegisters.size()-1){
+            if (allOpRegisters.indexOf(mainReg)!= allOpRegisters.size()-1){
                 handleSpill(List.of(helperVar), List.of(getNextReg(mainReg)), actions).getFirst();
                 return mainReg;
             }
         }
         if (varToReg.containsKey(helperVar)) {
             incrementUseCount(helperVar);
-            String helperReg = varToReg.get(helperVar);
-            if (isPrevFree(helperVar))
+            Register helperReg = varToReg.get(helperVar);
+            if (isPrevFree(helperReg))
                 return getPrevReg(helperReg);
-            if (allRegisters.indexOf(helperReg)!= 0){
+            if (allOpRegisters.indexOf(helperReg)!= 0){
                 handleSpill(List.of(mainVar), List.of(getPrevReg(helperReg)), actions).getFirst();
                 return getPrevReg(helperReg);
             }
@@ -79,32 +83,32 @@ public class RegisterManager {
 
     }
 
-    public String getFreeRegister(List<String> varNames, List<RegisterAction> actions){
+    public Register getFreeRegister(List<String> varNames, List<RegisterAction> actions){
         int cnt = varNames.size();
-        List<String> regs = findFreeRegister(cnt);
+        List<Register> regs = findFreeRegister(cnt);
         if (regs != null) {
-            String firstReg = regs.getFirst();
+            Register firstReg = regs.getFirst();
             for(String var: varNames){
                 assignRegister(firstReg, var);
                 incrementUseCount(var);
             }
             return firstReg;
         }
-        List<String> spillRegs = chooseSpillCandidate(cnt);
+        List<Register> spillRegs = chooseSpillCandidate(cnt);
         return handleSpill(varNames,spillRegs, actions).getFirst();
     }
 
     public void freeRegister(String varName) {
         if (!varToReg.containsKey(varName)) return;
 
-        String reg = varToReg.get(varName);
-        regToVar.remove(reg);
+        Register reg = varToReg.get(varName);
         varToReg.remove(varName);
-        registerStates.put(reg, RegisterState.FREE);
+        reg.clearVarName();
+        reg.free();
         varUseCounts.remove(varName);
     }
 
-    public String loadSpilled(String var1, String var2, List<RegisterAction> actions) {
+    public Register loadSpilled(String var1, String var2, List<RegisterAction> actions) {
         String needLoadVar = (var2 != null && memoryManager.hasVariable(var2)) ? var2 : var1;
 
         if (!memoryManager.hasVariable(needLoadVar)) {
@@ -112,7 +116,7 @@ public class RegisterManager {
         }
         incrementUseCount(needLoadVar);
 
-        String reg = null;
+        Register reg = null;
         if(memoryManager.isLocal(needLoadVar)){
             int offset = memoryManager.getLocalOffset(needLoadVar);
             reg = getFreeRegister(Stream.of(var1, var2).filter(Objects::nonNull).toList(), actions);
@@ -127,60 +131,38 @@ public class RegisterManager {
     }
 
 
-    public String getRegisterByVar(String varName){
+    public Register getRegisterByVar(String varName){
         return varToReg.get(varName);
     }
     /**
      * Allocate a specific register (for special purposes)
      */
-    public String allocateSpecificRegister(String reg, String varName) {
-        if (registerStates.get(reg) != RegisterState.FREE) {
-            throw new RuntimeException("Register " + reg + " is not free");
-        }
+    public void freeRegisterByReg(Register reg) {
+        if (reg.getVarName() == null) return;
 
-        assignRegister(reg, varName);
-        incrementUseCount(varName);
-        return reg;
-    }
-    public void freeRegisterByReg(String reg) {
-        if (!regToVar.containsKey(reg)) return;
-
-        String varName = regToVar.get(reg);
+        String varName = reg.getVarName();
         freeRegister(varName);
     }
 
     /**
      * Reserve a register so it won't be allocated
      */
-    public void reserveRegister(String reg) {
-        if (regToVar.containsKey(reg)) {
+    public void reserveRegister(Register reg) {
+        if (reg.getVarName() == null) {
             throw new RuntimeException("Cannot reserve register " + reg + " - it's currently in use");
         }
-        registerStates.put(reg, RegisterState.RESERVED);
+        reg.lock();
         pinnedRegisters.add(reg);
     }
 
     /**
      * Release a reserved register
      */
-    public void releaseRegister(String reg) {
+    public void releaseRegister(Register reg) {
         if (pinnedRegisters.contains(reg)) {
-            registerStates.put(reg, RegisterState.FREE);
+            reg.free();
             pinnedRegisters.remove(reg);
         }
-    }
-    public Set<String> getUsedRegisters() {
-        return regToVar.keySet();
-    }
-
-    public Set<String> getFreeRegisters() {
-        return registerStates.entrySet().stream()
-                .filter(e -> e.getValue() == RegisterState.FREE)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toSet());
-    }
-    public List<String> getAllRegisters() {
-        return allRegisters;
     }
 
 
@@ -188,9 +170,9 @@ public class RegisterManager {
         System.out.println("\nRegister State:");
         System.out.println("---------------");
 
-        for (String reg : allRegisters) {
-            String var = regToVar.getOrDefault(reg, "-");
-            String state = registerStates.get(reg).toString();
+        for (Register reg : allOpRegisters) {
+            String var = reg.getVarName(); if(var == null) var = "-";
+            String state = reg.isLock() ? "lock" : !reg.isFree() ? "free" : "used";
             if (pinnedRegisters.contains(reg)) {
                 state += " (pinned)";
             }
@@ -200,47 +182,47 @@ public class RegisterManager {
     }
 
 
-    public boolean isPrevFree(String regName) {
-        int index = allRegisters.indexOf(regName);
+    public boolean isPrevFree(Register regName) {
+        int index = allOpRegisters.indexOf(regName);
         if (index == -1 || index == 0) {
             return false;
         }
-        String nextReg = allRegisters.get(index - 1);
-        return registerStates.get(nextReg) == RegisterState.FREE;
+        Register nextReg = allOpRegisters.get(index - 1);
+        return nextReg.isFree();
     }
-    public String getPrevReg(String regName) {
-        int index = allRegisters.indexOf(regName);
+    public Register getPrevReg(Register regName) {
+        int index = allOpRegisters.indexOf(regName);
         if (index == -1 || index == 0) {
             return null;
         }
-        return allRegisters.get(index - 1);
+        return allOpRegisters.get(index - 1);
     }
-    public boolean isNextFree(String regName) {
-        int index = allRegisters.indexOf(regName);
-        if (index == -1 || index == allRegisters.size() - 1) {
+    public boolean isNextFree(Register regName) {
+        int index = allOpRegisters.indexOf(regName);
+        if (index == -1 || index == allOpRegisters.size() - 1) {
             return false;
         }
-        String nextReg = allRegisters.get(index + 1);
-        return registerStates.get(nextReg) == RegisterState.FREE;
+        Register nextReg = allOpRegisters.get(index + 1);
+        return nextReg.isFree();
     }
 
-    public String getNextReg(String regName) {
-        int index = allRegisters.indexOf(regName);
-        if (index == -1 || index == allRegisters.size() - 1) {
+    public Register getNextReg(Register regName) {
+        int index = allOpRegisters.indexOf(regName);
+        if (index == -1 || index == allOpRegisters.size() - 1) {
             return null;
         }
-        return allRegisters.get(index + 1);
+        return allOpRegisters.get(index + 1);
     }
 
-    private List<String> findFreeRegister(int cnt) {
-        List<String> freeRegs = new ArrayList<>();
+    private List<Register> findFreeRegister(int cnt) {
+        List<Register> freeRegs = new ArrayList<>();
 
-        for (int i = 0; i <= allRegisters.size() - cnt; i++) {
+        for (int i = 0; i <= allOpRegisters.size() - cnt; i++) {
             boolean allFree = true;
 
             for (int j = 0; j < cnt; j++) {
-                String reg = allRegisters.get(i + j);
-                if (registerStates.get(reg) != RegisterState.FREE) {
+                Register reg = allOpRegisters.get(i + j);
+                if (!reg.isFree()) {
                     allFree = false;
                     break;
                 }
@@ -248,7 +230,7 @@ public class RegisterManager {
 
             if (allFree) {
                 for (int j = 0; j < cnt; j++) {
-                    freeRegs.add(allRegisters.get(i + j));
+                    freeRegs.add(allOpRegisters.get(i + j));
                 }
                 return freeRegs;
             }
@@ -256,23 +238,23 @@ public class RegisterManager {
         return null;
     }
 
-    public List<String> handleSpill(List<String> varsToAssign, List<String> spillRegs, List<RegisterAction> actions) {
+    public List<Register> handleSpill(List<String> varsToAssign, List<Register> spillRegs, List<RegisterAction> actions) {
         int cnt = spillRegs.size();
         for (int i = 0; i < cnt; i++) {
-            String spillReg = spillRegs.get(i);
-            String spilledVar = regToVar.get(spillReg);
+            Register spillReg = spillRegs.get(i);
+            String spilledVar = spillReg.getVarName();
             if(memoryManager.isGlobal(spilledVar)){
                 int address = memoryManager.getGlobalAddress(spilledVar);
                 actions.add(new RegisterAction(RegisterAction.Type.SPILL_G, spillReg, 0,address));
             }
             else{
                 int offset = memoryManager.getLocalOffset(spilledVar);
-                actions.add(new RegisterAction(RegisterAction.Type.SPILL_G, spillReg, offset, 0));
+                actions.add(new RegisterAction(RegisterAction.Type.SPILL_L, spillReg, offset, 0));
             }
 
-            regToVar.remove(spillReg);
+            spillReg.clearVarName();
             varToReg.remove(spilledVar);
-            registerStates.put(spillReg, RegisterState.FREE);
+            spillReg.free();
 
             if(varsToAssign!=null) {
                 String varName = varsToAssign.get(i);
@@ -285,15 +267,15 @@ public class RegisterManager {
         return spillRegs;
     }
 
-    public void assignRegister(String reg, String varName) {
+    public void assignRegister(Register reg, String varName) {
         //if it had a register before:
-        String prevReg = varToReg.get(varName);
+        Register prevReg = varToReg.get(varName);
         if(prevReg!=null){
             freeRegister(varName);
         }
-        regToVar.put(reg, varName);
+        reg.setVarName(varName);
         varToReg.put(varName, reg);
-        registerStates.put(reg, RegisterState.USED);
+        reg.use();
     }
 
     private void incrementUseCount(String varName) {
@@ -303,23 +285,23 @@ public class RegisterManager {
     /* Todo: include the registers needed for the operation in calling this function
         so they are kept untouched
      */
-    private List<String> chooseSpillCandidate(int cnt) {
+    private List<Register> chooseSpillCandidate(int cnt) {
         int minUsageSum = Integer.MAX_VALUE;
-        List<String> bestBlock = null;
+        List<Register> bestBlock = null;
 
-        for (int i = 0; i <= allRegisters.size() - cnt; i++) {
-            List<String> block = allRegisters.subList(i, i + cnt);
+        for (int i = 0; i <= allOpRegisters.size() - cnt; i++) {
+            List<Register> block = allOpRegisters.subList(i, i + cnt);
 
             boolean allEligible = block.stream().allMatch(reg ->
-                    registerStates.get(reg) == RegisterState.USED &&
+                    !reg.isFree() &&
                             !pinnedRegisters.contains(reg)
             );
 
             if (!allEligible) continue;
 
             int usageSum = 0;
-            for (String reg : block) {
-                String var = regToVar.get(reg);
+            for (Register reg : block) {
+                String var = reg.getVarName();
                 int count = varUseCounts.getOrDefault(var, Integer.MAX_VALUE);
                 usageSum += count;
             }
@@ -338,8 +320,7 @@ public class RegisterManager {
     }
 
     public void clearRegisters() {
-        this.allRegisters.forEach(reg -> registerStates.put(reg, RegisterState.FREE));
-        regToVar = new HashMap<>();
+        this.allOpRegisters.forEach(reg -> {reg.free(); reg.clearVarName();});
         varToReg = new HashMap<>();
         varUseCounts = new HashMap<>();
     }

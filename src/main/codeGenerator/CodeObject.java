@@ -8,7 +8,7 @@ import java.util.Set;
 
 public class CodeObject {
     private final List<String> code;
-    private final Set<String> usedReg;
+    private final Set<Register> usedReg;
 
     /**
      * if the result of this part of code is stored in a register the value of resultReg would be non-null.
@@ -19,14 +19,14 @@ public class CodeObject {
 
     public CodeObject(){
         code = new ArrayList<String>();
-        usedReg = new HashSet<String>();
+        usedReg = new HashSet<Register>();
     }
     public String getResultVar() {
         return resultVar;
     }
 
-    public void setResultVar(String resultReg) {
-        this.resultVar = resultReg;
+    public void setResultVar(String resultVar) {
+        this.resultVar = resultVar;
     }
 
     public void setAddress(String address) {
@@ -37,7 +37,7 @@ public class CodeObject {
         return this.address;
     }
 
-    public List<String> getUsedRegisters(){
+    public List<Register> getUsedRegisters(){
         return new ArrayList<>(usedReg);
     }
     public void addCode(CodeObject other){
@@ -45,7 +45,7 @@ public class CodeObject {
         this.usedReg.addAll(other.usedReg);
     }
 
-    public void addUsedRegister(String register){
+    public void addUsedRegister(Register register){
         usedReg.add(register);
     }
 

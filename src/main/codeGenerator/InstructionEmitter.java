@@ -2,37 +2,61 @@ package main.codeGenerator;
 
 public class InstructionEmitter {
     private final boolean debugMode = true;
-    public static class Color {
-        public static final String RESET  = "\u001B[0m";
-
+    public enum Color {
+        RESET,
         // Regular colors
-        public static final String BLACK  = "\u001B[30m";
-        public static final String RED    = "\u001B[31m";
-        public static final String GREEN  = "\u001B[32m";
-        public static final String YELLOW = "\u001B[33m";
-        public static final String BLUE   = "\u001B[34m";
-        public static final String PURPLE = "\u001B[35m";
-        public static final String CYAN   = "\u001B[36m";
-        public static final String WHITE  = "\u001B[37m";
+        BLACK ,
+        RED   ,
+        GREEN ,
+        YELLOW,
+        BLUE  ,
+        PURPLE,
+        CYAN  ,
+        WHITE ,
 
         // Bright colors
-        public static final String BRIGHT_BLACK  = "\u001B[90m";
-        public static final String BRIGHT_RED    = "\u001B[91m";
-        public static final String BRIGHT_GREEN  = "\u001B[92m";
-        public static final String BRIGHT_YELLOW = "\u001B[93m";
-        public static final String BRIGHT_BLUE   = "\u001B[94m";
-        public static final String BRIGHT_PURPLE = "\u001B[95m";
-        public static final String BRIGHT_CYAN   = "\u001B[96m";
-        public static final String BRIGHT_WHITE  = "\u001B[97m";
+        BRIGHT_BLACK  ,
+        BRIGHT_RED    ,
+        BRIGHT_GREEN  ,
+        BRIGHT_YELLOW ,
+        BRIGHT_BLUE   ,
+        BRIGHT_PURPLE ,
+        BRIGHT_CYAN   ,
+        BRIGHT_WHITE  ;
+
+        @Override
+        public String toString() {
+            return switch (this) {
+                case RESET   -> "\u001B[0m";
+                case BLACK   -> "\u001B[30m";
+                case RED     -> "\u001B[31m";
+                case GREEN   -> "\u001B[32m";
+                case YELLOW  -> "\u001B[33m";
+                case BLUE    -> "\u001B[34m";
+                case PURPLE  -> "\u001B[35m";
+                case CYAN    -> "\u001B[36m";
+                case WHITE   -> "\u001B[37m";
+
+                case BRIGHT_BLACK  -> "\u001B[90m";
+                case BRIGHT_RED    -> "\u001B[91m";
+                case BRIGHT_GREEN  -> "\u001B[92m";
+                case BRIGHT_YELLOW -> "\u001B[93m";
+                case BRIGHT_BLUE   -> "\u001B[94m";
+                case BRIGHT_PURPLE -> "\u001B[95m";
+                case BRIGHT_CYAN   -> "\u001B[96m";
+                case BRIGHT_WHITE  -> "\u001B[97m";
+            };
+        }
     }
-    private String colorIfDebug(String text, String color) {
+
+    private String colorIfDebug(String text, Color color) {
         return debugMode ? color + text + Color.RESET : text;
     }
 
-    private String emit(String opcode, String... operands) {
+    private String emit(String opcode, Object... operands) {
         StringBuilder line = new StringBuilder(opcode);
-        for (String op : operands) {
-            line.append(" ").append(op);
+        for (Object op : operands) {
+            line.append(" ").append(op.toString());
         }
         return line.toString();
 
@@ -45,9 +69,9 @@ public class InstructionEmitter {
      * solely for FunctionDefinition, so when calling only the registers
      * of that function is stored on the stack and then reverted back.
      */
-    private void storeUsedReg(CodeObject code, String... regs) {
-        for (String r : regs) {
-            if(!r.equals("R0") && !r.equals("SP") && !r.equals("FP") )
+    private void storeUsedReg(CodeObject code, Register... regs) {
+        for (Register r : regs) {
+            if(r.purpose != Register.Purpose.OP)
                 code.addUsedRegister(r);
         }
     }
@@ -56,7 +80,7 @@ public class InstructionEmitter {
         return colorIfDebug(label, Color.YELLOW) + ":";
     }
 
-    public CodeObject emitComment(String comment, String color){
+    public CodeObject emitComment(String comment, Color color){
         CodeObject code =  new CodeObject();
         if(debugMode)
             code.addCode(color + "    " + "//" + comment + "//" + Color.RESET);
@@ -70,7 +94,7 @@ public class InstructionEmitter {
      * @param imm immediate that comes as an int value
      * @param destReg destination register
      */
-    public CodeObject MSI(int imm, String destReg){
+    public CodeObject MSI(int imm, Register destReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, destReg);
         code.addCode(this.emit("MSI", String.valueOf(imm), destReg));
@@ -82,7 +106,7 @@ public class InstructionEmitter {
      * this method generates three line of code. editing adrReg (sp in our case) to add with offset and after storing
      * revert it to the original value.
      */
-    public CodeObject SW(String valueReg, int offset, String adrReg){
+    public CodeObject SW(Register valueReg, int offset, Register adrReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg, adrReg);
         code.addCode(ADI(offset, adrReg));
@@ -95,7 +119,7 @@ public class InstructionEmitter {
      * this method generates three line of code. editing adrReg (sp in our case) to add with offset and after storing
      * revert it to the original value.
      */
-    public CodeObject LW(String adrReg, int offset, String destReg){
+    public CodeObject LW(Register adrReg, int offset, Register destReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, adrReg, destReg);
         code.addCode(ADI(offset, adrReg));
@@ -105,28 +129,28 @@ public class InstructionEmitter {
     }
 
 
-    public CodeObject STR(String valueReg, String adrReg){
+    public CodeObject STR(Register valueReg, Register adrReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg, adrReg);
         code.addCode(emit("STR", valueReg, adrReg));
         return code;
     }
 
-    public CodeObject LDR(String adrReg, String destReg){
+    public CodeObject LDR(Register adrReg, Register destReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, adrReg, destReg);
         code.addCode(emit("LDR", adrReg, destReg));
         return code;
     }
 
-    public CodeObject ADR(String valueReg2, String valueReg1, String destReg){
+    public CodeObject ADR(Register valueReg2, Register valueReg1, Register destReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
         code.addCode(emit("ADR", valueReg2, valueReg1, destReg));
         return code;
     }
 
-    public CodeObject ADI(int imm, String destReg){
+    public CodeObject ADI(int imm, Register destReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, destReg);
         code.addCode(emit("ADI", String.valueOf(imm) , destReg));
@@ -134,7 +158,7 @@ public class InstructionEmitter {
     }
 
 
-    public CodeObject CMR(String reg1, String reg2){
+    public CodeObject CMR(Register reg1, Register reg2){
         CodeObject code = new CodeObject();
         storeUsedReg(code, reg1, reg2);
         code.addCode(emit("CMR", reg1, reg2));
@@ -142,7 +166,7 @@ public class InstructionEmitter {
     }
 
 
-    public CodeObject CMI(int imm, String reg2){
+    public CodeObject CMI(int imm, Register reg2){
         CodeObject code = new CodeObject();
         storeUsedReg(code, reg2);
         code.addCode(emit("CMI", String.valueOf(imm), reg2));
@@ -155,7 +179,7 @@ public class InstructionEmitter {
     /**
      * JMP jumps without storing the return line
      */
-    public CodeObject JMR(String jmpReg){
+    public CodeObject JMR(Register jmpReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, jmpReg);
         code.addCode(emit("JMR", "0", jmpReg, "R0"));
@@ -165,7 +189,7 @@ public class InstructionEmitter {
     /**
      * JMPS jump and store the return value
      */
-    public CodeObject JMRS(String jmpReg, String storeReturnReg){
+    public CodeObject JMRS(Register jmpReg, Register storeReturnReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, jmpReg, storeReturnReg);
         code.addCode(emit("JMR", "1", jmpReg, storeReturnReg));
@@ -179,55 +203,55 @@ public class InstructionEmitter {
         return this.emit("JMP", colorIfDebug(label, Color.YELLOW));
     }
 
-    public  CodeObject JMPS(String label, String returnReg) {
+    public  CodeObject JMPS(String label, Register returnReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, returnReg);
         code.addCode(emit("JMPS", colorIfDebug(label, Color.YELLOW), returnReg));
         return code;
     }
-    public CodeObject SUR(String valueReg2, String valueReg1, String destReg) {
+    public CodeObject SUR(Register valueReg2, Register valueReg1, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
         code.addCode(emit("SUR", valueReg2, valueReg1, destReg));
         return code;
     }
 
-    public CodeObject ANR(String valueReg2, String valueReg1, String destReg) {
+    public CodeObject ANR(Register valueReg2, Register valueReg1, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
         code.addCode(emit("ANR", valueReg2, valueReg1, destReg));
         return code;
     }
 
-    public CodeObject ANI(int imm, String destReg) {
+    public CodeObject ANI(int imm, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, destReg);
         code.addCode(emit("ANI", String.valueOf(imm), destReg));
         return code;
     }
 
-    public CodeObject MUL(String valueReg2, String valueReg1, String destReg) {
+    public CodeObject MUL(Register valueReg2, Register valueReg1, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
         code.addCode(emit("MUL", valueReg2, valueReg1, destReg));
         return code;
     }
 
-    public CodeObject DIV(String valueReg2, String valueReg1, String destReg) {
+    public CodeObject DIV(Register valueReg2, Register valueReg1, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
         code.addCode(emit("DIV", valueReg2, valueReg1, destReg));
         return code;
     }
 
-    public CodeObject SAR(String valueReg2, String valueReg1, String destReg) {
+    public CodeObject SAR(Register valueReg2, Register valueReg1, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
         code.addCode(emit("SAR", valueReg2, valueReg1, destReg));
         return code;
     }
 
-    public CodeObject NTR(String valueReg, String destReg) {
+    public CodeObject NTR(Register valueReg, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg, destReg);
         code.addCode(emit("NTR", valueReg, destReg));
@@ -235,21 +259,21 @@ public class InstructionEmitter {
     }
 
 
-    public CodeObject NTR2(String valueReg, String destReg) {
+    public CodeObject NTR2(Register valueReg, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg, destReg);
         code.addCode(emit("NTR2", valueReg, destReg));
         return code;
     }
 
-    public CodeObject SUI(int imm, String destReg) {
+    public CodeObject SUI(int imm, Register destReg) {
         CodeObject code = new CodeObject();
         storeUsedReg(code, destReg);
         code.addCode(emit("SUI", String.valueOf(imm), destReg));
         return code;
     }
 
-    public CodeObject LDB(String destReg, String offsetReg){
+    public CodeObject LDB(Register destReg, Register offsetReg){
         CodeObject code = new CodeObject();
         storeUsedReg(code, destReg, offsetReg);
         code.addCode(emit("LDB", destReg, offsetReg));
