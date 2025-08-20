@@ -6,6 +6,11 @@ public class Register {
     private boolean isLock = false;
     private boolean isFree = true;
     private String varName;
+
+    public int getId() {
+        return id;
+    }
+
     public enum Purpose {
         ZR, FP, SP, RA, RT, OP
     }
