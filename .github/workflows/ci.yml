@@ -85,9 +85,8 @@ jobs:
             fi
           
             # Compare generated output with expected output
-            if diff --no-color -B -w \
-              <(sed 's/#.*$//' "$out_file" | grep -v '^[[:space:]]*$') \
-              <(sed 's/#.*$//' "$expected_file" | grep -v '^[[:space:]]*$'); then
+            if diff -w -B <(grep -v '^#' "$out_file" | sed 's/\x1B\[[0-9;]*[mK]//g') \
+              <(grep -v '^#' "$expected_file" | sed 's/\x1B\[[0-9;]*[mK]//g') > /dev/null; then
               echo "✅ PASS: $rel_path"
             else
               echo "❌ FAIL: $rel_path - Output differs from expected"
