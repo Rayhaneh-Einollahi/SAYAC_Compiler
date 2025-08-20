@@ -1,4 +1,3 @@
-### TODO: USE r14 for Handling big immediate value
 def split_imm16(value: int):
 
     value &= 0xFFFF

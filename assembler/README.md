@@ -31,6 +31,8 @@ This Python script converts SAYAC assembly code into its corresponding binary re
 | **`BRR`** | `BRR FLAG LABEL1`   | Jumps to `LABEL1` if the R15 flag bits equals FLAG. FLAG can be compare symbols like ==, <=,...                |
 | **`STI`** | `STI VALREG ADRIMM` | Stores the value of `VALREG` to memory address `ADRIMM` which is an immediate                                  |
 | **`LDI`** | `LDI DESREG ADRIMM` | Loads the value memory address `ADRIMM` to `DESREG`                                                            |
+| **`MSI`** | `MSI IMM DESREG`    | if imm ∉ [-128,127], adds `MHI` to store upper immediate too                                                   |
+| **`CMI`** | `CMI IMM DESREG`    | if imm ∉ [-16,15], uses a register and replaces CMI with CMR                                                   |
 
 ---
 
