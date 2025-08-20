@@ -1,8 +1,6 @@
 package main.codeGenerator;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class MemoryManager {
     private static final int DATA_REGION_START = 0x7000;
@@ -122,32 +120,36 @@ public class MemoryManager {
         frameOffset = scopesBase;
     }
 
-    public void printState() {
-        System.out.println("\nMemory State:");
-        System.out.println("-------------");
+    public List<String> getState() {
+        List<String> lines = new ArrayList<>();
+        lines.add("Memory State:");
+        lines.add("-------------");
 
         // Globals
-        System.out.println("Globals (absolute addresses):");
+        lines.add("Globals (absolute addresses):");
         if (globalAddresses.isEmpty()) {
-            System.out.println("  (none)");
+            lines.add("  (none)");
         } else {
             for (var e : globalAddresses.entrySet()) {
-                System.out.printf("  %-15s -> 0x%04X (%d)%n",
+                String line = String.format("  %-15s -> 0x%04X (%d)",
                         e.getKey(), e.getValue(), e.getValue());
+                lines.add(line);
             }
         }
 
-        // Locals
-        System.out.println("\nLocals (FP-relative offsets):");
+        lines.add("Locals (FP-relative offsets):");
         if (localOffsets == null || localOffsets.isEmpty()) {
-            System.out.println("  (none)");
+            lines.add("  (none)");
         } else {
             for (var e : localOffsets.entrySet()) {
-                System.out.printf("  %-15s -> %d%n", e.getKey(), e.getValue());
+                String line = String.format("  %-15s -> %d", e.getKey(), e.getValue());
+                lines.add(line);
             }
         }
 
-        System.out.println("\nCurrent frameOffset: " + frameOffset);
+        lines.add("Current frameOffset: " + frameOffset);
+
+        return lines;
     }
 
 

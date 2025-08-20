@@ -147,15 +147,20 @@ public class RegisterManager {
 
 
 
-    public void printState() {
-        System.out.println("\nRegister State:");
-        System.out.println("---------------");
+    public List<String> getState() {
+        List<String> lines = new ArrayList<>();
+        lines.add("Register State:");
+        lines.add("---------------");
 
         for (Register reg : allOpRegisters) {
-            String var = reg.getVarName(); if(var == null) var = "-";
+            String var = reg.getVarName();
+            if (var == null) var = "-";
             String state = reg.isLock() ? "lock" : !reg.isFree() ? "free" : "used";
-            System.out.printf("%-4s -> %-10s %s%n", reg, var, state);
+            String line = String.format("%-4s -> %-10s %s", reg, var, state);
+            lines.add(line);
         }
+
+        return lines;
     }
 
 

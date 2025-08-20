@@ -1,11 +1,14 @@
 package main.codeGenerator;
 
+import java.util.List;
+
 public class InstructionEmitter {
     private final boolean debugMode = true;
     public enum Color {
         RESET,
         // Regular colors
         BLACK ,
+        GRAY,
         RED   ,
         GREEN ,
         YELLOW,
@@ -29,6 +32,7 @@ public class InstructionEmitter {
             return switch (this) {
                 case RESET   -> "\u001B[0m";
                 case BLACK   -> "\u001B[30m";
+                case GRAY    -> "\u001B[38;5;247m";
                 case RED     -> "\u001B[31m";
                 case GREEN   -> "\u001B[32m";
                 case YELLOW  -> "\u001B[33m";
@@ -83,7 +87,17 @@ public class InstructionEmitter {
     public CodeObject emitComment(String comment, Color color){
         CodeObject code =  new CodeObject();
         if(debugMode)
-            code.addCode(color + "    " + "//" + comment + "//" + Color.RESET);
+            code.addCode(  "#     " + color + comment + Color.RESET);
+        return code;
+    }
+
+    public CodeObject emitComments(List<String> comments, Color color){
+        CodeObject code =  new CodeObject();
+        code.addCode("");
+        if(debugMode) {
+            for (String comment : comments)
+                code.addCode(emitComment(comment, color));
+        }
         return code;
     }
 
