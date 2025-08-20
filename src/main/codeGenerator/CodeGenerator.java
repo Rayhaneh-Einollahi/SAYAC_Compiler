@@ -626,7 +626,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String address = null;
         boolean need_store = false;
-        if((unaryExpr.getOperand() instanceof ArrayExpr) || (unaryExpr.getOperand() instanceof Identifier && ((Identifier) unaryExpr.getOperand()).isGlobal())) {
+        if(unaryExpr.getOperand() instanceof Identifier && ((Identifier) unaryExpr.getOperand()).isGlobal()) {
+            CodeObject globalAddress = LoadGlobalAddress((Identifier) unaryExpr.getOperand());
+            need_store = true;
+            address = globalAddress.getAddress();
+        }
+        else if((unaryExpr.getOperand() instanceof ArrayExpr)) {
             need_store = true;
             address = operandCode.getAddress();
         }
@@ -777,7 +782,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String address = null;
         boolean need_store = false;
-        if((binaryExpr.getFirstOperand() instanceof ArrayExpr) || (binaryExpr.getFirstOperand() instanceof Identifier && ((Identifier) binaryExpr.getFirstOperand()).isGlobal())) {
+        if(binaryExpr.getFirstOperand() instanceof Identifier && ((Identifier) binaryExpr.getFirstOperand()).isGlobal()) {
+            CodeObject globalAddress = LoadGlobalAddress((Identifier) binaryExpr.getFirstOperand());
+            need_store = true;
+            address = globalAddress.getAddress();
+        }
+        else if((binaryExpr.getFirstOperand() instanceof ArrayExpr)) {
             need_store = true;
             address = operand1Code.getAddress();
         }
@@ -1044,13 +1054,15 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(Identifier identifier) {
         CodeObject code = new CodeObject();
         code.setResultVar(identifier.getSpecialName());
-        if (identifier.isGlobal()) {
-            String adrVar = nameManager.newTmpVarName();
-            Register adrReg = getRegisterForWrite(code, adrVar);
-            code.addCode(emitter.MSI(memoryManager.getGlobalAddress(identifier.getSpecialName()), adrReg));
-            code.setAddress(adrVar);
+        return code;
+    }
 
-        }
+    public CodeObject LoadGlobalAddress(Identifier identifier) {
+        CodeObject code = new CodeObject();
+        String adrVar = nameManager.newTmpVarName();
+        Register adrReg = getRegisterForWrite(code, adrVar);
+        code.addCode(emitter.MSI(memoryManager.getGlobalAddress(identifier.getSpecialName()), adrReg));
+        code.setAddress(adrVar);
         return code;
     }
 
