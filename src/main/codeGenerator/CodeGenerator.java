@@ -276,7 +276,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.LDR(FP, FP));
         code.addCode(emitter.JMR(RA));
 
-        this.memoryManager.printState();
+//        this.memoryManager.printState();
         return code;
     }
 
