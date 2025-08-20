@@ -94,7 +94,6 @@ public class RegisterManager {
             for(String var: varNames){
                 Register reg = regs.removeFirst();
                 assignRegister(reg, var);
-                incrementUseCount(var);
             }
             return firstReg;
         }
@@ -118,7 +117,6 @@ public class RegisterManager {
         if (!memoryManager.hasVariable(needLoadVar)) {
             throw new RuntimeException("Variable not spilled: " + needLoadVar);
         }
-        incrementUseCount(needLoadVar);
 
         Register reg = null;
         if(memoryManager.isLocal(needLoadVar)){
@@ -155,7 +153,7 @@ public class RegisterManager {
         for (Register reg : allOpRegisters) {
             String var = reg.getVarName();
             if (var == null) var = "-";
-            String state = reg.isLock() ? "lock" : !reg.isFree() ? "free" : "used";
+            String state = reg.isLock() ? "lock" : reg.isFree() ? "free" : "used";
             String line = String.format("%-4s -> %-10s %s", reg, var, state);
             lines.add(line);
         }
@@ -224,7 +222,6 @@ public class RegisterManager {
             if(varsToAssign!=null) {
                 String varName = varsToAssign.get(i);
                 assignRegister(spillReg, varName);
-                incrementUseCount(varName);
             }
         }
 
@@ -238,6 +235,7 @@ public class RegisterManager {
         if(prevReg!=null){
             freeRegister(varName);
         }
+        incrementUseCount(varName);
         reg.setVarName(varName);
         varToReg.put(varName, reg);
         reg.use();
