@@ -1,6 +1,7 @@
 MSI 5 R1
 MSI 28672 R2
 STR R1 R2
+MSI 28672 SP
 JMP func_main ZR
 func_main:
 STR FP SP

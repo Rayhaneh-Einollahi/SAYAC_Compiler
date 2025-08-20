@@ -104,7 +104,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
             if(ed instanceof Declaration)
                 code.addCode(ed.accept(this));
         }
+
+        code.addCode(emitter.MSI(memoryManager.getSTACK_POINTER_BEGIN(), SP));
         code.addCode(emitter.JMP(labelManager.generateFunctionLabel("main"), ZR));
+
         for (ExternalDeclaration ed : program.getExternalDeclarations()){
             if(ed instanceof FunctionDefinition)
                 code.addCode(ed.accept(this));
@@ -175,27 +178,24 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         //Todo: handle the cases outExpr is not identifier
         String array_name = ((Identifier)arrayExpr.getOutside()).getSpecialName();
-        String tmpVar = nameManager.newTmpVarName();
-        Register tmpReg = getRegisterForWrite(code, tmpVar);
+        String adrVar = nameManager.newTmpVarName();
+        Register adrReg = getRegisterForWrite(code, adrVar);
 
-        code.addCode(emitter.MSI(memoryManager.getLocalOffset(array_name), tmpReg));
+        code.addCode(emitter.MSI(memoryManager.getLocalOffset(array_name), adrReg));
         code.addCode(emitter.ADR(regInside, regInside, regInside));
-        code.addCode(emitter.SUR(regInside, tmpReg, tmpReg));
-        code.addCode(emitter.ADR(tmpReg, FP, tmpReg));
-        code.setAddress(tmpVar);
+        code.addCode(emitter.SUR(regInside, adrReg, adrReg));
+        code.addCode(emitter.ADR(adrReg, FP, adrReg));
 
-        tmpReg.lock();
+        adrReg.lock();
         regInside.unlock();
 
-        String addressVarName = nameManager.newTmpVarName();
-        Register addressVarReg = getRegisterForWrite(code, addressVarName);
-        code.addCode(emitter.ADR(ZR, tmpReg, addressVarReg));
-        code.addCode(emitter.LDR(tmpReg, tmpReg));
-        code.setResultVar(tmpVar);
-        code.setAddress(addressVarName);
+        String valueName = nameManager.newTmpVarName();
+        Register valueReg = getRegisterForWrite(code, valueName);
+        code.addCode(emitter.LDR(adrReg, valueReg));
+        code.setResultVar(valueName);
+        code.setAddress(adrVar);
 
-        tmpReg.unlock();
-        registerManager.freeRegister(tmpVar);
+        adrReg.unlock();
 
         return code;
     }
@@ -615,7 +615,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
             case UnaryOperator.POST_INC:
                 destVar = nameManager.newTmpVarName();
-                destReg = this.getRegisterForWrite(code, destVar);
+                destReg = this.getRegisterForWrite(code, destVar); //ToDo: never freed
                 destReg.lock();
 
                 code.addCode(emitter.ADR(ZR, operandReg, destReg));
