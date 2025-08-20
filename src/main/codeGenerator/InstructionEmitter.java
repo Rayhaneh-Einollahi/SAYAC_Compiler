@@ -93,8 +93,8 @@ public class InstructionEmitter {
 
     public CodeObject emitComments(List<String> comments, Color color){
         CodeObject code =  new CodeObject();
-        code.addCode("");
         if(debugMode) {
+            code.addCode("");
             for (String comment : comments)
                 code.addCode(emitComment(comment, color));
         }
