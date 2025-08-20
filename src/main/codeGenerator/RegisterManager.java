@@ -92,7 +92,8 @@ public class RegisterManager {
         if (regs != null) {
             Register firstReg = regs.getFirst();
             for(String var: varNames){
-                assignRegister(firstReg, var);
+                Register reg = regs.removeFirst();
+                assignRegister(reg, var);
                 incrementUseCount(var);
             }
             return firstReg;
