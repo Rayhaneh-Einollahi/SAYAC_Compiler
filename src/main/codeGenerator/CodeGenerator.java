@@ -1,5 +1,6 @@
 package main.codeGenerator;
 
+import main.ast.nodes.Program;
 import main.ast.nodes.Statement.IterationStatement.*;
 import main.ast.nodes.Statement.JumpStatement.*;
 import main.ast.nodes.Statement.SelectionStatement;
@@ -96,6 +97,19 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 case LOAD_G -> code.addCode(emitter.LDI(action.address, action.register));
             }
         }
+    }
+    public CodeObject visit(Program program) {
+        CodeObject code = new CodeObject();
+        for (ExternalDeclaration ed : program.getExternalDeclarations()){
+            if(ed instanceof Declaration)
+                code.addCode(ed.accept(this));
+        }
+        code.addCode(emitter.JMP(labelManager.generateFunctionLabel("main"), ZR));
+        for (ExternalDeclaration ed : program.getExternalDeclarations()){
+            if(ed instanceof FunctionDefinition)
+                code.addCode(ed.accept(this));
+        }
+        return code;
     }
 
     public CodeObject visit(Declaration declaration) {
