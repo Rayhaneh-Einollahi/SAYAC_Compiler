@@ -1,6 +1,7 @@
 package main.codeGenerator;
 
 public class Register {
+    public static boolean AliasMode = true;
     public int id;
     public final Purpose purpose;
     private boolean isLock = false;
@@ -36,7 +37,7 @@ public class Register {
 
     @Override
     public String toString() {
-        if(purpose != Purpose.OP)
+        if(AliasMode && purpose != Purpose.OP)
             return purpose.toString();
         return "R" + id;
     }

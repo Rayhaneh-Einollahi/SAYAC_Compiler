@@ -3,7 +3,7 @@ package main.codeGenerator;
 import java.util.List;
 
 public class InstructionEmitter {
-    private final boolean debugMode = true;
+    public static boolean debugMode = true;
     public enum Color {
         RESET,
         // Regular colors

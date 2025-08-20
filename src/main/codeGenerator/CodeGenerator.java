@@ -14,6 +14,9 @@ import main.visitor.Visitor;
 import java.util.*;
 
 public class CodeGenerator extends Visitor<CodeObject> {
+    private final static boolean DEBUG_MODE = true;
+    private final static boolean ALIAS_REGISTER_NAMES = true;
+
     private boolean insideFunction = false;
     public final RegisterManager registerManager;
     public final MemoryManager memoryManager;
@@ -41,6 +44,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
         RT = registerManager.RT;
         FP = registerManager.FP;
         SP = registerManager.SP;
+
+        InstructionEmitter.debugMode = DEBUG_MODE;
+        Register.AliasMode = ALIAS_REGISTER_NAMES;
     }
 
     @Override
