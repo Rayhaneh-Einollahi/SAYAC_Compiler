@@ -1,7 +1,7 @@
 package main.codeGenerator;
 
 public class InstructionEmitter {
-    private final boolean debugMode = false;
+    private final boolean debugMode = true;
     public enum Color {
         RESET,
         // Regular colors

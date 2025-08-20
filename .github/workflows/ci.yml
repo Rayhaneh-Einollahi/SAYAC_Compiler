@@ -85,7 +85,7 @@ jobs:
             fi
           
             # Compare generated output with expected output
-            if diff -w -B "$out_file" "$expected_file" > /dev/null; then
+            if diff --no-color -w -B <(grep -v '^#' "$out_file") <(grep -v '^#' "$expected_file") > /dev/null; then
               echo "✅ PASS: $rel_path"
             else
               echo "❌ FAIL: $rel_path - Output differs from expected"
