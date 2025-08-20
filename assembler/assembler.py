@@ -1,4 +1,12 @@
 ### TODO: USE r14 for Handling big immediate value
+def split_imm16(value: int):
+
+    value &= 0xFFFF
+    
+    low = value & 0xFF
+    high = (value >> 8) & 0xFF
+    return low, high
+
 def reg(val):
     return format(int(val[1:]), '04b')
 
@@ -147,6 +155,7 @@ def expand_label_macros(lines, labels):
             new_lines.append(line)
             continue
         op = parts[0].upper()
+
         if op == 'JMP':
             target = parts[1]
             retReg = parts[2]
@@ -164,6 +173,7 @@ def expand_label_macros(lines, labels):
                     f'PLACE_HOLDER',
                     f'JMR {target} {retReg}'
                 ])
+
         elif op == 'BRR' and parts[2] in labels:
             target = parts[2]
             approx_offset = labels[target] - pc + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc] + brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2
@@ -194,19 +204,19 @@ def replace_placeholder(lines, labels):
         op = parts[0].upper()
         if op == 'JMI' and parts[1] in labels:
             target = parts[1]
-            offset = labels[target] - pc
             desReg = parts[2]
-
+            offset = labels[target] - pc
             lines[i] = f'JMI {offset} {desReg}'
+
 
         elif op == 'JMR' and parts[1] in labels:
             target = parts[1]
             desReg = parts[2]
             offset = labels[target] - pc
-            lo = offset & 0x00FF
-            hi = (offset >> 8) & 0x00FF
+            lo, hi = split_imm16(offset)
             
-            if i>=2 and lines[i-1] == 'PLACE_HOLDER' and lines[i-2] == 'PLACE_HOLDER':
+            if i>=2 and lines[i-1] == 'PLACE_HOLDER' \
+                    and lines[i-2] == 'PLACE_HOLDER':
                 lines[i-1:i+1] = [
                     f'MSI {lo} r14',
                     f'JMR 1 r14 {desReg}'
@@ -222,9 +232,9 @@ def replace_placeholder(lines, labels):
             flag = parts[1]
             target = parts[2]
             offset = labels[target] - pc
-            lo = offset & 0x00FF
-            hi = (offset >> 8) & 0x00FF
-            if i>=2 and lines[i-1] == 'PLACE_HOLDER' and lines[i-2] == 'PLACE_HOLDER':
+            lo, hi = split_imm16(offset)
+            if i>=2 and lines[i-1] == 'PLACE_HOLDER' \
+                    and lines[i-2] == 'PLACE_HOLDER':
                 lines[i-2:i+1] = [
                     f'MSI {lo} r14',
                     f'BRR {flag} r14'
@@ -240,69 +250,64 @@ def replace_placeholder(lines, labels):
     return lines
 
 def expand_other_macros(lines):
-    pc = 0
+    def expand_ldi(parts):
+        addImm, desReg = int(parts[1]), parts[2]
+        return [f"MSI {addImm} r14", f"LDR r14 {desReg}"]
+
+    def expand_sti(parts):
+        valueReg, addImm = parts[1], parts[2]
+        return [f"MSI {addImm} r14", f"STR {valueReg} r14"]
+
+    handlers = {
+        "LDI": expand_ldi,
+        "STI": expand_sti,
+    }
+
     new_lines = []
-    for i in range(len(lines)):
-        line = lines[i].strip()
-        parts = line.split()
+    for line in lines:
+        parts = line.strip().split()
         if not parts:
             continue
         op = parts[0].upper()
-        if op == 'LDI':
-            addImm = int(parts[1])
-            desReg = parts[2]
-            new_lines.extend([
-                f'MSI {addImm} r14',
-                f'LDR r14 {desReg}'
-            ])
-        elif op == 'STI':
-            valueReg = parts[1]
-            addImm = parts[2]
-            new_lines.extend([
-                f'MSI {addImm} r14',
-                f'STR {valueReg} r14'
-            ])
+        if op in handlers:
+            new_lines.extend(handlers[op](parts))
         else:
             new_lines.append(line)
-        pc += 1
     return new_lines
+
 
 def expand_large_imm(lines):
     new_lines = []
-    for i in range(len(lines)):
-        line = lines[i].strip()
-        parts = line.split()
+
+    for line in lines:
+        parts = line.strip().split()
+        if not parts:
+            continue
+
         op = parts[0].upper()
-        if op == "MSI" and not -128<=int(parts[1])<= 127:
-            imm = int(parts[1])
-            reg = parts[2]
-            lo = imm & 0x00FF
-            hi = (imm >> 8) & 0x00FF
-            new_lines.extend([
-                f'MSI {lo} {reg}',
-                f'MHI {hi} {reg}',
-            ])
-        elif op == "CMI" and not -16<=int(parts[1])<= 16:
-            imm = int(parts[1])
-            reg = parts[2]
+        imm = int(parts[1]) if len(parts) > 1 else None
+        reg = parts[2] if len(parts) > 2 else None
 
-            lo = imm & 0x00FF
-            hi = (imm >> 8) & 0x00FF
+        if op == "MSI":
+            if -128 <= imm <= 127:
+                new_lines.append(line)
+            else:
+                lo, hi = split_imm16(imm)
+                new_lines += [f"MSI {lo} {reg}", f"MHI {hi} {reg}"]
 
-            new_lines.append(
-                f'MSI {lo} r14'
-            )
+        elif op == "CMI":
+            if -16 <= imm <= 15:
+                new_lines.append(line)
+            else:
+                lo, hi = split_imm16(imm)
+                new_lines.append(f"MSI {lo} r14")
+                if not -128 <= imm <= 127:
+                    new_lines.append(f"MHI {hi} r14")
+                new_lines.append(f"CMR r14 {reg}")
 
-            if not -128<= imm<= 127:
-                new_lines.append(
-                    f'MHI {hi} r14'
-                )
-
-            new_lines.append(
-                f'CMR r14 {reg}'
-            )
         else:
             new_lines.append(line)
+
     return new_lines
 
 def remove_comments(lines):
@@ -321,13 +326,12 @@ def assemble_program(lines):
     expanded_lines = expand_label_macros(lines, labels)
     new_labels, new_lines = collect_labels(expanded_lines)
     no_label_lines = replace_placeholder(new_lines, new_labels)
-    # print_lines(no_label_lines)
     binaries = []
     for line in no_label_lines:
         result = assemble_sayac(line)
         if result:
             binaries.append(result)
-    return binaries
+    return no_label_lines, binaries
 
 def print_lines(lines):
     for l in lines:
@@ -347,5 +351,6 @@ for filename in sys.argv[1:]:
 
 
 for i, program in enumerate(test_programs):
-    binary = assemble_program(program)
+    asm,binary = assemble_program(program)
+    print_lines(asm)
     print_lines(binary)
