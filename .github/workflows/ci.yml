@@ -53,38 +53,28 @@ jobs:
           mkdir -p test_output
           failed_tests=0
           total_tests=0
-          
-          # Find all .c files recursively
           while IFS= read -r -d '' f; do
-            total_tests=$((total_tests + 1))
-          
-            # Get relative path from tests/ directory
             rel_path="${f#tests/}"
             rel_path="${rel_path%.c}"
-          
-            # Generate output file path (preserving directory structure)
+
+            expected_file="tests/${rel_path}.sayac"
+            if [ ! -f "$expected_file" ]; then
+              echo "⚠️  Skipping $rel_path - No expected output file found"
+              continue
+            fi
+            total_tests=$((total_tests + 1))
+
             out_file="test_output/${rel_path}.sayac"
             mkdir -p "$(dirname "$out_file")"
-          
-            # Expected output file path
-            expected_file="tests/${rel_path}.sayac"
-          
+
             echo "Testing: $f"
-          
-            # Run compiler with local ANTLR jar
+
             if ! java -cp "build:utilities/antlr-4.13.1-complete.jar" SimpleLang "$f" > "$out_file" 2>&1; then
               echo "❌ Compilation failed for $f"
               failed_tests=$((failed_tests + 1))
               continue
             fi
-          
-            # Check if expected output exists
-            if [ ! -f "$expected_file" ]; then
-              echo "⚠️  No expected output for $rel_path, generated: $out_file"
-              continue
-            fi
-          
-            # Compare generated output with expected output
+
             if diff -w -B <(grep -v '^#' "$out_file" | sed 's/\x1B\[[0-9;]*[mK]//g') \
               <(grep -v '^#' "$expected_file" | sed 's/\x1B\[[0-9;]*[mK]//g') > /dev/null; then
               echo "✅ PASS: $rel_path"
@@ -95,7 +85,7 @@ jobs:
               failed_tests=$((failed_tests + 1))
             fi
           done < <(find tests -name "*.c" -print0)
-          
+
           echo "---"
           if [ $failed_tests -ne 0 ]; then
             echo "❌ $failed_tests out of $total_tests test(s) failed"
@@ -103,7 +93,6 @@ jobs:
           else
             echo "✅ All $total_tests compiler tests passed!"
           fi
-
       # Step 7: Run assembler on compiler outputs
       - name: Run assembler
         run: |

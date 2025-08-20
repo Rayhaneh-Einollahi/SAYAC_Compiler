@@ -44,7 +44,6 @@ public class SimpleLang {
         LocalOffsetAssigner localOffsetAssigner = new LocalOffsetAssigner(memoryManager);
         localOffsetAssigner.visit(program);
         CodeGenerator codeGenerator = new CodeGenerator(memoryManager);
-        System.out.println("# hello there!");
         System.out.print(codeGenerator.visit(program));
     }
 }
