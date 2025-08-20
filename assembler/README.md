@@ -8,7 +8,7 @@ This Python script converts SAYAC assembly code into its corresponding binary re
 ## 📌 Important Notes
 
 - **R14 Register**:  
-  The `R14` register in the Register File is reserved for storing label addresses. **Do not use it in your compiled assembly code unless no labels are used!**  
+  The `R14` register in the Register File is reserved for storing label addresses. **Do not use it in your compiled assembly code unless no macro instructions are used!**  
 
 - **Labels**:  
   Labels can be used in consecutive lines, all pointing to a single line. Example:  
@@ -18,14 +18,19 @@ This Python script converts SAYAC assembly code into its corresponding binary re
       LDR R1, R2  ; Both LABEL1 and LABEL2 point to this line
   ```
 
+- **Comments:**:  
+  One-line Comments supported using ``#`` character across the file
+
 ---
 
 ## 🛠 Macro Instructions
 
-| Macro | Usage | Description |
-|-------|-------|-------------|
-| **`JMP`** | `JMP LABEL1` | Unconditionally jumps to `LABEL1`. |
-| **`BRR`** | `BRR FLAG LABEL1` | Jumps to `LABEL1` if the R15 flag bits equals FLAG. |
+| Macro     | Usage               | Description                                                                                                    |
+|-----------|---------------------|----------------------------------------------------------------------------------------------------------------|
+| **`JMP`** | `JMP LABEL1 DESREG` | Unconditionally jumps to `LABEL1` and store the return address in `DESREG`. if no return address needed use R0 |
+| **`BRR`** | `BRR FLAG LABEL1`   | Jumps to `LABEL1` if the R15 flag bits equals FLAG. FLAG can be compare symbols like ==, <=,...                |
+| **`STI`** | `STI VALREG ADRIMM` | Stores the value of `VALREG` to memory address `ADRIMM` which is an immediate                                  |
+| **`LDI`** | `LDI DESREG ADRIMM` | Loads the value memory address `ADRIMM` to `DESREG`                                                            |
 
 ---
 
@@ -117,6 +122,7 @@ The assembler supports the following SAYAC instructions:
 
 5. **`collect_labels(lines)`**  
    - Scans the code for labels and tracks their addresses.
+   - Returns label addresses along with cleaned code without labels
 
 6. **`assemble_program(lines)`**  
    - The main function that processes an entire program:
@@ -125,6 +131,71 @@ The assembler supports the following SAYAC instructions:
      - Resolves labels.
      - Generates binary output.
 
+---
+
+## Macro Translations
+
+### `STI`
+
+**Usage:** `STI valueReg addImm`
+
+Expands to:
+
+```asm
+MSI addImm R14
+STR valueReg R14
+```
+
+---
+
+### `LDI`
+
+**Usage:** `LDI desReg addImm`
+
+Expands to:
+
+```asm
+MSI addImm R14
+LDR R14 desReg
+```
+
+---
+
+### `BRR`
+
+**Usage:** `BRR flag label`
+
+> **Note:** `approx_offset` is computed assuming all `JMP` and `BRR` between a `JUMP` and its `Label` expand to three lines.
+
+Expands to:
+
+```asm
+MSI lo r14
+MHI hi r14   # if approx_offset ∉ [-128,127]
+BRR flag r14
+```
+
+---
+
+### `JMP`
+
+**Usage:** `JMP label desReg`
+
+> **Note:** `approx_offset` is computed assuming all `JMP` and `BRR` between a `JUMP` and its `Label` expand to three lines.
+
+* If `-32 <= approx_offset <= 31`:
+
+```asm
+JMI offset desReg
+```
+
+* Otherwise:
+
+```asm
+MSI lo r14
+MHI hi r14   # if approx_offset ∉ [-128,127]
+JMR 1 r14 desReg
+```
 ---
 
 ## 🚀 Usage
