@@ -207,7 +207,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.addCode(emitter.STR(operand1reg, reg));
         }
         return code;
-
     }
 
     /// generate code for Function:
@@ -589,12 +588,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
         operandReg.lock();
         code.addCode(operandCode);
 
+
         String address = null;
-        boolean isArray = false;
-        if(unaryExpr.getOperand() instanceof ArrayExpr) {
-            isArray = true;
+        boolean need_store = false;
+        if((unaryExpr.getOperand() instanceof ArrayExpr) || (unaryExpr.getOperand() instanceof Identifier && ((Identifier) unaryExpr.getOperand()).isGlobal())) {
+            need_store = true;
             address = operandCode.getAddress();
         }
+
 
         String destVar;
         Register destReg;
@@ -604,13 +605,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
         switch (op) {
             case UnaryOperator.PRE_INC:
                 code.addCode(emitter.ADI(1 , operandReg));
-                code.addCode(ArrayStore(operandReg, address, isArray));
+                code.addCode(ArrayStore(operandReg, address, need_store));
                 code.setResultVar(operandVar);
                 break;
 
             case UnaryOperator.PRE_DEC:
                 code.addCode(emitter.SUI(1 , operandReg));
-                code.addCode(ArrayStore(operandReg, address, isArray));
+                code.addCode(ArrayStore(operandReg, address, need_store));
                 code.setResultVar(operandVar);
                 break;
 
@@ -621,7 +622,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
                 code.addCode(emitter.ADR(ZR, operandReg, destReg));
                 code.addCode(emitter.ADI(1 , operandReg));
-                code.addCode(ArrayStore(operandReg, address, isArray));
+                code.addCode(ArrayStore(operandReg, address, need_store));
                 destReg.unlock();
                 code.setResultVar(destVar);
                 break;
@@ -633,7 +634,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ADR(ZR, operandReg, destReg));
                 code.addCode(emitter.SUI(1 , operandReg));
 
-                code.addCode(ArrayStore(operandReg, address, isArray));
+                code.addCode(ArrayStore(operandReg, address, need_store));
                 destReg.unlock();
                 code.setResultVar(destVar);
                 break;
@@ -740,11 +741,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(operand1Code);
 
         String address = null;
-        boolean isArray = false;
-        if(binaryExpr.getFirstOperand() instanceof ArrayExpr) {
-            isArray = true;
+        boolean need_store = false;
+        if((binaryExpr.getFirstOperand() instanceof ArrayExpr) || (binaryExpr.getFirstOperand() instanceof Identifier && ((Identifier) binaryExpr.getFirstOperand()).isGlobal())) {
+            need_store = true;
             address = operand1Code.getAddress();
         }
+
 
         CodeObject operand2Code = binaryExpr.getSecondOperand().accept(this);
         code.addCode(operand2Code);
@@ -886,21 +888,21 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 } else {
                     code.addCode(emitter.ADR(ZR, operand2reg, operand1reg));
                 }
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.ANDASSIGN:{
                 code.addCode(emitter.ANR(operand1reg, operand2reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.DIVASSIGN: {
                 code.addCode(emitter.DIV(operand1reg, operand2reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
@@ -912,7 +914,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 tmpReg.lock();
                 code.addCode(emitter.NTR2(operand2reg, tmpReg));
                 code.addCode(emitter.SAR(tmpReg, operand1reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 tmpReg.unlock();
                 needFree.add(tmpVar);
                 code.setResultVar(operand1);
@@ -920,28 +922,28 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.RIGHTSHIFTASSIGN: {
                 code.addCode(emitter.SAR(operand2reg, operand1reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.MINUSASSIGN: {
                 code.addCode(emitter.SUR(operand1reg, operand2reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.PLUSASSIGN: {
                 code.addCode(emitter.ADR(operand1reg, operand2reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.STARASSIGN: {
                 code.addCode(emitter.MUL(operand2reg, operand1reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
@@ -955,7 +957,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(operand2reg, tmpReg));
                 code.addCode(emitter.ANR(tmpReg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 tmpReg.unlock();
                 code.setResultVar(operand1);
                 break;
@@ -975,7 +977,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ANR(tmp2Reg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
                 code.addCode(emitter.ANR(operand1reg, tmpReg, operand1reg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 tmpReg.unlock();
                 tmp2Reg.unlock();
                 code.setResultVar(operand1);
@@ -985,7 +987,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.MODASSIGN: {
                 code.addCode(emitter.DIV(operand1reg, operand2reg, helperReg));
-                code.addCode(ArrayStore(operand1reg, address, isArray));
+                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
@@ -1007,6 +1009,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(Identifier identifier) {
         CodeObject code = new CodeObject();
         code.setResultVar(identifier.getSpecialName());
+        if (identifier.isGlobal()) {
+            String adrVar = nameManager.newTmpVarName();
+            Register adrReg = getRegisterForWrite(code, adrVar);
+            code.addCode(emitter.MSI(memoryManager.getGlobalAddress(identifier.getSpecialName()), adrReg));
+            code.setAddress(adrVar);
+
+        }
         return code;
     }
 

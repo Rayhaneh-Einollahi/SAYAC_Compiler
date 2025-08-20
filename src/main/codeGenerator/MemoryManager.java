@@ -22,6 +22,7 @@ public class MemoryManager {
         if (globalAddresses.containsKey(varname)) return true;
         return localOffsets.containsKey(varname);
     }
+
     public boolean isGlobal(String varname){
         return globalAddresses.containsKey(varname);
     }
