@@ -24,5 +24,5 @@ int main() {
     f0();
     f1(x);
     int y = f2();
-    int z = f3(y);
+    int a = f3(y);
 }

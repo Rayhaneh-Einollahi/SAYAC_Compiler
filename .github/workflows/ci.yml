@@ -81,7 +81,9 @@ jobs:
             else
               echo "❌ FAIL: $rel_path - Output differs from expected"
               echo "Diff:"
-              diff -w -B "$expected_file" "$out_file" || true
+              diff -w -B \
+              <(grep -v '^#' "$out_file" | sed 's/\x1B\[[0-9;]*[mK]//g') \
+              <(grep -v '^#' "$expected_file" | sed 's/\x1B\[[0-9;]*[mK]//g') || true
               failed_tests=$((failed_tests + 1))
             fi
           done < <(find tests -name "*.c" -print0)
