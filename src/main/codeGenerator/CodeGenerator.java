@@ -178,7 +178,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String tmpVar = nameManager.newTmpVarName();
         Register tmpReg = getRegisterForWrite(code, tmpVar);
 
-        code.addCode(emitter.MSI(memoryManager.getLocalStart(array_name), tmpReg));
+        code.addCode(emitter.MSI(memoryManager.getLocalOffset(array_name), tmpReg));
         code.addCode(emitter.ADR(regInside, regInside, regInside));
         code.addCode(emitter.SUR(regInside, tmpReg, tmpReg));
         code.addCode(emitter.ADR(tmpReg, FP, tmpReg));

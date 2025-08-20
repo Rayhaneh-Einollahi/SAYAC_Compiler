@@ -1,8 +1,0 @@
-MSI 5 r1
-CMI 0 r1
-BRR == TRUE
-MSI 0 r2
-JMP END
-TRUE:
-MSI 1 r2
-END:

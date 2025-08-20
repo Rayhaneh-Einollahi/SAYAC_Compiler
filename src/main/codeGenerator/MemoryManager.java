@@ -9,7 +9,7 @@ public class MemoryManager {
     private static final int DATA_REGION_END = 0xDFFF;
 
     private int nextGlobalAddr = DATA_REGION_START;
-    private int frameOffset = 0;
+    private int frameOffset = -2;
 
     private final Map<String, Integer> globalAddresses = new HashMap<>();
     private Map<String, Integer> localOffsets;
@@ -18,7 +18,6 @@ public class MemoryManager {
     private Map<String, Integer> localSizes;
     private final Map<String, Map<String, Integer>> functionsLocalSizes = new HashMap<>();
     private final Map<String, Integer> globalStarts = new HashMap<>();
-    private Map<String, Integer> localStarts = new HashMap<>();
 
     public boolean hasVariable(String varname){
         if (globalAddresses.containsKey(varname)) return true;
@@ -60,21 +59,13 @@ public class MemoryManager {
             return localOffsets.get(name);
         }
         int alignedSize = align(size);
-        localStarts.put(name, frameOffset);
-        frameOffset -= alignedSize;
         localOffsets.put(name, frameOffset);
+        frameOffset -= alignedSize;
         localSizes.put(name, alignedSize);
 
         return frameOffset;
     }
 
-    public int getLocalStart(String name) {
-        if (localStarts != null) {
-            Integer sz = localStarts.get(name);
-            if (sz != null) return sz;
-        }
-        return 0;
-    }
 
     public int getLocalSize(String name) {
         if (localSizes != null) {
@@ -98,7 +89,7 @@ public class MemoryManager {
     }
 
     public void beginFunctionSetOffset(String name) {
-        frameOffset = 0;
+        frameOffset = -2;
         localOffsets = new HashMap<>();
         localSizes = new HashMap<>();
         functionsLocalOffsets.put(name, localOffsets);
@@ -111,7 +102,7 @@ public class MemoryManager {
         frameOffset = localOffsets.keySet().stream()
                 .mapToInt(k -> localOffsets.get(k) - localSizes.get(k))
                 .min()
-                .orElse(0) - 2;
+                .orElse(-2);
     }
 
     private int align(int size) {
