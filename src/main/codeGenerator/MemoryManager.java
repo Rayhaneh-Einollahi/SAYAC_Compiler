@@ -5,7 +5,7 @@ import java.util.*;
 public class MemoryManager {
     private static final int DATA_REGION_START = 0x7000;
     private static final int DATA_REGION_END = 0xDFFF;
-    private static final int STACK_POINTER_BEGIN = 0x7000;
+    private static final int STACK_POINTER_BEGIN = 0xDFFF;
 
     private int nextGlobalAddr = DATA_REGION_START;
     private int frameOffset = -2;
@@ -67,7 +67,7 @@ public class MemoryManager {
         frameOffset -= alignedSize;
         localSizes.put(name, alignedSize);
 
-        return frameOffset;
+        return frameOffset + alignedSize;
     }
 
 

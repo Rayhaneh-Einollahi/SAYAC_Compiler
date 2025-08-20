@@ -92,7 +92,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         for (RegisterAction action : actions) {
             switch (action.type) {
                 case SPILL_L -> code.addCode(emitter.SW(action.register, action.offset, FP));
-                case LOAD_L  -> code.addCode(emitter.LW(action.register, action.offset, FP));
+                case LOAD_L  -> code.addCode(emitter.LW(FP, action.offset, action.register));
                 case SPILL_G -> code.addCode(emitter.STI(action.register, action.address));
                 case LOAD_G -> code.addCode(emitter.LDI(action.address, action.register));
             }
@@ -209,30 +209,61 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return code;
     }
 
-    /// generate code for Function:
-    /// 1 - generate a label for the beginning of function definition
-    /// 2 - store the current frame-pointer to the stack
-    /// 3 - as new function is called another frame should be initialized so the fp is updated to current stack-pointer
-    /// 4 - move the sp to point to the clear cell of memory
-    /// 5 - store the used registers
-    ///
-    /// stack state during call: <p>
-    /// <pre>
-    ///     |              |
-    ///     |  ...         |
-    ///     |  locals      |
-    ///     |  old fp      | <- new fp pointing here
-    ///     |  reg 11(RA)  |
-    ///     |  ...         |
-    ///     |  reg 2       |
-    ///     |  reg 1       |
-    ///     |--------------|
-    ///     |  arg n       |
-    ///     |  ... .       |
-    ///     |  arg2        |
-    ///     |  arg1        |
-    /// </pre>
-    /// @param functionDefinition : function definition node
+    /** generate code for Function:<p>
+     * 1 - generate a label for the beginning of function definition<p>
+     * 2 - store the current frame-pointer to the stack <p>
+     * 3 - as new function is called another frame should be initialized so the fp is updated to current stack-pointer <p>
+     * 4 - move the sp to point to the clear cell of memory <p>
+     * 5 - store the used registers <p>
+     *
+     * Function Code Generation: Two-Pass Approach <p>
+     *
+     * Problem Overview:
+     * When generating code for function definitions, we face a circular dependency:
+     * 1. Body code generation needs to know function argument offsets to properly access them
+     * 2. Argument offset calculation needs to know which registers will be used in the function body
+     *    to determine the correct stack layout
+     *
+     * Solution: Two-Pass Code Generation
+     * We solve this by performing two passes over the function body:
+     *
+     * First Pass: Analysis
+     * - Generate temporary body code only to discover used registers
+     * - This pass happens before setting argument offsets
+     * - The generated code from this pass is discarded (only register usage is retained)
+     *
+     * Second Pass: Actual Code Generation
+     * - Set argument offsets using the register information from the first pass
+     * - Generate the actual body code with proper argument access
+     * - This code is included in the final output
+     *
+     * Stack Layout After Prologue:
+     * <pre>
+     * |              |
+     * |  ...         |
+     * |  locals      |
+     * |  old fp      | ← new FP points here
+     * |  reg 11(RA)  |
+     * |  ...         |
+     * |  reg 2       |
+     * |  reg 1       |
+     * |--------------|
+     * |  arg n       | ← FP + (saved_regs + 1   ) * 2
+     * |  ...         |
+     * |  arg2        | ← FP + (saved_regs + n -1) * 2
+     * |  arg1        | ← FP + (saved_regs + n   ) * 2
+     * </pre>
+     *
+     * Key Benefits: <p>
+     * 1. Correct argument access: Body code can properly reference function arguments <p>
+     * 2. Optimal register usage: Only actually used registers are saved/restored   <p>
+     * 3. Clean stack management: Proper calculation of argument offsets relative to saved registers <p>
+     *
+     * This approach ensures the compiler has all necessary information before generating
+     * code that depends on that information.
+     *
+
+     */
     @Override
     public CodeObject visit(FunctionDefinition functionDefinition) {
         insideFunction = true;
@@ -242,12 +273,17 @@ public class CodeGenerator extends Visitor<CodeObject> {
         registerManager.clearRegisters();
         currentFunctionEndLabel = labelManager.generateFunctionReturnLabel(functionDefinition.getName());
         List<Declaration> args = functionDefinition.getArgDeclarations();
-        CodeObject bodyCode = functionDefinition.getBody().accept(this);
+
         List<Register> bodyUsedReg = new ArrayList<>();
         if(!functionDefinition.getName().equals( "main")){
+            for (Declaration arg : args)
+                memoryManager.setFunctionArgOffset(arg.getSpecialName(), 0);
+            CodeObject bodyCode = functionDefinition.getBody().accept(this);
             bodyUsedReg = bodyCode.getUsedRegisters();
             bodyUsedReg.add(RA);
+            registerManager.clearRegisters();
         }
+
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
         for (Register reg : bodyUsedReg) {
             code.addCode(emitter.STR( reg, SP));
@@ -262,7 +298,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
 
 
-        code.addCode(bodyCode);
+        code.addCode(functionDefinition.getBody().accept(this));
 
 
         code.addCode(emitter.emitLabel(currentFunctionEndLabel));
@@ -318,16 +354,17 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
         }
 
+        String tmpVar = nameManager.newTmpVarName();
+        Register tmpReg = getRegisterForWrite(code, tmpVar);
+
+        code.addCode(emitter.MSI(memoryManager.getCurrentOffset(), tmpReg));
+        code.addCode(emitter.ADR(tmpReg, FP, SP));
+
 
         for (int offset : tempOffsets) {
-            String tmpName = nameManager.newTmpVarName();
-            Register tmpReg = getRegisterForWrite(code, tmpName);
             code.addCode(emitter.LW(FP, offset, tmpReg));
-            memoryManager.allocateLocal(tmpName, 2);
             code.addCode(emitter.STR(tmpReg, SP));
             code.addCode(emitter.ADI(-2, SP));
-
-            registerManager.freeRegister(tmpName);
         }
 
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
@@ -335,8 +372,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.ADI(2 * tempOffsets.size(), SP));
 
 
-        String tmpVar = nameManager.newTmpVarName();
-        Register tmpReg = getRegisterForWrite(code, tmpVar);
         code.addCode(emitter.ADR(ZR, RT, tmpReg));
         code.setResultVar(tmpVar);
 
