@@ -274,6 +274,8 @@ def expand_other_macros(lines):
             new_lines.append(line)
     return new_lines
 
+def parse_int_safe(s: str):
+    return int(s) if s.lstrip("+-").isdigit() else None
 
 def expand_large_imm(lines):
     new_lines = []
@@ -284,7 +286,7 @@ def expand_large_imm(lines):
             continue
 
         op = parts[0].upper()
-        imm = int(parts[1]) if len(parts) > 1 else None
+        imm = parse_int_safe(parts[1]) if len(parts) > 1 else None
         reg = parts[2] if len(parts) > 2 else None
 
         if op == "MSI":
@@ -325,7 +327,7 @@ def assemble_program(lines):
     expanded_lines = expand_label_macros(lines, labels)
     new_labels, new_lines = collect_labels(expanded_lines)
     no_label_lines = replace_placeholder(new_lines, new_labels)
-    binaries = []
+    binaries = ["0000000000000000"]
     for line in no_label_lines:
         result = assemble_sayac(line)
         if result:
