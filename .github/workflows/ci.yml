@@ -1,0 +1,153 @@
+name: Compiler CI
+
+on:
+  push:
+    branches:
+      - '**'
+  pull_request:
+    branches:
+      - '**'
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Step 2: Setup Java
+      - name: Set up Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      # Step 3: Verify ANTLR jar exists
+      - name: Check ANTLR jar
+        run: |
+          if [ ! -f "utilities/antlr-4.13.1-complete.jar" ]; then
+            echo "❌ ANTLR jar not found at utilities/antlr-4.13.1-complete.jar"
+            exit 1
+          else
+            echo "✅ Found ANTLR jar: utilities/antlr-4.13.1-complete.jar"
+          fi
+
+      # Step 4: Generate parser/lexer from ANTLR grammar using local jar
+      - name: Generate parser/lexer from ANTLR grammar
+        run: |
+          mkdir -p out
+          java -jar utilities/antlr-4.13.1-complete.jar -Dlanguage=Java -o out src/main/grammar/SimpleLang.g4
+
+      # Step 5: Build the compiler with local ANTLR jar
+      - name: Build compiler
+        run: |
+          mkdir -p build
+          shopt -s globstar
+          javac -cp "utilities/antlr-4.13.1-complete.jar" -d build $(find src gen -name "*.java")
+
+      # Step 6: Run compiler tests and compare with expected output
+      - name: Run compiler and verify output
+        run: |
+          mkdir -p test_output
+          failed_tests=0
+          total_tests=0
+          while IFS= read -r -d '' f; do
+            rel_path="${f#tests/}"
+            rel_path="${rel_path%.c}"
+
+            expected_file="tests/${rel_path}.sayac"
+            if [ ! -f "$expected_file" ]; then
+              echo "⚠️  Skipping $rel_path - No expected output file found"
+              continue
+            fi
+            total_tests=$((total_tests + 1))
+
+            out_file="test_output/${rel_path}.sayac"
+            mkdir -p "$(dirname "$out_file")"
+
+            echo "Testing: $f"
+
+            if ! java -cp "build:utilities/antlr-4.13.1-complete.jar" SimpleLang "$f" > "$out_file" 2>&1; then
+              echo "❌ Compilation failed for $f"
+              failed_tests=$((failed_tests + 1))
+              continue
+            fi
+
+            if diff -w -B <(grep -v '^#' "$out_file" | sed 's/\x1B\[[0-9;]*[mK]//g') \
+              <(grep -v '^#' "$expected_file" | sed 's/\x1B\[[0-9;]*[mK]//g') > /dev/null; then
+              echo "✅ PASS: $rel_path"
+            else
+              echo "❌ FAIL: $rel_path - Output differs from expected"
+              echo "Diff:"
+              diff -w -B "$expected_file" "$out_file" || true
+              failed_tests=$((failed_tests + 1))
+            fi
+          done < <(find tests -name "*.c" -print0)
+
+          echo "---"
+          if [ $failed_tests -ne 0 ]; then
+            echo "❌ $failed_tests out of $total_tests test(s) failed"
+            exit 1
+          else
+            echo "✅ All $total_tests compiler tests passed!"
+          fi
+      # Step 7: Run assembler on compiler outputs
+      - name: Run assembler
+        run: |
+          mkdir -p bin_output
+          # Process all .sayac files recursively
+          while IFS= read -r -d '' f; do
+            # Get relative path from test_output/ directory
+            rel_path="${f#test_output/}"
+            rel_path="${rel_path%.sayac}"
+          
+            bin_file="bin_output/${rel_path}.bin"
+            mkdir -p "$(dirname "$bin_file")"
+          
+            echo "Assembling: $f"
+            ./assembler "$f" > "$bin_file" 2>&1 || echo "Assembler failed for $f"
+          done < <(find test_output -name "*.sayac" -print0)
+
+      # Step 8: Verify assembler outputs against expected binaries
+      - name: Verify assembler outputs
+        run: |
+          failed_bin_tests=0
+          total_bin_tests=0
+          
+          # Process all .bin files recursively
+          while IFS= read -r -d '' f; do
+            total_bin_tests=$((total_bin_tests + 1))
+          
+            # Get relative path from bin_output/ directory
+            rel_path="${f#bin_output/}"
+            rel_path="${rel_path%.bin}"
+          
+            # Expected binary file path
+            expected_bin="tests/${rel_path}.bin"
+          
+            echo "Verifying binary: $rel_path"
+          
+            # Check if expected binary exists
+            if [ ! -f "$expected_bin" ]; then
+              echo "⚠️  No expected binary for $rel_path, generated: $f"
+              continue
+            fi
+          
+            # Compare generated binary with expected binary
+            if cmp "$f" "$expected_bin" > /dev/null; then
+              echo "✅ BINARY PASS: $rel_path"
+            else
+              echo "❌ BINARY FAIL: $rel_path - Binary differs from expected"
+              failed_bin_tests=$((failed_bin_tests + 1))
+            fi
+          done < <(find bin_output -name "*.bin" -print0)
+          
+          echo "---"
+          if [ $failed_bin_tests -ne 0 ]; then
+            echo "❌ $failed_bin_tests out of $total_bin_tests binary test(s) failed"
+            exit 1
+          else
+            echo "✅ All $total_bin_tests binary tests passed!"
+          fi
