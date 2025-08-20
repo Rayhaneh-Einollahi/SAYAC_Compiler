@@ -1,4 +1,4 @@
-### TODO: USE R14 for Handling big immediate value
+### TODO: USE r14 for Handling big immediate value
 def reg(val):
     return format(int(val[1:]), '04b')
 
@@ -252,19 +252,57 @@ def expand_other_macros(lines):
             addImm = int(parts[1])
             desReg = parts[2]
             new_lines.extend([
-                f'MSI {addImm} R14',
-                f'LDR R14 {desReg}'
+                f'MSI {addImm} r14',
+                f'LDR r14 {desReg}'
             ])
         elif op == 'STI':
             valueReg = parts[1]
             addImm = parts[2]
             new_lines.extend([
-                f'MSI {addImm} R14',
-                f'STR {valueReg} R14'
+                f'MSI {addImm} r14',
+                f'STR {valueReg} r14'
             ])
         else:
             new_lines.append(line)
         pc += 1
+    return new_lines
+
+def expand_large_imm(lines):
+    new_lines = []
+    for i in range(len(lines)):
+        line = lines[i].strip()
+        parts = line.split()
+        op = parts[0].upper()
+        if op == "MSI" and not -128<=int(parts[1])<= 127:
+            imm = int(parts[1])
+            reg = parts[2]
+            lo = imm & 0x00FF
+            hi = (imm >> 8) & 0x00FF
+            new_lines.extend([
+                f'MSI {lo} {reg}',
+                f'MHI {hi} {reg}',
+            ])
+        elif op == "CMI" and not -16<=int(parts[1])<= 16:
+            imm = int(parts[1])
+            reg = parts[2]
+
+            lo = imm & 0x00FF
+            hi = (imm >> 8) & 0x00FF
+
+            new_lines.append(
+                f'MSI {lo} r14'
+            )
+
+            if not -128<= imm<= 127:
+                new_lines.append(
+                    f'MHI {hi} r14'
+                )
+
+            new_lines.append(
+                f'CMR r14 {reg}'
+            )
+        else:
+            new_lines.append(line)
     return new_lines
 
 def remove_comments(lines):
@@ -278,10 +316,12 @@ def remove_comments(lines):
 def assemble_program(lines):
     lines = remove_comments(lines)
     lines = expand_other_macros(lines)
+    lines = expand_large_imm(lines)
     labels, _ = collect_labels(lines)
     expanded_lines = expand_label_macros(lines, labels)
     new_labels, new_lines = collect_labels(expanded_lines)
     no_label_lines = replace_placeholder(new_lines, new_labels)
+    # print_lines(no_label_lines)
     binaries = []
     for line in no_label_lines:
         result = assemble_sayac(line)
