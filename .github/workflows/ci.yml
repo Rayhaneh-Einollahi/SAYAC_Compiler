@@ -22,24 +22,30 @@ jobs:
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
 
-      # Step 3: Download ANTLR
-      - name: Download ANTLR
+      # Step 3: Verify ANTLR jar exists
+      - name: Check ANTLR jar
         run: |
-          wget https://www.antlr.org/download/antlr-4.10.1-complete.jar
+          if [ ! -f "utilities/antlr-4.13.1-complete.jar" ]; then
+            echo "❌ ANTLR jar not found at utilities/antlr-4.13.1-complete.jar"
+            exit 1
+          else
+            echo "✅ Found ANTLR jar: utilities/antlr-4.13.1-complete.jar"
+          fi
 
-      # Step 4: Generate parser/lexer from ANTLR grammar
+      # Step 4: Generate parser/lexer from ANTLR grammar using local jar
       - name: Generate parser/lexer from ANTLR grammar
         run: |
           mkdir -p out
-          java -jar antlr-4.10.1-complete.jar -Dlanguage=Java -o out src/grammar/SimpleLang.g4
+          java -jar utilities/antlr-4.13.1-complete.jar -Dlanguage=Java -o out src/main/grammar/SimpleLang.g4
 
-      # Step 5: Build the compiler
+      # Step 5: Build the compiler with local ANTLR jar
       - name: Build compiler
         run: |
           mkdir -p build
-          javac -cp "antlr-4.10.1-complete.jar" -d build src/**/*.java out/**/*.java
+          shopt -s globstar
+          javac -cp "utilities/antlr-4.13.1-complete.jar" -d build $(find src gen -name "*.java")
 
       # Step 6: Run compiler tests and compare with expected output
       - name: Run compiler and verify output
@@ -65,8 +71,8 @@ jobs:
           
             echo "Testing: $f"
           
-            # Run compiler
-            if ! java -cp "build:antlr-4.10.1-complete.jar" SimpleLang "$f" > "$out_file" 2>&1; then
+            # Run compiler with local ANTLR jar
+            if ! java -cp "build:utilities/antlr-4.13.1-complete.jar" SimpleLang "$f" > "$out_file" 2>&1; then
               echo "❌ Compilation failed for $f"
               failed_tests=$((failed_tests + 1))
               continue
