@@ -1,49 +1,67 @@
+
 import main.ast.nodes.Program;
-import main.codeGenerator.*;
 import main.grammar.SimpleLangLexer;
 import main.grammar.SimpleLangParser;
-import main.visitor.*;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 
+
+import main.codeGenerator.CodeGenerator;
+import main.codeGenerator.LocalOffsetAssigner;
+import main.codeGenerator.MemoryManager;
+import main.visitor.NameAnalyzer;
+
+
+import java.nio.charset.StandardCharsets;
+
+import java.nio.file.Path;
 
 public class SimpleLang {
     public static void main(String[] args) throws IOException {
-        String code = Files.readString(Paths.get(args[0]));
-        CharStream reader = CharStreams.fromString(code);
+        if (args.length == 0) {
+            System.err.println("Usage: SimpleLang <input> [-o <output.s>]");
+            System.exit(1);
+        }
 
-        SimpleLangLexer SimpleLangLexer = new SimpleLangLexer(reader);
-        CommonTokenStream tokens = new CommonTokenStream(SimpleLangLexer);
-        SimpleLangParser flParser = new SimpleLangParser(tokens);
-        Program program = flParser.compilationUnit().programRet;
+        // ---- Parse CLI args ----
+        String inputPath = args[0];
+        String outPath = null;
+        if (args.length >= 3 && "-o".equals(args[1])) {
+            outPath = args[2];
+        }
 
-//
-        NameAnalyzer name_analyzer = new NameAnalyzer();
-        name_analyzer.visit(program);
-//
-//        UnusedRemover unusedRemover = new UnusedRemover();
-//        unusedRemover.visit(program);
-//
-//        DeadStmtRemover deadRemover = new DeadStmtRemover();
-//        deadRemover.visit(program);
+        // ---- Read source file ----
+        String code = Files.readString(Path.of(inputPath), StandardCharsets.UTF_8);
+        CharStream reader = CharStreams.fromString(code, inputPath);
 
-//        DefRemover defRemover = new DefRemover();
-//        defRemover.visit(program);
+        // ---- ANTLR pipeline ----
+        SimpleLangLexer lexer = new SimpleLangLexer(reader);
+        CommonTokenStream tokens = new CommonTokenStream(lexer);
+        SimpleLangParser parser = new SimpleLangParser(tokens);
+        Program program = parser.compilationUnit().programRet;
 
-//        AccessAnalyzer accessAnalyzer = new AccessAnalyzer();
-//        accessAnalyzer.visit(program);
+        // ---- Semantic analysis ----
+        NameAnalyzer nameAnalyzer = new NameAnalyzer();
+        nameAnalyzer.visit(program);
 
-//        TestVisitor my6_visitor = new TestVisitor();
-//        my6_visitor.visit(program);
         MemoryManager memoryManager = new MemoryManager();
         LocalOffsetAssigner localOffsetAssigner = new LocalOffsetAssigner(memoryManager);
         localOffsetAssigner.visit(program);
+
+        // ---- Code generation ----
         CodeGenerator codeGenerator = new CodeGenerator(memoryManager);
-        System.out.print(codeGenerator.visit(program));
+        String asm = codeGenerator.visit(program).toString();
+
+        // ---- Output ----
+        if (outPath == null) {
+            System.out.print(asm);   // print to stdout
+        } else {
+            Files.createDirectories(Path.of(outPath).toAbsolutePath().getParent());
+            Files.writeString(Path.of(outPath), asm, StandardCharsets.UTF_8);
+        }
     }
 }
