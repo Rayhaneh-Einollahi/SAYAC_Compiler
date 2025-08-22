@@ -133,30 +133,64 @@ func_ret_main:
 * Resolves labels for control flow.
 
 ---
+## Build & Run from Terminal
 
-## Run from Terminal
+### **Step 1 – Generate Parser/Lexer with ANTLR**
 
-*You can build and run the compiler directly from the terminal without IntelliJ:
-
+**Linux/macOS:**
 ```bash
-# 1
 java -jar lib/antlr-4.13.1-complete.jar \
   -Dlanguage=Java \
   -visitor \
   -package main.grammar \
   -o out/gen/main/grammar \
   src/main/grammar/SimpleLang.g4
+```
 
-# 2
+**Windows (CMD/PowerShell):**
+```bat
+java -jar lib\antlr-4.13.1-complete.jar ^
+  -Dlanguage=Java ^
+  -visitor ^
+  -package main.grammar ^
+  -o out\gen\main\grammar ^
+  src\main\grammar\SimpleLang.g4
+```
+
+---
+
+### **Step 2 – Compile Sources**
+
+**Linux/macOS:**
+```bash
 mkdir -p out
 javac -cp lib/antlr-4.13.1-complete.jar \
      -d out \
      $(find out/gen -type f -name "*.java") \
      $(find src -type f -name "*.java")
-
-# 3
-java -cp "out:lib/antlr-4.13.1-complete.jar" SimpleLang tests/CodeGeneration/Array/array_1.c -o out/output.s
-
 ```
 
+**Windows (CMD):**
+```bat
+mkdir out
+dir /s /b out\gen\*.java > classes.txt
+dir /s /b src\*.java >> classes.txt
 
+javac -cp lib\antlr-4.13.1-complete.jar;out ^
+     -d out ^
+     @classes.txt
+```
+
+---
+
+### **Step 3 – Run Compiler**
+
+**Linux/macOS:**
+```bash
+java -cp "out:lib/antlr-4.13.1-complete.jar" SimpleLang tests/CodeGeneration/Array/array_1.c -o out/output.s
+```
+
+**Windows (CMD):**
+```bat
+java -cp "out;lib\antlr-4.13.1-complete.jar" SimpleLang tests\CodeGeneration\Array\array_1.c -o out\output.s
+```
