@@ -133,3 +133,30 @@ func_ret_main:
 * Resolves labels for control flow.
 
 ---
+
+## Run from Terminal
+
+*You can build and run the compiler directly from the terminal without IntelliJ:
+
+```bash
+# 1
+java -jar lib/antlr-4.13.1-complete.jar \
+  -Dlanguage=Java \
+  -visitor \
+  -package main.grammar \
+  -o out/gen/main/grammar \
+  src/main/grammar/SimpleLang.g4
+
+# 2
+mkdir -p out
+javac -cp lib/antlr-4.13.1-complete.jar \
+     -d out \
+     $(find out/gen -type f -name "*.java") \
+     $(find src -type f -name "*.java")
+
+# 3
+java -cp "out:lib/antlr-4.13.1-complete.jar" SimpleLang tests/CodeGeneration/Array/array_1.c -o out/output.s
+
+```
+
+
