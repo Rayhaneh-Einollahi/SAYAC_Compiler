@@ -1,4 +1,4 @@
-MSI 57343 SP
+MSI 5000 SP
 JMP func_main ZR
 func_main:
 STR FP SP
