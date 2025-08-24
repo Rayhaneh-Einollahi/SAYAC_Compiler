@@ -7,6 +7,18 @@ def split_imm16(value: int):
     return low, high
 
 def reg(val):
+    val = val.upper()
+    if val == 'ZR':
+        return format(0, '04b')
+    elif val == 'RA':
+        return format(10, '04b')
+    elif val == 'RT':
+        return format(11, '04b')
+    elif val == 'FP':
+        return format(12, '04b')
+    elif val == 'SP':
+        return format(13, '04b')
+    
     return format(int(val[1:]), '04b')
 
 def imm(val, bits):
@@ -216,14 +228,15 @@ def replace_placeholder(lines, labels):
             
             if i>=2 and lines[i-1] == 'PLACE_HOLDER' \
                     and lines[i-2] == 'PLACE_HOLDER':
-                lines[i-1:i+1] = [
-                    f'MSI {lo} r14',
-                    f'JMR 1 r14 {desReg}'
-                ]
-            elif i>=1 and lines[i-1] == 'PLACE_HOLDER':
                 lines[i-2:i+1] = [
                     f'MSI {lo} r14',
                     f'MHI {hi} r14',
+                    f'JMR 1 r14 {desReg}'
+                    
+                ]
+            elif i>=1 and lines[i-1] == 'PLACE_HOLDER':
+                lines[i-1:i+1] = [
+                    f'MSI {lo} r14',
                     f'JMR 1 r14 {desReg}'
                 ]
         
@@ -236,12 +249,13 @@ def replace_placeholder(lines, labels):
                     and lines[i-2] == 'PLACE_HOLDER':
                 lines[i-2:i+1] = [
                     f'MSI {lo} r14',
+                    f'MHI {hi} r14',
                     f'BRR {flag} r14'
+                    
                 ]
             elif i>=1 and lines[i-1] == 'PLACE_HOLDER':
-                lines[i-2:i+1] = [
+                lines[i-1:i+1] = [
                     f'MSI {lo} r14',
-                    f'MHI {hi} r14',
                     f'BRR {flag} r14'
                 ]
             

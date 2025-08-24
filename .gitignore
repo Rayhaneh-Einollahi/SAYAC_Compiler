@@ -1,13 +1,13 @@
 # Ignore IDE files
-.vscode/
-.idea/
+**/.vscode/
+**/.idea/
 *.iml
 
 # Ignore out directory
 /out/
 
 # macOS
-.DS_Store
+**/.DS_Store
 
 # Windows
 Thumbs.db
