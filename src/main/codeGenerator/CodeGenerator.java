@@ -14,7 +14,7 @@ import main.visitor.Visitor;
 import java.util.*;
 
 public class CodeGenerator extends Visitor<CodeObject> {
-    private final static boolean DEBUG_MODE = true;
+    private final static boolean DEBUG_MODE = false;
     private final static boolean ALIAS_REGISTER_NAMES = true;
 
     private boolean insideFunction = false;
@@ -229,20 +229,20 @@ public class CodeGenerator extends Visitor<CodeObject> {
      * 1. Body code generation needs to know function argument offsets to properly access them
      * 2. Argument offset calculation needs to know which registers will be used in the function body
      *    to determine the correct stack layout
-     *
+     * <p>
      * Solution: Two-Pass Code Generation
      * We solve this by performing two passes over the function body:
-     *
+     * <p>
      * First Pass: Analysis
      * - Generate temporary body code only to discover used registers
      * - This pass happens before setting argument offsets
      * - The generated code from this pass is discarded (only register usage is retained)
-     *
+     * <p>
      * Second Pass: Actual Code Generation
      * - Set argument offsets using the register information from the first pass
      * - Generate the actual body code with proper argument access
      * - This code is included in the final output
-     *
+     * <p>
      * Stack Layout After Prologue:
      * <pre>
      * |              |
@@ -291,31 +291,40 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
 
         code.addCode(emitter.emitLabel(labelManager.generateFunctionLabel(functionDefinition.getName())));
+        code.addCode(emitter.emitComment("Store Body's Used Regs ", InstructionEmitter.Color.BLUE));
         for (Register reg : bodyUsedReg) {
             code.addCode(emitter.STR( reg, SP));
             code.addCode(emitter.ADI( -2, SP));
         }
+        code.addCode(emitter.emitComment("store FP to stack", InstructionEmitter.Color.BLUE));
         code.addCode(emitter.STR(FP, SP));
+        code.addCode(emitter.emitComment("update FP", InstructionEmitter.Color.BLUE));
         code.addCode(emitter.ADR(ZR, SP, FP));
-        code.addCode(emitter.ADI(-2, SP));
         for(int i = 0; i < args.size(); i++){
             Declaration arg = args.get(i);
             memoryManager.setFunctionArgOffset(arg.getSpecialName(), (args.size() - i + bodyUsedReg.size())*2);
         }
 
 
+        code.addCode(emitter.emitComment("body's code:", InstructionEmitter.Color.BLUE));
         code.addCode(functionDefinition.getBody().accept(this));
 
 
         code.addCode(emitter.emitLabel(currentFunctionEndLabel));
+        code.addCode(emitter.emitComment("return SP to FP", InstructionEmitter.Color.BLUE));
         code.addCode(emitter.ADR(ZR,FP, SP));
+        code.addCode(emitter.emitComment("restore used regs", InstructionEmitter.Color.BLUE));
         for (int i = bodyUsedReg.size() - 1; i >= 0; i--) {
             Register reg = bodyUsedReg.get(i);
             code.addCode(emitter.ADI(2, SP));
             code.addCode(emitter.LDR(SP, reg));
         }
+        code.addCode(emitter.emitComment("restore old FP", InstructionEmitter.Color.BLUE));
         code.addCode(emitter.LDR(FP, FP));
-        code.addCode(emitter.JMR(RA));
+        if(!functionDefinition.getName().equals( "main")) {
+            code.addCode(emitter.emitComment("JUMP to RETURN ADDRESS", InstructionEmitter.Color.BLUE));
+            code.addCode(emitter.JMR(RA));
+        }
 
         code.addCode(emitter.emitComments(this.memoryManager.getState(), InstructionEmitter.Color.GRAY));
         code.addCode(emitter.emitComments(this.registerManager.getState(), InstructionEmitter.Color.GRAY));
@@ -342,42 +351,37 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
         code.addCode(emitter.emitComment("FunctionCall", InstructionEmitter.Color.GREEN));
         List<Expr> arguments = functionExpr.getArguments();
-        List<Integer> tempOffsets = new ArrayList<>();
+        List<String> argumentVarNames = new ArrayList<>();
         for (int i = 0; i< arguments.size(); i++) {
             Expr arg = arguments.get(i);
+            code.addCode(emitter.emitComment("arg_" + i, InstructionEmitter.Color.BLUE));
             CodeObject argCode = arg.accept(this);
 
-            code.addCode(emitter.emitComment("arg_" + i, InstructionEmitter.Color.BLUE));
             code.addCode(argCode);
             String resultVar = argCode.getResultVar();
-            Register resultReg = getRegisterForRead(code, resultVar);
-            int offset = memoryManager.allocateLocal(resultVar,2);
-            tempOffsets.add(offset);
-
-            code.addCode(emitter.SW(resultReg, offset, FP));
-            if(nameManager.isTmp(resultVar)){
-                registerManager.freeRegister(resultVar);
-            }
+            argumentVarNames.add(resultVar);
         }
 
         String tmpVar = nameManager.newTmpVarName();
         Register tmpReg = getRegisterForWrite(code, tmpVar);
-
+        code.addCode(emitter.emitComment("Update SP", InstructionEmitter.Color.BRIGHT_YELLOW));
         code.addCode(emitter.MSI(memoryManager.getCurrentOffset(), tmpReg));
         code.addCode(emitter.ADR(tmpReg, FP, SP));
 
 
-        for (int offset : tempOffsets) {
-            code.addCode(emitter.LW(FP, offset, tmpReg));
-            code.addCode(emitter.STR(tmpReg, SP));
+        code.addCode(emitter.emitComment("Load to Stack", InstructionEmitter.Color.BRIGHT_YELLOW));
+        for (String varName : argumentVarNames) {
+            Register regArg = getRegisterForRead(code, varName);
+            code.addCode(emitter.STR(regArg, SP));
             code.addCode(emitter.ADI(-2, SP));
         }
 
+        code.addCode(emitter.emitComment("JMP to Func", InstructionEmitter.Color.BRIGHT_YELLOW));
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
         code.addCode(emitter.JMP(funcLabel, RA));
-        code.addCode(emitter.ADI(2 * tempOffsets.size(), SP));
+        code.addCode(emitter.emitComment("roll back SP", InstructionEmitter.Color.BRIGHT_YELLOW));
 
-
+        code.addCode(emitter.emitComment("store RT in another reg", InstructionEmitter.Color.BRIGHT_YELLOW));
         code.addCode(emitter.ADR(ZR, RT, tmpReg));
         code.setResultVar(tmpVar);
 

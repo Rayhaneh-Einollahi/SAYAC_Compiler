@@ -3,7 +3,6 @@ JMP func_main ZR
 func_main:
 STR FP SP
 ADR ZR SP FP
-ADI -2 SP
 MSI 2 R1
 MSI 4 R2
 NTR R1 R4
@@ -16,4 +15,3 @@ ANR R4 R3 R3
 func_ret_main:
 ADR ZR FP SP
 LDR FP FP
-JMR 0 RA R0
