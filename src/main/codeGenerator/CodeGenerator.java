@@ -142,26 +142,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 String resultVar = exprCode.getResultVar();
                 Register resultReg = getRegisterForRead(code , resultVar);
                 if (!insideFunction) {
-                    String addressVar = nameManager.newTmpVarName();
-                    Register addressReg = getRegisterForWrite(code, addressVar);
                     int address = memoryManager.allocateGlobal(varName, 2);
-
-                    code.addCode(emitter.MSI(address, addressReg));
-                    code.addCode(emitter.STR(resultReg, addressReg));
-
-
+                    code.addCode(emitter.STI(resultReg, address));
                     this.registerManager.freeRegister(resultVar);
-                    this.registerManager.freeRegister(addressVar);
 
                 } else {
-                    if(nameManager.isTmp(resultVar)){
-                        registerManager.freeRegister(resultVar);
-                        registerManager.assignRegister(resultReg, varName);
-                    }
-                    else{
-                        Register desReg = getRegisterForWrite(code, varName);
-                        code.addCode(emitter.ADR(ZR, resultReg, desReg));
-                    }
+                    putVarToMem(varName, resultVar, resultReg,code);
                 }
             }
         }
