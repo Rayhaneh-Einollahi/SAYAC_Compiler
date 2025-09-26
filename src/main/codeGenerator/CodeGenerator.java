@@ -1014,15 +1014,34 @@ public class CodeGenerator extends Visitor<CodeObject> {
             case BinaryOperator.ASSIGN: {
                 Register operand2reg = getRegisterForRead(code, operand2);
                 operand2reg.lock();
+                //Todo: don't put every local assignment back to memory
+//                if(nameManager.isTmp(operand2)){
+//                    registerManager.freeRegister(operand2);
+//                    registerManager.assignRegister(operand2reg, operand1);
+//                } else {
+//                    code.addCode(emitter.ADR(ZR, operand2reg, operand1reg));
+//                }
                 if (need_store){
+                    Register operand1reg = getRegisterForRead(code, operand1);
                     code.addCode(ArrayStore(operand2reg, address));
                 }
-                else if(nameManager.isTmp(operand2)){
+                else{
+                    if (nameManager.isTmp(operand2)) {
+                        List<RegisterAction> actions = new ArrayList<>();
+                        List<Register> spillRegs = new ArrayList<>();
+                        spillRegs.add(operand2reg);
+                        registerManager.handleSpill(null, spillRegs, actions);
+                        this.generateRegActionCode(actions, code);
+                    }
                     registerManager.freeRegister(operand2);
                     registerManager.assignRegister(operand2reg, operand1);
-                } else {
-                    Register operand1reg = getRegisterForRead(code, operand1);
-                    code.addCode(emitter.ADR(ZR, operand2reg, operand1reg));
+
+                    List<RegisterAction> actions = new ArrayList<>();
+                    List<Register> spillRegs = new ArrayList<>();
+                    spillRegs.add(operand2reg);
+                    registerManager.handleSpill(null, spillRegs, actions);
+                    this.generateRegActionCode(actions, code);
+
                 }
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
