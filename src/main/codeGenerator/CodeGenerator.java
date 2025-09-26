@@ -989,22 +989,40 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 break;
             }
             case BinaryOperator.ASSIGN: {
-                Register operand1reg = getRegisterForRead(code, operand1);
-                operand1reg.lock();
                 Register operand2reg = getRegisterForRead(code, operand2);
                 operand2reg.lock();
-
-                if(nameManager.isTmp(operand2)){
+                //Todo: don't put every local assignment back to memory
+//                if(nameManager.isTmp(operand2)){
+//                    registerManager.freeRegister(operand2);
+//                    registerManager.assignRegister(operand2reg, operand1);
+//                } else {
+//                    code.addCode(emitter.ADR(ZR, operand2reg, operand1reg));
+//                }
+                if (need_store){
+                    Register operand1reg = getRegisterForRead(code, operand1);
+                    code.addCode(ArrayStore(operand1reg, address, need_store));
+                }
+                else{
+                    if (nameManager.isTmp(operand2)) {
+                        List<RegisterAction> actions = new ArrayList<>();
+                        List<Register> spillRegs = new ArrayList<>();
+                        spillRegs.add(operand2reg);
+                        registerManager.handleSpill(null, spillRegs, actions);
+                        this.generateRegActionCode(actions, code);
+                    }
                     registerManager.freeRegister(operand2);
                     registerManager.assignRegister(operand2reg, operand1);
-                } else {
-                    code.addCode(emitter.ADR(ZR, operand2reg, operand1reg));
+
+                    List<RegisterAction> actions = new ArrayList<>();
+                    List<Register> spillRegs = new ArrayList<>();
+                    spillRegs.add(operand2reg);
+                    registerManager.handleSpill(null, spillRegs, actions);
+                    this.generateRegActionCode(actions, code);
+
                 }
-                code.addCode(ArrayStore(operand1reg, address, need_store));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
 
-                operand1reg.unlock();
                 operand2reg.unlock();
                 break;
             }
