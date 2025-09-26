@@ -1,196 +1,41 @@
-# SAYAC Compiler
+![act-logo](https://raw.githubusercontent.com/wiki/nektos/act/img/logo-150.png)
 
-**Authors:** Rayhaneh Einolahi, Bahareh Einolahi, Mahdis Mirzaei, Hasti Abolhasani  
-**Supervisor:** Professor Navabi
+# Overview [![push](https://github.com/nektos/act/workflows/push/badge.svg?branch=master&event=push)](https://github.com/nektos/act/actions) [![Go Report Card](https://goreportcard.com/badge/github.com/nektos/act)](https://goreportcard.com/report/github.com/nektos/act) [![awesome-runners](https://img.shields.io/badge/listed%20on-awesome--runners-blue.svg)](https://github.com/jonico/awesome-runners)
 
----
+> "Think globally, `act` locally"
 
-## Overview
+Run your [GitHub Actions](https://developer.github.com/actions/) locally! Why would you want to do this? Two reasons:
 
-The SAYAC compiler translates **Mini-C ASTs** into **SAYAC assembly**. Its backend consists of:
+- **Fast Feedback** - Rather than having to commit/push every time you want to test out the changes you are making to your `.github/workflows/` files (or for any changes to embedded GitHub actions), you can use `act` to run the actions locally. The [environment variables](https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables#default-environment-variables) and [filesystem](https://help.github.com/en/actions/reference/virtual-environments-for-github-hosted-runners#filesystems-on-github-hosted-runners) are all configured to match what GitHub provides.
+- **Local Task Runner** - I love [make](<https://en.wikipedia.org/wiki/Make_(software)>). However, I also hate repeating myself. With `act`, you can use the GitHub Actions defined in your `.github/workflows/` to replace your `Makefile`!
 
-- **Memory Manager:** Handles globals, locals, temps, stack frames, and alignment.
-- **Register Manager:** Allocates CPU registers, handles spills/reloads.
-- **Instruction Emitter:** Generates SAYAC syntax for ALU, memory, and control operations.
-- **Code Generator:** Handles main conversion of AST nodes to assembly.
----
+> [!TIP]
+> **Now Manage and Run Act Directly From VS Code!**<br/>
+> Check out the [GitHub Local Actions](https://sanjulaganepola.github.io/github-local-actions-docs/) Visual Studio Code extension which allows you to leverage the power of `act` to run and test workflows locally without leaving your editor.
 
-## Memory Manager
+# How Does It Work?
 
-- **Globals:** Absolute addresses `[0x7000–0xDFFF]`.
-- **Locals/Temps:** FP-relative stack slots.
-- **Alignment:** 2-byte enforced.
+When you run `act` it reads in your GitHub Actions from `.github/workflows/` and determines the set of actions that need to be run. It uses the Docker API to either pull or build the necessary images, as defined in your workflow files and finally determines the execution path based on the dependencies that were defined. Once it has the execution path, it then uses the Docker API to run containers for each action based on the images prepared earlier. The [environment variables](https://help.github.com/en/actions/configuring-and-managing-workflows/using-environment-variables#default-environment-variables) and [filesystem](https://docs.github.com/en/actions/using-github-hosted-runners/about-github-hosted-runners#file-systems) are all configured to match what GitHub provides.
 
-**Example Prologue/Epilogue:**
-```asm
-PUSH FP
-MOV  FP, SP
-SUB  SP, SP, #frame_size
-; ... body ...
-ADD  SP, SP, #frame_size
-POP  FP
-RET
-````
+Let's see it in action with a [sample repo](https://github.com/cplee/github-actions-demo)!
 
----
+![Demo](https://raw.githubusercontent.com/wiki/nektos/act/quickstart/act-quickstart-2.gif)
 
-## Register Manager
+# Act User Guide
 
-* Maps variable names ↔ registers.
-* Uses **register actions** to separate allocation from emission.
-* **Linear-scan allocation:** reuse free registers; spill if needed.
+Please look at the [act user guide](https://nektosact.com) for more documentation.
 
-**Key Methods:**
+# Support
 
-* `allocateForRead(varName, actions)`
-* `allocateForWrite(varName, actions)`
-* `allocateTwoForRead(varNames, actions)`
-* `allocateTwoForWrite(varNames, actions)`
+Need help? Ask in [discussions](https://github.com/nektos/act/discussions)!
 
----
+# Contributing
 
-## Instruction Emitter
+Want to contribute to act? Awesome! Check out the [contributing guidelines](CONTRIBUTING.md) to get involved.
 
-Provides high-level methods to generate SAYAC assembly:
+## Manually building from source
 
-* **ALU:** `ADD, SUB, MUL, ADDI, AND, OR, XOR, NOT, SHL, SHR`
-* **Memory:** `LI, LW, SW`
-* **Control:** `CMP, Bxx, JMP, CALL, RET`
-* **Labels:** `emitLabel(name)`
-
----
-
-## Code Generation
-
-* **Variables:** Globals get absolute addresses; locals get FP-relative offsets.
-* **Expressions:**
-
-    * Unary & binary: direct instruction or temporary reuse.
-    * Boolean: use true/false labels.
-    * Bitwise OR/XOR: emulated using AND/NOT.
-    * Compound assignments: use helper variables.
-* **Function Calls:** Push arguments on stack; use `RA` for return.
-* **Control Flow:**
-
-    * **While/For:** Labels for condition, body, step, end; handle `break`/`continue` with stacks.
-    * **If/Else:** Conditional branch, jump to end label.
-* **Functions:** Prologue/epilogue, save FP & RA, allocate locals.
-
-**Example Mini-C → SAYAC:**
-
-```c
-int main() {
-    int i;
-    for (i = 0; i < 5; i++) {
-        if (i == 3) break;
-    }
-    return 0;
-}
-```
-
-```asm
-func_main:
-    STR FP SP
-    ADR ZR SP FP
-    ADI -2 SP
-    MSI 0 R1
-    ADI -2 R2
-    LDR FP R2
-    ADI 2 R2
-for_condition_0:
-    CMI 5 R1
-    BRR > for_body_1
-    JMP for_end_2
-for_body_1:
-    CMI 3 R1
-    BRR == If_4
-    JMP After_If_6
-If_4:
-    JMP for_end_2
-    JMP After_If_6
-After_If_6:
-    JMP for_step_3
-for_step_3:
-    ADR ZR R1 R2
-    ADI 1 R1
-    JMP for_condition_0
-for_end_2:
-    MSI 0 R3
-    ADR ZR R3 RT
-    JMP func_ret_main
-func_ret_main:
-    ADR ZR FP SP
-    LDR FP FP
-    JMR 0 RA R0
-```
-
----
-
-## Assembler
-
-* Converts SAYAC assembly → machine code.
-* Supports all SAYAC instructions + `JMP` and `BRR` and `STI` and `LDI`.
-* Resolves labels for control flow.
-
----
-## Build & Run from Terminal
-
-### **Step 1 – Generate Parser/Lexer with ANTLR**
-
-**Linux/macOS:**
-```bash
-java -jar lib/antlr-4.13.1-complete.jar \
-  -Dlanguage=Java \
-  -visitor \
-  -package main.grammar \
-  -o out/gen/main/grammar \
-  src/main/grammar/SimpleLang.g4
-```
-
-**Windows (CMD/PowerShell):**
-```bat
-java -jar lib\antlr-4.13.1-complete.jar ^
-  -Dlanguage=Java ^
-  -visitor ^
-  -package main.grammar ^
-  -o out\gen\main\grammar ^
-  src\main\grammar\SimpleLang.g4
-```
-
----
-
-### **Step 2 – Compile Sources**
-
-**Linux/macOS:**
-```bash
-mkdir -p out
-javac -cp lib/antlr-4.13.1-complete.jar \
-     -d out \
-     $(find out/gen -type f -name "*.java") \
-     $(find src -type f -name "*.java")
-```
-
-**Windows (CMD):**
-```bat
-mkdir out
-dir /s /b out\gen\*.java > classes.txt
-dir /s /b src\*.java >> classes.txt
-
-javac -cp lib\antlr-4.13.1-complete.jar;out ^
-     -d out ^
-     @classes.txt
-```
-
----
-
-### **Step 3 – Run Compiler**
-
-**Linux/macOS:**
-```bash
-java -cp "out:lib/antlr-4.13.1-complete.jar" SimpleLang tests/CodeGeneration/Array/array_1.c -o out/output.s
-```
-
-**Windows (CMD):**
-```bat
-java -cp "out;lib\antlr-4.13.1-complete.jar" SimpleLang tests\CodeGeneration\Array\array_1.c -o out\output.s
-```
+- Install Go tools 1.20+ - (<https://golang.org/doc/install>)
+- Clone this repo `git clone git@github.com:nektos/act.git`
+- Run unit tests with `make test`
+- Build and install: `make install`
