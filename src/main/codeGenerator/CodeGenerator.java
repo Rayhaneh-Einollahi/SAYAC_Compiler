@@ -780,6 +780,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return code;
     }
 
+    private void putVarToMem(String operand1, String operand2, Register operand2reg, CodeObject code) {
+        registerManager.freeRegister(operand2);
+        registerManager.assignRegister(operand2reg, operand1);
+
+        List<RegisterAction> actions = new ArrayList<>();
+        List<Register> spillRegs = new ArrayList<>();
+        spillRegs.add(operand2reg);
+        registerManager.handleSpill(null, spillRegs, actions);
+        this.generateRegActionCode(actions, code);
+        registerManager.freeRegister(operand1);
+    }
+
     private String resolveDesVar(List<String> needFree){
         if(needFree.isEmpty()){
             return nameManager.newTmpVarName();
@@ -830,8 +842,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String operand1 = operand1Code.getResultVar();
         String operand2 = operand2Code.getResultVar();
         List<String> needFree = new ArrayList<>();
-        if(nameManager.isTmp(operand1)) needFree.add(operand1);
-        if(nameManager.isTmp(operand2)) needFree.add(operand2);
+        /*if(nameManager.isTmp(operand1))*/ needFree.add(operand1);
+        /*if(nameManager.isTmp(operand2))*/ needFree.add(operand2);
 
         switch (op) {
             case BinaryOperator.PLUS: {
@@ -1026,24 +1038,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     code.addCode(ArrayStore(operand2reg, address));
                 }
                 else{
-                    if (nameManager.isTmp(operand2)) {
-                        List<RegisterAction> actions = new ArrayList<>();
-                        List<Register> spillRegs = new ArrayList<>();
-                        spillRegs.add(operand2reg);
-                        registerManager.handleSpill(null, spillRegs, actions);
-                        this.generateRegActionCode(actions, code);
-                    }
-                    registerManager.freeRegister(operand2);
-                    registerManager.assignRegister(operand2reg, operand1);
-
-                    List<RegisterAction> actions = new ArrayList<>();
-                    List<Register> spillRegs = new ArrayList<>();
-                    spillRegs.add(operand2reg);
-                    registerManager.handleSpill(null, spillRegs, actions);
-                    this.generateRegActionCode(actions, code);
-
+                    putVarToMem(operand1, operand2, operand2reg,code);
                 }
-                needFree.remove(operand1);
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 operand2reg.unlock();
@@ -1056,8 +1053,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 operand2reg.lock();
 
                 code.addCode(emitter.ANR(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
-                needFree.remove(operand1);
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 operand1reg.unlock();
@@ -1075,8 +1077,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 operand2reg.lock();
 
                 code.addCode(emitter.DIV(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
-                needFree.remove(operand1);
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 helperReg.unlock();
@@ -1090,13 +1097,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 Register operand2reg = getRegisterForRead(code, operand2);
                 operand2reg.lock();
 
-                needFree.remove(operand1);
+//                needFree.remove(operand1);
                 String tmpVar = resolveDesVar(needFree);
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
                 tmpReg.lock();
                 code.addCode(emitter.NTR2(operand2reg, tmpReg));
                 code.addCode(emitter.SAR(tmpReg, operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
                 tmpReg.unlock();
                 needFree.add(tmpVar);
                 code.setResultVar(operand1);
@@ -1112,8 +1124,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 operand2reg.lock();
 
                 code.addCode(emitter.SAR(operand2reg, operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
-                needFree.remove(operand1);
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 operand1reg.unlock();
@@ -1127,8 +1144,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 operand2reg.lock();
 
                 code.addCode(emitter.SUR(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
-                needFree.remove(operand1);
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 operand1reg.unlock();
@@ -1142,8 +1164,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 operand2reg.lock();
 
                 code.addCode(emitter.ADR(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
-                needFree.remove(operand1);
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 operand1reg.unlock();
@@ -1161,8 +1188,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 operand2reg.lock();
 
                 code.addCode(emitter.MUL(operand2reg, operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
-                needFree.remove(operand1);
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 helperReg.unlock();
@@ -1176,7 +1208,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 Register operand2reg = getRegisterForRead(code, operand2);
                 operand2reg.lock();
 
-                needFree.remove(operand1);
+//                needFree.remove(operand1);
                 String tmpVar = resolveDesVar(needFree);
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
                 tmpReg.lock();
@@ -1184,7 +1216,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(operand2reg, tmpReg));
                 code.addCode(emitter.ANR(tmpReg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
                 tmpReg.unlock();
                 code.setResultVar(operand1);
 
@@ -1198,7 +1235,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 Register operand2reg = getRegisterForRead(code, operand2);
                 operand2reg.lock();
 
-                needFree.remove(operand1);
+//                needFree.remove(operand1);
                 String tmpVar = nameManager.newTmpVarName();
                 Register tmpReg = getRegisterForWrite(code, tmpVar);
                 tmpReg.lock();
@@ -1212,7 +1249,12 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ANR(tmp2Reg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
                 code.addCode(emitter.ANR(operand1reg, tmpReg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
                 tmpReg.unlock();
                 tmp2Reg.unlock();
                 code.setResultVar(operand1);
@@ -1234,8 +1276,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 operand2reg.lock();
 
                 code.addCode(emitter.DIV(operand1reg, operand2reg, helperReg));
-                if(need_store) code.addCode(ArrayStore(operand2reg, address));
-                needFree.remove(operand1);
+                if (need_store){
+                    code.addCode(ArrayStore(operand2reg, address));
+                }
+                else{
+                    putVarToMem(operand1, operand1, operand1reg,code);
+                }
+//                needFree.remove(operand1);
                 code.setResultVar(operand1);
 
                 helperReg.unlock();
