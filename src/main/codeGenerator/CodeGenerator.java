@@ -961,7 +961,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.ASSIGN: {
                 if (need_store){
-                    code.addCode(ArrayStore(operand1reg, address));
+                    code.addCode(ArrayStore(operand2reg, address));
                 }
                 else if(nameManager.isTmp(operand2)){
                     registerManager.freeRegister(operand2);
@@ -975,14 +975,14 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.ANDASSIGN:{
                 code.addCode(emitter.ANR(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.DIVASSIGN: {
                 code.addCode(emitter.DIV(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
@@ -994,7 +994,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 tmpReg.lock();
                 code.addCode(emitter.NTR2(operand2reg, tmpReg));
                 code.addCode(emitter.SAR(tmpReg, operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 tmpReg.unlock();
                 needFree.add(tmpVar);
                 code.setResultVar(operand1);
@@ -1002,28 +1002,28 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.RIGHTSHIFTASSIGN: {
                 code.addCode(emitter.SAR(operand2reg, operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.MINUSASSIGN: {
                 code.addCode(emitter.SUR(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.PLUSASSIGN: {
                 code.addCode(emitter.ADR(operand1reg, operand2reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
             }
             case BinaryOperator.STARASSIGN: {
                 code.addCode(emitter.MUL(operand2reg, operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
@@ -1037,7 +1037,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.NTR(operand2reg, tmpReg));
                 code.addCode(emitter.ANR(tmpReg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 tmpReg.unlock();
                 code.setResultVar(operand1);
                 break;
@@ -1057,7 +1057,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 code.addCode(emitter.ANR(tmp2Reg, operand1reg, operand1reg));
                 code.addCode(emitter.NTR(operand1reg, operand1reg));
                 code.addCode(emitter.ANR(operand1reg, tmpReg, operand1reg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 tmpReg.unlock();
                 tmp2Reg.unlock();
                 code.setResultVar(operand1);
@@ -1067,7 +1067,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
             case BinaryOperator.MODASSIGN: {
                 code.addCode(emitter.DIV(operand1reg, operand2reg, helperReg));
-                if(need_store) code.addCode(ArrayStore(operand1reg, address));
+                if(need_store) code.addCode(ArrayStore(operand2reg, address));
                 needFree.remove(operand1);
                 code.setResultVar(operand1);
                 break;
