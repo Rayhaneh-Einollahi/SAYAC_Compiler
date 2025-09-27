@@ -37,6 +37,7 @@ public class LocalOffsetAssigner extends Visitor<Void>{
                 // just handle int a[SIZE];
                 int array_size = initDeclarator.getDeclarator().getDirectDeclarator().getArraySize();
                 memoryManager.allocateLocal(initDeclarator.getDeclarator().getSpecialName(), 2 * array_size);
+                memoryManager.putArrayStep(initDeclarator.getDeclarator().getSpecialName(), initDeclarator.getDeclarator().getDirectDeclarator().getStepsSizes());
             }
             else {
                 memoryManager.allocateLocal(initDeclarator.getDeclarator().getSpecialName(), 2);

@@ -128,11 +128,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
             String varName = initDeclarator.getDeclarator().getSpecialName();
             CodeObject exprCode;
 
-            if(initDeclarator.getDeclarator().isArray()) {
-                int array_size = initDeclarator.getDeclarator().getDirectDeclarator().getArraySize();
-            }
-            else {
 
+            if(!initDeclarator.getDeclarator().isArray()) {
                 if(initDeclarator.getInitializer() == null)
                     continue;
                 if (initDeclarator.getInitializer().getExpr() != null)
@@ -182,11 +179,38 @@ public class CodeGenerator extends Visitor<CodeObject> {
         Register regInside =  getRegisterForRead(code, resultInside);
         regInside.lock();
 
+        ArrayExpr outsideArray = arrayExpr;
+        String array_name;
+        if(outsideArray.getOutside() instanceof ArrayExpr) {
+            outsideArray = (ArrayExpr)outsideArray.getOutside();
+            array_name = ((Identifier)(outsideArray).getOutside()).getSpecialName();
+
+            // a[i][j] -> i
+            CodeObject InsideOfOutsideArray = outsideArray.getInside().accept(this);
+            code.addCode(InsideOfOutsideArray);
+            String resultInsideOfOutside = InsideOfOutsideArray.getResultVar();
+            Register regInsideOfOutside =  getRegisterForRead(code, resultInsideOfOutside);
+
+
+            // int a[10][12] -> 12
+            String arraySizeVar = nameManager.newTmpVarName();
+            Register adrArraySizeVarReg = getRegisterForWrite(code, arraySizeVar);
+            code.addCode(emitter.MSI(memoryManager.getArrayStep(array_name).get(1), adrArraySizeVarReg));
+
+            // i * 12
+            code.addCode(emitter.MUL(regInsideOfOutside, adrArraySizeVarReg, regInsideOfOutside));
+
+            // i * 12 + j
+            code.addCode(emitter.ADR(regInside, regInsideOfOutside, regInside));
+        }
+        else {
+            array_name = ((Identifier)arrayExpr.getOutside()).getSpecialName();
+        }
+
         //Todo: handle the cases outExpr is not identifier
-        String array_name = ((Identifier)arrayExpr.getOutside()).getSpecialName();
+
         String adrVar = nameManager.newTmpVarName();
         Register adrReg = getRegisterForWrite(code, adrVar);
-
         code.addCode(emitter.MSI(memoryManager.getLocalOffset(array_name), adrReg));
         code.addCode(emitter.ADR(regInside, regInside, regInside));
         code.addCode(emitter.SUR(regInside, adrReg, adrReg));
@@ -206,8 +230,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
         return code;
     }
 
+
     public CodeObject ArrayStore(Register operand1reg, String address, boolean isArray) {
         CodeObject code = new CodeObject();
+
         if(isArray) {
             Register reg = getRegisterForWrite(code, address);
             code.addCode(emitter.STR(operand1reg, reg));
@@ -1057,6 +1083,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         for(String tmpVar: needFree){
             registerManager.freeRegister(tmpVar);
         }
+
+//        code.addCode(registerManager.getState());
 
         return code;
     }

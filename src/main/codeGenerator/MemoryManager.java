@@ -17,6 +17,7 @@ public class MemoryManager {
     private Map<String, Integer> localSizes;
     private final Map<String, Map<String, Integer>> functionsLocalSizes = new HashMap<>();
     private final Map<String, Integer> globalStarts = new HashMap<>();
+    private Map<String, ArrayList<Integer>> Array_steps = new HashMap<>();
 
     public boolean hasVariable(String varname){
         if (globalAddresses.containsKey(varname)) return true;
@@ -46,6 +47,14 @@ public class MemoryManager {
         return addr;
     }
 
+    public void putArrayStep(String name, ArrayList<Integer> steps) {
+        Array_steps.put(name, steps);
+    }
+
+    public ArrayList<Integer> getArrayStep(String name) {
+        return Array_steps.get(name);
+    }
+
     public int getSTACK_POINTER_BEGIN() {
         return STACK_POINTER_BEGIN;
     }
@@ -63,11 +72,20 @@ public class MemoryManager {
             return localOffsets.get(name);
         }
         int alignedSize = align(size);
+
         localOffsets.put(name, frameOffset);
         frameOffset -= alignedSize;
         localSizes.put(name, alignedSize);
 
         return frameOffset + alignedSize;
+    }
+
+    public int getNumberOfElements(String name) {
+        if(localSizes != null) {
+            Integer sz = localSizes.get(name) / 2;
+            if(sz != null) return sz;
+        }
+        return 1;
     }
 
 

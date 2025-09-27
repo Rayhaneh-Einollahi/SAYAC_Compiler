@@ -15,6 +15,7 @@ public class DirectDeclarator extends Node {
     private Declarator innerDeclarator;
     private final List<DDStep> steps = new ArrayList<>();
 
+    private ArrayList<Integer> stepsSizes = new ArrayList<>();
 
     public boolean isGlobal() {
         return this.identifier.isGlobal();
@@ -96,7 +97,7 @@ public class DirectDeclarator extends Node {
 
 
     public List<DDStep> getSteps() {
-        return steps;
+        return this.steps;
     }
 
     public Identifier getIdentifier() {
@@ -122,13 +123,19 @@ public class DirectDeclarator extends Node {
 
 
     public boolean isArray() {
-        return this.steps.size() != 0;
+        return !this.steps.isEmpty();
     }
 
     public int getArraySize() {
-        if(this.steps.getFirst().getArrayExpr() instanceof IntVal) {
-            return ((IntVal) this.steps.getFirst().getArrayExpr()).getInt();
+        int arraySize = 1;
+        for (DDStep step : this.steps) {
+            arraySize *= ((IntVal) step.getArrayExpr()).getInt();
+            stepsSizes.add(((IntVal) step.getArrayExpr()).getInt());
         }
-        return 0;
+        return arraySize;
+    }
+
+    public ArrayList<Integer> getStepsSizes() {
+        return stepsSizes;
     }
 }
