@@ -33,6 +33,7 @@ This Python script converts SAYAC assembly code into its corresponding binary re
 | **`LDI`** | `LDI DESREG ADRIMM` | Loads the value memory address `ADRIMM` to `DESREG`                                                            |
 | **`MSI`** | `MSI IMM DESREG`    | if imm ∉ [-128,127], adds `MHI` to store upper immediate too                                                   |
 | **`CMI`** | `CMI IMM DESREG`    | if imm ∉ [-16,15], uses a register and replaces CMI with CMR                                                   |
+| **`ADI`** | `CMI IMM REG`       | if imm ∉ [-128,127], uses a register and replaces ADI with ADR                                                   |
 
 ---
 

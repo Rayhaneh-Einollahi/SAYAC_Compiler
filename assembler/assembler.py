@@ -319,7 +319,14 @@ def expand_large_imm(lines):
                 if not -128 <= imm <= 127:
                     new_lines.append(f"MHI {hi} r14")
                 new_lines.append(f"CMR r14 {reg}")
-
+        elif op == "ADI":
+            if -128 <= imm <= 127:
+                new_lines.append(line)
+            else:
+                lo, hi = split_imm16(imm)
+                new_lines += [f"MSI {lo} r14",
+                              f"MHI {hi} r14",
+                              f"ADR {reg} r14 {reg}"]
         else:
             new_lines.append(line)
 
