@@ -62,7 +62,7 @@ public class RegisterManager {
                 return mainReg;
             }
             if (mainReg.id <= allOpRegisters.size()-1 && !getNextReg(mainReg).isLock()){ //check if it's not the last register
-                handleSpill(List.of(helperVar), List.of(getNextReg(mainReg)), actions).getFirst();
+                handleSpill(List.of(helperVar), List.of(getNextReg(mainReg)), actions);
                 return mainReg;
             }
         }
@@ -74,7 +74,7 @@ public class RegisterManager {
                 return getPrevReg(helperReg);
             }
             if (1 < helperReg.id && !getPrevReg(helperReg).isLock()){
-                handleSpill(List.of(mainVar), List.of(getPrevReg(helperReg)), actions).getFirst();
+                handleSpill(List.of(mainVar), List.of(getPrevReg(helperReg)), actions);
                 return getPrevReg(helperReg);
             }
         }
@@ -98,7 +98,8 @@ public class RegisterManager {
             return firstReg;
         }
         List<Register> spillRegs = chooseSpillCandidate(cnt);
-        return handleSpill(varNames,spillRegs, actions).getFirst();
+        handleSpill(varNames,spillRegs, actions);
+        return spillRegs.getFirst();
     }
 
     public void freeRegister(String varName) {
@@ -201,7 +202,13 @@ public class RegisterManager {
         return null;
     }
 
-    public List<Register> handleSpill(List<String> varsToAssign, List<Register> spillRegs, List<RegisterAction> actions) {
+    public void handleSpill(String varName, List<RegisterAction> actions) {
+
+        handleSpill(null, List.of(varToReg.get(varName)), actions);
+    }
+
+
+    public void handleSpill(List<String> varsToAssign, List<Register> spillRegs, List<RegisterAction> actions) {
         int cnt = spillRegs.size();
         for (int i = 0; i < cnt; i++) {
             Register spillReg = spillRegs.get(i);
@@ -225,8 +232,6 @@ public class RegisterManager {
             }
         }
 
-
-        return spillRegs;
     }
 
     public void assignRegister(Register reg, String varName) {

@@ -131,12 +131,11 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 curVar = nextRegState.varName;
                 if (oldState.varToRegSnapshot.get(curVar).id == newRegState.id){
                     List<RegisterAction> actions = new ArrayList<>();
-                    List<Register> spillRegs = new ArrayList<>();
-                    spillRegs.add();
-
-                    registerManager.handleSpill(null, spillRegs, actions);
+                    registerManager.handleSpill(vars.getFirst(), actions);
                     this.generateRegActionCode(actions, code);
-                    //ADR
+                    vars.removeFirst();
+                    vars.add(curVar);
+                    break;
                 }
             }
 
@@ -273,27 +272,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
         Register reg = getRegisterForWrite(code, address);
         code.addCode(emitter.STR(operand1reg, reg));
-        return code;
-    }
-    private void SpillVar (String varname, CodeObject code) {
-        registerManager.freeRegister(operand2);
-        registerManager.assignRegister(operand2reg, operand1);
-
-        List<RegisterAction> actions = new ArrayList<>();
-        List<Register> spillRegs = new ArrayList<>();
-        spillRegs.add(varname);
-        registerManager.handleSpill(null, spillRegs, actions);
-        this.generateRegActionCode(actions, code);
-        registerManager.freeRegister(operand1);
-    }
-    public CodeObject visit(CompoundStatement compoundStatement){
-        CodeObject code = new CodeObject();
-        for(BlockItem blockItem:compoundStatement.getBlockItems()){
-            code.addCode(blockItem.accept(this));
-        }
-        for(String str: locals_changed){
-
-        }
         return code;
     }
     /** generate code for Function:<p>
