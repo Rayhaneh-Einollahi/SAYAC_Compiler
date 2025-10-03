@@ -211,9 +211,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         String adrVar = nameManager.newTmpVarName();
         Register adrReg = getRegisterForWrite(code, adrVar);
-        code.addCode(emitter.MSI(memoryManager.getLocalOffset(array_name), adrReg));
-        code.addCode(emitter.ADR(regInside, regInside, regInside));
-        code.addCode(emitter.SUR(regInside, adrReg, adrReg));
+        code.addCode(emitter.ADR(regInside, regInside, adrReg));
+        code.addCode(emitter.NTR2(adrReg, adrReg));
+        code.addCode(emitter.ADI(memoryManager.getLocalOffset(array_name), adrReg));
         code.addCode(emitter.ADR(adrReg, FP, adrReg));
 
         adrReg.lock();
