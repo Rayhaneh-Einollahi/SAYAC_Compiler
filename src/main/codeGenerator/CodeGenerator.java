@@ -121,23 +121,29 @@ public class CodeGenerator extends Visitor<CodeObject> {
             if(oldVar.equals(newVar)){
                 continue;
             }
-            List<String> vars = new ArrayList<>();
+            List<String> varsToReplace = new ArrayList<>();
+            List<String> varsToSpill = new ArrayList<>(List.of(newVar));
             String curVar = newVar;
             while(oldState.varToRegSnapshot.get(curVar)!=null){
-                vars.add(curVar);
+                varsToReplace.add(curVar);
                 Register.State nextRegState = newState.opRegistersSnapshot.get(oldState.varToRegSnapshot.get(curVar).id);
                 if(nextRegState.isFree)
                     break;
                 curVar = nextRegState.varName;
                 if (oldState.varToRegSnapshot.get(curVar).id == newRegState.id){
-                    List<RegisterAction> actions = new ArrayList<>();
-                    registerManager.handleSpill(vars.getFirst(), actions);
-                    this.generateRegActionCode(actions, code);
-                    vars.removeFirst();
-                    vars.add(curVar);
+                    varsToSpill.add(varsToReplace.removeFirst());
+                    varsToReplace.add(curVar);
                     break;
                 }
             }
+
+            for(String varname: varsToSpill){
+                List<RegisterAction> actions = new ArrayList<>();
+                registerManager.handleSpill(varname, actions);
+                this.generateRegActionCode(actions, code);
+            }
+
+            //handle replacement
 
         }
     }
