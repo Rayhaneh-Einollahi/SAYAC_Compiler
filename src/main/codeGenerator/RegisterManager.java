@@ -292,4 +292,34 @@ public class RegisterManager {
         varUseCounts = new HashMap<>();
     }
 
+    //Store and Restore RegisterManager States:
+    public static class State {
+        public final Map<String, Register> varToRegSnapshot;
+        public final Map<String, Integer> varUseCountsSnapshot;
+        public final List<Register.State> opRegistersSnapshot;
+
+        public State(Map<String, Register> varToReg,
+                     Map<String, Integer> varUseCounts,
+                     List<Register> opRegisters) {
+            this.varToRegSnapshot = new HashMap<>(varToReg);
+            this.varUseCountsSnapshot = new HashMap<>(varUseCounts);
+            this.opRegistersSnapshot = opRegisters.stream()
+                    .map(Register::saveState)
+                    .toList();
+        }
+    }
+
+    public State saveState() {
+        return new State(varToReg, varUseCounts, allOpRegisters);
+    }
+
+    public void restoreState(State state) {
+        this.varToReg = new HashMap<>(state.varToRegSnapshot);
+        this.varUseCounts = new HashMap<>(state.varUseCountsSnapshot);
+
+        for (int i = 0; i < allOpRegisters.size(); i++) {
+            allOpRegisters.get(i).restoreState(state.opRegistersSnapshot.get(i));
+        }
+    }
+
 }

@@ -1,9 +1,12 @@
 package main.codeGenerator;
 
 import main.ast.nodes.Program;
+import main.ast.nodes.Statement.BlockItem;
+import main.ast.nodes.Statement.CompoundStatement;
 import main.ast.nodes.Statement.IterationStatement.*;
 import main.ast.nodes.Statement.JumpStatement.*;
 import main.ast.nodes.Statement.SelectionStatement;
+import main.ast.nodes.Statement.Statement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.operator.BinaryOperator;
@@ -16,6 +19,8 @@ import java.util.*;
 public class CodeGenerator extends Visitor<CodeObject> {
     private final static boolean DEBUG_MODE = false;
     private final static boolean ALIAS_REGISTER_NAMES = true;
+    private final static boolean STORE_LOCALS = true;
+    private final HashSet<String> locals_changed = new HashSet<>();
 
     private boolean insideFunction = false;
     public final RegisterManager registerManager;
@@ -102,6 +107,39 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 case SPILL_G -> code.addCode(emitter.STI(action.register, action.address));
                 case LOAD_G -> code.addCode(emitter.LDI(action.address, action.register));
             }
+        }
+    }
+
+    public void rollBackRegState(RegisterManager.State oldState, RegisterManager.State newState, CodeObject code){
+        for (int i = 0; i < newState.opRegistersSnapshot.size(); i++) {
+            Register.State newRegState = newState.opRegistersSnapshot.get(i);
+            Register.State oldRegState = oldState.opRegistersSnapshot.get(i);
+
+            String oldVar = oldRegState.varName;
+            String newVar = newRegState.varName;
+
+            if(oldVar.equals(newVar)){
+                continue;
+            }
+            List<String> vars = new ArrayList<>();
+            String curVar = newVar;
+            while(oldState.varToRegSnapshot.get(curVar)!=null){
+                vars.add(curVar);
+                Register.State nextRegState = newState.opRegistersSnapshot.get(oldState.varToRegSnapshot.get(curVar).id);
+                if(nextRegState.isFree)
+                    break;
+                curVar = nextRegState.varName;
+                if (oldState.varToRegSnapshot.get(curVar).id == newRegState.id){
+                    List<RegisterAction> actions = new ArrayList<>();
+                    List<Register> spillRegs = new ArrayList<>();
+                    spillRegs.add();
+
+                    registerManager.handleSpill(null, spillRegs, actions);
+                    this.generateRegActionCode(actions, code);
+                    //ADR
+                }
+            }
+
         }
     }
     public CodeObject visit(Program program) {
@@ -237,7 +275,27 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.STR(operand1reg, reg));
         return code;
     }
+    private void SpillVar (String varname, CodeObject code) {
+        registerManager.freeRegister(operand2);
+        registerManager.assignRegister(operand2reg, operand1);
 
+        List<RegisterAction> actions = new ArrayList<>();
+        List<Register> spillRegs = new ArrayList<>();
+        spillRegs.add(varname);
+        registerManager.handleSpill(null, spillRegs, actions);
+        this.generateRegActionCode(actions, code);
+        registerManager.freeRegister(operand1);
+    }
+    public CodeObject visit(CompoundStatement compoundStatement){
+        CodeObject code = new CodeObject();
+        for(BlockItem blockItem:compoundStatement.getBlockItems()){
+            code.addCode(blockItem.accept(this));
+        }
+        for(String str: locals_changed){
+
+        }
+        return code;
+    }
     /** generate code for Function:<p>
      * 1 - generate a label for the beginning of function definition<p>
      * 2 - store the current frame-pointer to the stack <p>

@@ -63,4 +63,29 @@ public class Register {
     public boolean isFree() {
         return isFree;
     }
+
+    public static class State {
+        public final boolean isLock;
+        public final boolean isFree;
+        public final String varName;
+        public final int id;
+
+        private State(boolean isLock, boolean isFree, String varName, int id) {
+            this.isLock = isLock;
+            this.isFree = isFree;
+            this.varName = varName;
+            this.id = id;
+        }
+    }
+
+    public State saveState() {
+        return new State(isLock, isFree, varName, id);
+    }
+
+    public void restoreState(State state) {
+        this.isLock = state.isLock;
+        this.isFree = state.isFree;
+        this.varName = state.varName;
+        this.id = state.id;
+    }
 }
