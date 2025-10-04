@@ -460,6 +460,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(WhileStatement whileStatement){
         CodeObject code = new CodeObject();
+        RegisterManager.State state = registerManager.saveState();
         String condLabel = labelManager.generateWhileConditionLabel();
         String bodyLabel = labelManager.generateWhileBodyLabel();
         String endLabel = labelManager.generateWhileEndLabel();
@@ -482,6 +483,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
         code.addCode(emitter.JMP(condLabel, ZR));
 
+        rollBackRegState(state, registerManager.saveState(), code);
+        registerManager.restoreState(state);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -495,6 +498,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
     @Override
     public CodeObject visit(ForStatement forStatement) {
         CodeObject code = new CodeObject();
+        RegisterManager.State state = registerManager.saveState();
+
         String condLabel = labelManager.generateForConditionLabel();
         String bodyLabel = labelManager.generateForBodyLabel();
         String endLabel = labelManager.generateForEndLabel();
@@ -528,6 +533,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
         code.addCode(emitter.JMP(condLabel, ZR));
 
+        rollBackRegState(state, registerManager.saveState(), code);
+        registerManager.restoreState(state);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -653,6 +660,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(SelectionStatement selectionStatement) {
         CodeObject code= new CodeObject();
+        RegisterManager.State state = registerManager.saveState();
         String ifLabel = labelManager.generateIfLabel();
         String elseLabel = labelManager.generateElseLabel();
         String afterIfLabel = labelManager.generateAfterIfLabel();
@@ -662,12 +670,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         code.addCode(emitter.emitLabel(ifLabel));
         code.addCode(selectionStatement.getIfStatement().accept(this));
+
+        rollBackRegState(state, registerManager.saveState(), code);
+        registerManager.restoreState(state);
         code.addCode(emitter.JMP(afterIfLabel, ZR));
 
 
         if (selectionStatement.getElseStatement() != null) {
             code.addCode(emitter.emitLabel(elseLabel));
             code.addCode(selectionStatement.getElseStatement().accept(this));
+
+            rollBackRegState(state, registerManager.saveState(), code);
+            registerManager.restoreState(state);
         }
         code.addCode(emitter.emitLabel(afterIfLabel));
         return code;
