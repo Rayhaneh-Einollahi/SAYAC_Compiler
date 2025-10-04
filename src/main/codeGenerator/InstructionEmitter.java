@@ -100,7 +100,15 @@ public class InstructionEmitter {
         }
         return code;
     }
-
+    /**
+     * SWP is not a default instruction of SAYAC processor. To handle swapping properly without xor
+     */
+    public CodeObject SWP(Register reg1, Register reg2){
+        CodeObject code = new CodeObject();
+        storeUsedReg(code, reg1, reg2);
+        code.addCode(this.emit("SWP", reg1, reg2));
+        return code;
+    }
     /**
      * Returns an MSI instruction that will print: MSI IMM dest
      * Models: Stores the value of immediate to the dest register :#dest = IMM

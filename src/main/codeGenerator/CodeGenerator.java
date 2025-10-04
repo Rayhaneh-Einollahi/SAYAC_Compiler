@@ -122,7 +122,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 continue;
             }
             List<String> varsToReplace = new ArrayList<>();
-            List<String> varsToSpill = new ArrayList<>(List.of(newVar));
             String curVar = newVar;
             while(oldState.varToRegSnapshot.get(curVar)!=null){
                 varsToReplace.add(curVar);
@@ -131,20 +130,24 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     break;
                 curVar = nextRegState.varName;
                 if (oldState.varToRegSnapshot.get(curVar).id == newRegState.id){
-                    varsToSpill.add(varsToReplace.removeFirst());
                     varsToReplace.add(curVar);
+                    curVar = newVar;
                     break;
                 }
             }
 
-            for(String varname: varsToSpill){
-                List<RegisterAction> actions = new ArrayList<>();
-                registerManager.handleSpill(varname, actions);
-                this.generateRegActionCode(actions, code);
-            }
+            //curVar needs to spill
+            List<RegisterAction> actions = new ArrayList<>();
+            registerManager.handleSpill(curVar, actions);
+            this.generateRegActionCode(actions, code);
 
             //handle replacement
-
+            for (int j = varsToReplace.size() - 1; j >= 0; j--) {
+                String var = varsToReplace.get(j);
+                Register reg1 = registerManager.getRegisterByID(newState.varToRegSnapshot.get(var).id);
+                Register reg2 = registerManager.getRegisterByID(oldState.varToRegSnapshot.get(var).id);
+                code.addCode(emitter.SWP(reg1, reg2));
+            }
         }
     }
     public CodeObject visit(Program program) {

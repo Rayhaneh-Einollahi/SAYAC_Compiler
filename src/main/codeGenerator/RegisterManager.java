@@ -22,7 +22,12 @@ public class RegisterManager {
             allOpRegisters.add(new Register(i, Register.Purpose.OP));
         }
     }
-
+    public Register getRegisterByID(int id){
+        if(0<id && id<=allOpRegisters.size()){
+            return allOpRegisters.get(id-1);
+        }
+        throw new RuntimeException("Non-op register can't be refrenced by id");
+    }
     /**
      * get a register for the purpose of writing into it that refers to the variable varName
      */
