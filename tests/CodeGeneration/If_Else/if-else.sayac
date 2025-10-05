@@ -1,0 +1,30 @@
+MSI 5000 SP
+JMP func_main ZR
+func_main:
+STR FP SP
+ADR ZR SP FP
+MSI 0 R1
+MSI 1 R2
+CMI 1 R1
+BRR < If_0
+JMP Else_1 ZR
+If_0:
+MSI 2 R3
+ADR ZR R3 R2
+JMP After_If_2 ZR
+Else_1:
+CMI 0 R1
+BRR == If_3
+JMP Else_4 ZR
+If_3:
+MSI 10 R3
+ADR ZR R3 R2
+JMP After_If_5 ZR
+Else_4:
+MSI 3 R3
+ADR ZR R3 R2
+After_If_5:
+After_If_2:
+func_ret_main:
+ADR ZR FP SP
+LDR FP FP
