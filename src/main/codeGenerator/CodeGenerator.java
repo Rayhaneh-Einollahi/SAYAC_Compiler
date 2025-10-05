@@ -1,12 +1,9 @@
 package main.codeGenerator;
 
 import main.ast.nodes.Program;
-import main.ast.nodes.Statement.BlockItem;
-import main.ast.nodes.Statement.CompoundStatement;
 import main.ast.nodes.Statement.IterationStatement.*;
 import main.ast.nodes.Statement.JumpStatement.*;
 import main.ast.nodes.Statement.SelectionStatement;
-import main.ast.nodes.Statement.Statement;
 import main.ast.nodes.declaration.*;
 import main.ast.nodes.expr.*;
 import main.ast.nodes.expr.operator.BinaryOperator;
@@ -111,25 +108,36 @@ public class CodeGenerator extends Visitor<CodeObject> {
     }
 
     public void rollBackRegState(RegisterManager.State oldState, RegisterManager.State newState, CodeObject code){
-        for (int i = 0; i < newState.opRegistersSnapshot.size(); i++) {
-            Register.State newRegState = newState.opRegistersSnapshot.get(i);
-            Register.State oldRegState = oldState.opRegistersSnapshot.get(i);
+        for (Register reg : registerManager.allOpRegisters) {
 
-            String oldVar = oldRegState.varName;
-            String newVar = newRegState.varName;
-
-            if(oldVar.equals(newVar)){
+            String oldVar = oldState.getRegState(reg).varName;
+            String newVar = newState.getRegState(reg).varName;
+            if((oldVar==null && newVar==null) ||
+                    (oldVar != null && oldVar.equals(newVar))){
                 continue;
             }
+            if(newVar == null){
+                Register newReg = newState.varToReg.get(oldVar);
+                if (newReg != null){
+                    code.addCode(emitter.ADR(ZR, newReg,reg));
+                }
+                else{
+                    List<RegisterAction> actions = new ArrayList<>();
+                    registerManager.loadToReg(oldVar, reg , actions);
+                    generateRegActionCode(actions, code);
+                }
+                continue;
+            }
+
             List<String> varsToReplace = new ArrayList<>();
             String curVar = newVar;
-            while(oldState.varToRegSnapshot.get(curVar)!=null){
+            while(oldState.varToReg.get(curVar)!=null){
                 varsToReplace.add(curVar);
-                Register.State nextRegState = newState.opRegistersSnapshot.get(oldState.varToRegSnapshot.get(curVar).id);
-                if(nextRegState.isFree)
+                Register nextReg = oldState.varToReg.get(curVar);
+                if(newState.getRegState(nextReg).isFree)
                     break;
-                curVar = nextRegState.varName;
-                if (oldState.varToRegSnapshot.get(curVar).id == newRegState.id){
+                curVar = newState.getRegState(nextReg).varName;
+                if (oldState.varToReg.get(curVar) == newState.varToReg.get(newVar)){
                     varsToReplace.add(curVar);
                     curVar = newVar;
                     break;
@@ -139,13 +147,16 @@ public class CodeGenerator extends Visitor<CodeObject> {
             //curVar needs to spill
             List<RegisterAction> actions = new ArrayList<>();
             registerManager.handleSpill(curVar, actions);
+
+            Register curReg = newState.varToReg.get(curVar);
+
             this.generateRegActionCode(actions, code);
 
             //handle replacement
             for (int j = varsToReplace.size() - 1; j >= 0; j--) {
                 String var = varsToReplace.get(j);
-                Register reg1 = registerManager.getRegisterByID(newState.varToRegSnapshot.get(var).id);
-                Register reg2 = registerManager.getRegisterByID(oldState.varToRegSnapshot.get(var).id);
+                Register reg1 = registerManager.getRegisterByID(newState.varToReg.get(var).id);
+                Register reg2 = registerManager.getRegisterByID(oldState.varToReg.get(var).id);
                 code.addCode(emitter.SWP(reg1, reg2));
             }
         }
