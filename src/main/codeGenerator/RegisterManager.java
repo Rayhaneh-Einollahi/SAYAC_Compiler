@@ -1,11 +1,12 @@
 package main.codeGenerator;
 
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RegisterManager {
-    private final List<Register> allOpRegisters = new ArrayList<>();
+    public final List<Register> allOpRegisters = new ArrayList<>();
     private final MemoryManager memoryManager;
     private  Map<String, Register> varToReg = new HashMap<>();
     private  Map<String, Integer> varUseCounts = new HashMap<>();
@@ -22,7 +23,12 @@ public class RegisterManager {
             allOpRegisters.add(new Register(i, Register.Purpose.OP));
         }
     }
-
+    public Register getRegisterByID(int id){
+        if(0<id && id<=allOpRegisters.size()){
+            return allOpRegisters.get(id-1);
+        }
+        throw new RuntimeException("Non-op register can't be refrenced by id");
+    }
     /**
      * get a register for the purpose of writing into it that refers to the variable varName
      */
@@ -45,7 +51,7 @@ public class RegisterManager {
         }
 
         if (memoryManager.hasVariable(varName)) {
-            return loadSpilled(varName,null, actions);
+            return loadVars(varName,null, actions);
         }
 
         return getFreeRegister(List.of(varName), actions);
@@ -62,7 +68,7 @@ public class RegisterManager {
                 return mainReg;
             }
             if (mainReg.id <= allOpRegisters.size()-1 && !getNextReg(mainReg).isLock()){ //check if it's not the last register
-                handleSpill(List.of(helperVar), List.of(getNextReg(mainReg)), actions).getFirst();
+                handleSpill(List.of(helperVar), List.of(getNextReg(mainReg)), actions);
                 return mainReg;
             }
         }
@@ -74,13 +80,13 @@ public class RegisterManager {
                 return getPrevReg(helperReg);
             }
             if (1 < helperReg.id && !getPrevReg(helperReg).isLock()){
-                handleSpill(List.of(mainVar), List.of(getPrevReg(helperReg)), actions).getFirst();
+                handleSpill(List.of(mainVar), List.of(getPrevReg(helperReg)), actions);
                 return getPrevReg(helperReg);
             }
         }
 
         if (memoryManager.hasVariable(mainVar) || memoryManager.hasVariable(helperVar)) {
-            return loadSpilled(mainVar,helperVar, actions);
+            return loadVars(mainVar,helperVar, actions);
         }
         return getFreeRegister(List.of(mainVar, helperVar),actions);
 
@@ -98,7 +104,8 @@ public class RegisterManager {
             return firstReg;
         }
         List<Register> spillRegs = chooseSpillCandidate(cnt);
-        return handleSpill(varNames,spillRegs, actions).getFirst();
+        handleSpill(varNames,spillRegs, actions);
+        return spillRegs.getFirst();
     }
 
     public void freeRegister(String varName) {
@@ -111,24 +118,27 @@ public class RegisterManager {
         varUseCounts.remove(varName);
     }
 
-    public Register loadSpilled(String var1, String var2, List<RegisterAction> actions) {
+    //Todo: load to specific register
+    //Todo: load
+    public void loadToReg(String varname, Register reg, List<RegisterAction> actions){
+        if(memoryManager.isLocal(varname)){
+            int offset = memoryManager.getLocalOffset(varname);
+            actions.add(new RegisterAction(RegisterAction.Type.LOAD_L, reg, offset,0));
+        }
+        else if(memoryManager.isGlobal(varname)){
+            int address = memoryManager.getGlobalAddress(varname);
+            actions.add(new RegisterAction(RegisterAction.Type.LOAD_G, reg, 0,address));
+        }
+    }
+    private Register loadVars(String var1, String var2, List<RegisterAction> actions) {
         String needLoadVar = (var2 != null && memoryManager.hasVariable(var2)) ? var2 : var1;
 
         if (!memoryManager.hasVariable(needLoadVar)) {
             throw new RuntimeException("Variable not spilled: " + needLoadVar);
         }
 
-        Register reg = null;
-        if(memoryManager.isLocal(needLoadVar)){
-            int offset = memoryManager.getLocalOffset(needLoadVar);
-            reg = getFreeRegister(Stream.of(var1, var2).filter(Objects::nonNull).toList(), actions);
-            actions.add(new RegisterAction(RegisterAction.Type.LOAD_L, reg, offset,0));
-        }
-        else if(memoryManager.isGlobal(needLoadVar)){
-            int address = memoryManager.getGlobalAddress(needLoadVar);
-            reg = getFreeRegister(Stream.of(var1, var2).filter(Objects::nonNull).toList(), actions);
-            actions.add(new RegisterAction(RegisterAction.Type.LOAD_G, reg, 0,address));
-        }
+        Register reg = getFreeRegister(Stream.of(var1, var2).filter(Objects::nonNull).toList(), actions);
+        loadToReg(needLoadVar, reg, actions);
         return reg;
     }
 
@@ -201,7 +211,13 @@ public class RegisterManager {
         return null;
     }
 
-    public List<Register> handleSpill(List<String> varsToAssign, List<Register> spillRegs, List<RegisterAction> actions) {
+    public void handleSpill(String varName, List<RegisterAction> actions) {
+
+        handleSpill(null, List.of(varToReg.get(varName)), actions);
+    }
+
+
+    public void handleSpill(List<String> varsToAssign, List<Register> spillRegs, List<RegisterAction> actions) {
         int cnt = spillRegs.size();
         for (int i = 0; i < cnt; i++) {
             Register spillReg = spillRegs.get(i);
@@ -225,8 +241,6 @@ public class RegisterManager {
             }
         }
 
-
-        return spillRegs;
     }
 
     public void assignRegister(Register reg, String varName) {
@@ -290,6 +304,41 @@ public class RegisterManager {
             });
         varToReg = new HashMap<>();
         varUseCounts = new HashMap<>();
+    }
+
+    //Store and Restore RegisterManager States:
+    public static class State {
+        public final Map<String, Register> varToReg;
+        public final Map<String, Integer> varUseCounts;
+        private final Map<Register, Register.State> opRegsState;
+
+        public State(Map<String, Register> varToReg,
+                     Map<String, Integer> varUseCounts,
+                     List<Register> opRegisters) {
+            this.varToReg = new HashMap<>(varToReg);
+            this.varUseCounts = new HashMap<>(varUseCounts);
+            this.opRegsState = opRegisters.stream()
+                    .collect(Collectors.toMap(
+                            Function.identity(),
+                            Register::saveState
+                    ));
+        }
+        public Register.State getRegState(Register reg){
+            return opRegsState.get(reg);
+        }
+    }
+
+    public State saveState() {
+        return new State(varToReg, varUseCounts, allOpRegisters);
+    }
+
+    public void restoreState(State state) {
+        this.varToReg = new HashMap<>(state.varToReg);
+        this.varUseCounts = new HashMap<>(state.varUseCounts);
+
+        for (Map.Entry<Register, Register.State> entry: state.opRegsState.entrySet()) {
+            entry.getKey().restoreState(entry.getValue());
+        }
     }
 
 }

@@ -16,6 +16,8 @@ import java.util.*;
 public class CodeGenerator extends Visitor<CodeObject> {
     private final static boolean DEBUG_MODE = false;
     private final static boolean ALIAS_REGISTER_NAMES = true;
+    private final static boolean STORE_LOCALS = true;
+    private final HashSet<String> locals_changed = new HashSet<>();
 
     private boolean insideFunction = false;
     public final RegisterManager registerManager;
@@ -101,6 +103,85 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 case LOAD_L  -> code.addCode(emitter.LW(FP, action.offset, action.register));
                 case SPILL_G -> code.addCode(emitter.STI(action.register, action.address));
                 case LOAD_G -> code.addCode(emitter.LDI(action.address, action.register));
+            }
+        }
+    }
+
+    public void rollBackRegState(RegisterManager.State oldState, RegisterManager.State newState, CodeObject code){
+        for (Register reg : registerManager.allOpRegisters) {
+
+            String oldVar = oldState.getRegState(reg).varName;
+            String newVar = newState.getRegState(reg).varName;
+            if((oldVar==null && newVar==null) ||
+                    (oldVar != null && oldVar.equals(newVar))){
+                continue;
+            }
+            if(newVar == null){
+                Register newReg = newState.varToReg.get(oldVar);
+                if (newReg != null){
+                    code.addCode(emitter.ADR(ZR, newReg,reg));
+                    //update newState:
+                    newState.varToReg.put(oldVar,reg);
+                    newState.getRegState(reg).varName = oldVar;
+                    newState.getRegState(reg).isFree = false;
+
+                    newState.getRegState(newReg).varName = null;
+                    newState.getRegState(newReg).isFree = true;
+
+                }
+                else{
+                    List<RegisterAction> actions = new ArrayList<>();
+                    registerManager.loadToReg(oldVar, reg , actions);
+                    newState.varToReg.put(oldVar,reg);
+                    newState.getRegState(reg).varName = oldVar;
+                    newState.getRegState(reg).isFree = false;
+                    generateRegActionCode(actions, code);
+                }
+                continue;
+            }
+
+            List<String> varsToReplace = new ArrayList<>();
+            String curVar = newVar;
+            while(oldState.varToReg.get(curVar)!=null){
+                varsToReplace.add(curVar);
+                Register nextReg = oldState.varToReg.get(curVar);
+                if(newState.getRegState(nextReg).isFree) {
+                    curVar = null;
+                    break;
+                }
+                curVar = newState.getRegState(nextReg).varName;
+                if (oldState.varToReg.get(curVar) == newState.varToReg.get(newVar)){
+                    varsToReplace.add(curVar);
+                    curVar = newVar;
+                    break;
+                }
+            }
+
+            //curVar needs to spill
+            if(curVar != null){
+                List<RegisterAction> actions = new ArrayList<>();
+                Register curReg = newState.varToReg.get(curVar);
+                newState.getRegState(curReg).varName = null;
+                newState.getRegState(curReg).isFree = true;
+                newState.varToReg.remove(curVar);
+
+                registerManager.handleSpill(curVar, actions);
+                this.generateRegActionCode(actions, code);
+
+            }
+            //handle replacement
+            for (int j = varsToReplace.size() - 1; j >= 0; j--) {
+                String var1 = varsToReplace.get(j);
+                Register reg1 = newState.varToReg.get(var1);
+                String var2 = newState.getRegState(reg1).varName;
+                Register reg2 = newState.varToReg.get(var2);
+                code.addCode(emitter.SWP(reg1, reg2));
+                //free reg1:
+                newState.getRegState(reg1).varName = var2;
+                newState.getRegState(reg2).varName = var1;
+
+                newState.varToReg.put(var1, reg2);
+                newState.varToReg.put(var2, reg1);
             }
         }
     }
@@ -237,7 +318,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.STR(operand1reg, reg));
         return code;
     }
-
     /** generate code for Function:<p>
      * 1 - generate a label for the beginning of function definition<p>
      * 2 - store the current frame-pointer to the stack <p>
@@ -415,6 +495,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(WhileStatement whileStatement){
         CodeObject code = new CodeObject();
+        RegisterManager.State state = registerManager.saveState();
         String condLabel = labelManager.generateWhileConditionLabel();
         String bodyLabel = labelManager.generateWhileBodyLabel();
         String endLabel = labelManager.generateWhileEndLabel();
@@ -437,6 +518,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
         code.addCode(emitter.JMP(condLabel, ZR));
 
+        rollBackRegState(state, registerManager.saveState(), code);
+        registerManager.restoreState(state);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -450,6 +533,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
     @Override
     public CodeObject visit(ForStatement forStatement) {
         CodeObject code = new CodeObject();
+        RegisterManager.State state = registerManager.saveState();
+
         String condLabel = labelManager.generateForConditionLabel();
         String bodyLabel = labelManager.generateForBodyLabel();
         String endLabel = labelManager.generateForEndLabel();
@@ -483,6 +568,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
         code.addCode(emitter.JMP(condLabel, ZR));
 
+        rollBackRegState(state, registerManager.saveState(), code);
+        registerManager.restoreState(state);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -608,6 +695,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(SelectionStatement selectionStatement) {
         CodeObject code= new CodeObject();
+        RegisterManager.State state = registerManager.saveState();
         String ifLabel = labelManager.generateIfLabel();
         String elseLabel = labelManager.generateElseLabel();
         String afterIfLabel = labelManager.generateAfterIfLabel();
@@ -617,12 +705,18 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         code.addCode(emitter.emitLabel(ifLabel));
         code.addCode(selectionStatement.getIfStatement().accept(this));
+
+        rollBackRegState(state, registerManager.saveState(), code);
+        registerManager.restoreState(state);
         code.addCode(emitter.JMP(afterIfLabel, ZR));
 
 
         if (selectionStatement.getElseStatement() != null) {
             code.addCode(emitter.emitLabel(elseLabel));
             code.addCode(selectionStatement.getElseStatement().accept(this));
+
+            rollBackRegState(state, registerManager.saveState(), code);
+            registerManager.restoreState(state);
         }
         code.addCode(emitter.emitLabel(afterIfLabel));
         return code;
