@@ -10,6 +10,7 @@ public class LabelManager {
     private int counter = 0;
     static final private String funcPrefix = "func_";
     static final private String funcReturnPrefix = "func_ret_";
+    static final private String functionJMPPrefix = "func_JMP_";
 
     public LabelManager(/*String prefix = " "*/) {
 //        this.prefix = prefix;
@@ -73,6 +74,10 @@ public class LabelManager {
     public String generateFunctionReturnLabel(String funcName){
         return funcReturnPrefix + funcName;
     }
+    public String generateFunctionJMPLabel(String funcName){
+        return functionJMPPrefix + funcName;
+    }
+
     public boolean contains(String label) {
         return labels.contains(label);
     }

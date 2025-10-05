@@ -91,6 +91,12 @@ public class InstructionEmitter {
         return code;
     }
 
+    public CodeObject SRA(String JMPLabel, Register returnReg){
+        CodeObject code =  new CodeObject();
+        code.addCode(emit("SRA", JMPLabel, returnReg));
+        return code;
+    }
+
     public CodeObject emitComments(List<String> comments, Color color){
         CodeObject code =  new CodeObject();
         if(debugMode) {

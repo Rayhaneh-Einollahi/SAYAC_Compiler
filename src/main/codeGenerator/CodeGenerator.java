@@ -425,7 +425,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.emitComment("restore old FP", InstructionEmitter.Color.BLUE));
         code.addCode(emitter.LDR(FP, FP));
         if(!functionDefinition.getName().equals( "main")) {
-            code.addCode(emitter.emitComment("JUMP to RETURN ADDRESS", InstructionEmitter.Color.BLUE));
+            code.addCode(emitter.emitLabel(labelManager.generateFunctionJMPLabel(functionDefinition.getName())));
             code.addCode(emitter.JMR(RA));
         }
 
@@ -481,7 +481,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         code.addCode(emitter.emitComment("JMP to Func", InstructionEmitter.Color.BRIGHT_YELLOW));
         String funcLabel = labelManager.generateFunctionLabel(functionExpr.getName());
-        code.addCode(emitter.JMP(funcLabel, RA));
+        code.addCode(emitter.SRA(labelManager.generateFunctionJMPLabel(functionExpr.getName()), RA));
+        code.addCode(emitter.JMP(funcLabel, ZR));
         code.addCode(emitter.emitComment("roll back SP", InstructionEmitter.Color.BRIGHT_YELLOW));
 
         code.addCode(emitter.emitComment("store RT in another reg", InstructionEmitter.Color.BRIGHT_YELLOW));

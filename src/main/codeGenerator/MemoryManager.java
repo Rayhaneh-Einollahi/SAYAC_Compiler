@@ -141,27 +141,27 @@ public class MemoryManager {
 
     public List<String> getState() {
         List<String> lines = new ArrayList<>();
-        lines.add("Memory State:\n");
-        lines.add("-------------\n");
+        lines.add("Memory State:");
+        lines.add("-------------");
 
         // Globals
-        lines.add("Globals (absolute addresses):\n");
+        lines.add("Globals (absolute addresses):");
         if (globalAddresses.isEmpty()) {
-            lines.add("  (none)\n");
+            lines.add("  (none)");
         } else {
             for (var e : globalAddresses.entrySet()) {
-                String line = String.format("  %-15s -> 0x%04X (%d)\n",
+                String line = String.format("  %-15s -> 0x%04X (%d)",
                         e.getKey(), e.getValue(), e.getValue());
                 lines.add(line);
             }
         }
 
-        lines.add("Locals (FP-relative offsets):\n");
+        lines.add("Locals (FP-relative offsets):");
         if (localOffsets == null || localOffsets.isEmpty()) {
-            lines.add("  (none)\n");
+            lines.add("  (none)");
         } else {
             for (var e : localOffsets.entrySet()) {
-                String line = String.format("  %-15s -> %d\n", e.getKey(), e.getValue());
+                String line = String.format("  %-15s -> %d", e.getKey(), e.getValue());
                 lines.add(line);
             }
         }
