@@ -234,7 +234,13 @@ def replace_placeholder(lines, labels):
         if op == 'SRA' and parts[1] in labels:
             target = parts[1]
             reg = parts[2]
-            offset = pc + 2 - labels[target]
+            cnt_jmp_offset = 0
+            for j in range(i + 1, min(i + 3, len(lines))):
+                if lines[j] == 'PLACE_HOLDER':
+                    cnt_jmp_offset += 1
+                else:
+                    break
+            offset = pc + cnt_jmp_offset+ 2 - labels[target]
             lo, hi = split_imm16(offset)
             if i>=1 and lines[i-1] == 'PLACE_HOLDER':
                 lines[i-1:i+1] = [
