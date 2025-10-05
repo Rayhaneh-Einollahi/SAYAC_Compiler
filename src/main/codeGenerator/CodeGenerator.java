@@ -120,10 +120,21 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 Register newReg = newState.varToReg.get(oldVar);
                 if (newReg != null){
                     code.addCode(emitter.ADR(ZR, newReg,reg));
+                    //update newState:
+                    newState.varToReg.put(oldVar,reg);
+                    newState.getRegState(reg).varName = oldVar;
+                    newState.getRegState(reg).isFree = false;
+
+                    newState.getRegState(newReg).varName = null;
+                    newState.getRegState(newReg).isFree = true;
+
                 }
                 else{
                     List<RegisterAction> actions = new ArrayList<>();
                     registerManager.loadToReg(oldVar, reg , actions);
+                    newState.varToReg.put(oldVar,reg);
+                    newState.getRegState(reg).varName = oldVar;
+                    newState.getRegState(reg).isFree = false;
                     generateRegActionCode(actions, code);
                 }
                 continue;
@@ -134,8 +145,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
             while(oldState.varToReg.get(curVar)!=null){
                 varsToReplace.add(curVar);
                 Register nextReg = oldState.varToReg.get(curVar);
-                if(newState.getRegState(nextReg).isFree)
+                if(newState.getRegState(nextReg).isFree) {
+                    curVar = null;
                     break;
+                }
                 curVar = newState.getRegState(nextReg).varName;
                 if (oldState.varToReg.get(curVar) == newState.varToReg.get(newVar)){
                     varsToReplace.add(curVar);
@@ -145,19 +158,30 @@ public class CodeGenerator extends Visitor<CodeObject> {
             }
 
             //curVar needs to spill
-            List<RegisterAction> actions = new ArrayList<>();
-            registerManager.handleSpill(curVar, actions);
+            if(curVar != null){
+                List<RegisterAction> actions = new ArrayList<>();
+                Register curReg = newState.varToReg.get(curVar);
+                newState.getRegState(curReg).varName = null;
+                newState.getRegState(curReg).isFree = true;
+                newState.varToReg.remove(curVar);
 
-            Register curReg = newState.varToReg.get(curVar);
+                registerManager.handleSpill(curVar, actions);
+                this.generateRegActionCode(actions, code);
 
-            this.generateRegActionCode(actions, code);
-
+            }
             //handle replacement
             for (int j = varsToReplace.size() - 1; j >= 0; j--) {
-                String var = varsToReplace.get(j);
-                Register reg1 = registerManager.getRegisterByID(newState.varToReg.get(var).id);
-                Register reg2 = registerManager.getRegisterByID(oldState.varToReg.get(var).id);
+                String var1 = varsToReplace.get(j);
+                Register reg1 = newState.varToReg.get(var1);
+                String var2 = newState.getRegState(reg1).varName;
+                Register reg2 = newState.varToReg.get(var2);
                 code.addCode(emitter.SWP(reg1, reg2));
+                //free reg1:
+                newState.getRegState(reg1).varName = var2;
+                newState.getRegState(reg2).varName = var1;
+
+                newState.varToReg.put(var1, reg2);
+                newState.varToReg.put(var2, reg1);
             }
         }
     }

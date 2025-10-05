@@ -65,13 +65,11 @@ public class Register {
     }
 
     public static class State {
-        public final boolean isLock;
-        public final boolean isFree;
-        public final String varName;
+        public boolean isFree;
+        public String varName;
         public final int id;
 
         private State(boolean isLock, boolean isFree, String varName, int id) {
-            this.isLock = isLock;
             this.isFree = isFree;
             this.varName = varName;
             this.id = id;
@@ -83,7 +81,6 @@ public class Register {
     }
 
     public void restoreState(State state) {
-        this.isLock = state.isLock;
         this.isFree = state.isFree;
         this.varName = state.varName;
         this.id = state.id;
