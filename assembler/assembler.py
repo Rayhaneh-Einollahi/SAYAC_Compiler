@@ -153,10 +153,16 @@ def compute_prefix(instruction, lines):
         prefix_sum[i] = count
         i += 1
     return prefix_sum
+def cal_approx_offset(pc, target, labels, jmp_prefix, brr_prefix, sra_prefix):
+    return labels[target] - pc \
+            + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc]) * 2 \
+            + (brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2 \
+            + (sra_prefix[labels[target] - 1] - sra_prefix[pc])
 
 def expand_label_macros(lines, labels):
     jmp_prefix = compute_prefix('JMP', lines)
     brr_prefix = compute_prefix('BRR', lines)
+    sra_prefix = compute_prefix('SRA', lines)
     pc = 0
     new_lines = []
     for i, line in enumerate(lines):
@@ -166,11 +172,23 @@ def expand_label_macros(lines, labels):
             new_lines.append(line)
             continue
         op = parts[0].upper()
+        
+        if op == 'SRA':
+            target = parts[1]
+            reg = parts[2]
+            approx_offset = cal_approx_offset(pc, target, labels, jmp_prefix, brr_prefix, sra_prefix)
+            if -128 <= approx_offset <= 127:
+                new_lines.append(line)
+            else:
+                new_lines.extend([
+                    f'PLACE_HOLDER',
+                    line
+                ])
 
-        if op == 'JMP':
+        elif op == 'JMP':
             target = parts[1]
             retReg = parts[2]
-            approx_offset = labels[target] - pc + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc] + brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2
+            approx_offset = cal_approx_offset(pc, target, labels, jmp_prefix, brr_prefix, sra_prefix)
             if -32 <= approx_offset <= 31:
                 new_lines.append(f'JMI {target} {retReg}')
             elif -128 <= approx_offset <= 127:
@@ -187,7 +205,7 @@ def expand_label_macros(lines, labels):
 
         elif op == 'BRR' and parts[2] in labels:
             target = parts[2]
-            approx_offset = labels[target] - pc + (jmp_prefix[labels[target] - 1] - jmp_prefix[pc] + brr_prefix[labels[target] - 1] - brr_prefix[pc]) * 2
+            approx_offset = cal_approx_offset(pc, target, labels, jmp_prefix, brr_prefix, sra_prefix)
             flag = parts[1]
             if -128 <= approx_offset <= 127:
                 new_lines.extend([
@@ -213,7 +231,21 @@ def replace_placeholder(lines, labels):
         if not parts:
             continue
         op = parts[0].upper()
-        if op == 'JMI' and parts[1] in labels:
+        if op == 'SRA' and parts[1] in labels:
+            target = parts[1]
+            reg = parts[2]
+            offset = pc + 2 - labels[target]
+            lo, hi = split_imm16(offset)
+            if i>=1 and lines[i-1] == 'PLACE_HOLDER':
+                lines[i-1:i+1] = [
+                    f'MSI {lo} {reg}',
+                    f'MHI {hi} {reg}',
+                ]
+            else:
+                lines[i] = f'MSI {lo} {reg}'
+
+
+        elif op == 'JMI' and parts[1] in labels:
             target = parts[1]
             desReg = parts[2]
             offset = labels[target] - pc
