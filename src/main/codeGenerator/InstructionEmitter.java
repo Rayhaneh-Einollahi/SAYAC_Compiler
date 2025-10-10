@@ -236,7 +236,8 @@ public class InstructionEmitter {
         return this.emit("JMP", colorIfDebug(label, Color.YELLOW), returnReg);
     }
 
-    public CodeObject SUR(Register valueReg2, Register valueReg1, Register destReg) {
+    public CodeObject SUR(Register valueReg1, Register valueReg2, Register destReg) {
+        // destReg = valueReg1 - valueReg2
         CodeObject code = new CodeObject();
         storeUsedReg(code, valueReg2, valueReg1, destReg);
         code.addCode(emit("SUR", valueReg2, valueReg1, destReg));

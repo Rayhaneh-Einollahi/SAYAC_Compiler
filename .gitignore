@@ -5,6 +5,7 @@
 
 # Ignore out directory
 /out/
+*.out
 
 # macOS
 **/.DS_Store
