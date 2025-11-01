@@ -11,6 +11,7 @@ public class RegisterManager {
     private  Map<String, Register> varToReg = new HashMap<>();
     private  Map<String, Integer> varUseCounts = new HashMap<>();
 
+    public State initialState;
     public Register ZR = new Register(0, Register.Purpose.ZR);
     public Register RA = new Register(10, Register.Purpose.RA);
     public Register RT = new Register(11, Register.Purpose.RT);
@@ -19,6 +20,7 @@ public class RegisterManager {
 
     public RegisterManager(MemoryManager memoryManager) {
         this.memoryManager = memoryManager;
+        this.initialState = saveState();
         for(int i=1; i<=9; i++){
             allOpRegisters.add(new Register(i, Register.Purpose.OP));
         }
@@ -249,6 +251,9 @@ public class RegisterManager {
         if(prevReg!=null){
             freeRegister(varName);
         }
+//        i think?
+//        if(reg.getVarName() != null)
+//            varToReg.remove(reg.getVarName());
         incrementUseCount(varName);
         reg.setVarName(varName);
         varToReg.put(varName, reg);

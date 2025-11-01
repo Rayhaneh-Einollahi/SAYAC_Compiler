@@ -1,6 +1,7 @@
 package main.codeGenerator;
 
 import main.ast.nodes.Program;
+import main.ast.nodes.Statement.ExpressionStatement;
 import main.ast.nodes.Statement.IterationStatement.*;
 import main.ast.nodes.Statement.JumpStatement.*;
 import main.ast.nodes.Statement.SelectionStatement;
@@ -246,7 +247,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 }
             }
         }
-
+        //restore
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
+        registerManager.restoreState(registerManager.initialState);
         return code;
     }
 
@@ -496,7 +499,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(WhileStatement whileStatement){
         CodeObject code = new CodeObject();
-        RegisterManager.State state = registerManager.saveState();
+//        RegisterManager.State state = registerManager.saveState();
         String condLabel = labelManager.generateWhileConditionLabel();
         String bodyLabel = labelManager.generateWhileBodyLabel();
         String endLabel = labelManager.generateWhileEndLabel();
@@ -507,6 +510,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.emitLabel(condLabel));
         if(whileStatement.getCondition() != null) {
             code.addCode(branch(whileStatement.getCondition(), bodyLabel, endLabel));
+            //restore
+            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
+            registerManager.restoreState(registerManager.initialState);
         }
         else {
             code.addCode(emitter.JMP(bodyLabel, ZR));
@@ -519,8 +525,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
         code.addCode(emitter.JMP(condLabel, ZR));
 
-        rollBackRegState(state, registerManager.saveState(), code);
-        registerManager.restoreState(state);
+//        rollBackRegState(state, registerManager.saveState(), code);
+//        registerManager.restoreState(state);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -534,7 +540,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
     @Override
     public CodeObject visit(ForStatement forStatement) {
         CodeObject code = new CodeObject();
-        RegisterManager.State state = registerManager.saveState();
+//        RegisterManager.State state = registerManager.saveState();
 
         String condLabel = labelManager.generateForConditionLabel();
         String bodyLabel = labelManager.generateForBodyLabel();
@@ -549,11 +555,17 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
         else if (forStatement.getForCondition().getExpr() != null) {
             code.addCode(forStatement.getForCondition().getExpr().accept(this));
+            //restore
+            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
+            registerManager.restoreState(registerManager.initialState);
         }
 
 
         code.addCode(emitter.emitLabel(condLabel));
         code.addCode(branchFromAndList(forStatement.getForCondition().getConditions(), bodyLabel, endLabel));
+        //restore
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
+        registerManager.restoreState(registerManager.initialState);
 
         code.addCode(emitter.emitLabel(bodyLabel));
         if (forStatement.getBody() != null) {
@@ -565,12 +577,15 @@ public class CodeGenerator extends Visitor<CodeObject> {
         if (forStatement.getForCondition().getSteps() != null) {
             for (Expr step : forStatement.getForCondition().getSteps()) {
                 code.addCode(step.accept(this));
+                //restore
+                rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
+                registerManager.restoreState(registerManager.initialState);
             }
         }
         code.addCode(emitter.JMP(condLabel, ZR));
 
-        rollBackRegState(state, registerManager.saveState(), code);
-        registerManager.restoreState(state);
+//        rollBackRegState(state, registerManager.saveState(), code);
+//        registerManager.restoreState(state);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -703,6 +718,9 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
         code.addCode(branch(selectionStatement.getCondition(), ifLabel,selectionStatement.getElseStatement() != null? elseLabel: afterIfLabel));
+        //restore
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
+        registerManager.restoreState(registerManager.initialState);
 
         code.addCode(emitter.emitLabel(ifLabel));
         code.addCode(selectionStatement.getIfStatement().accept(this));
@@ -720,6 +738,15 @@ public class CodeGenerator extends Visitor<CodeObject> {
             registerManager.restoreState(state);
         }
         code.addCode(emitter.emitLabel(afterIfLabel));
+        return code;
+    }
+    public CodeObject visit(ExpressionStatement expressionStatement) {
+
+        CodeObject code = new CodeObject();
+        code.addCode(expressionStatement.getExpr().accept(this));
+        //restore
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
+        registerManager.restoreState(registerManager.initialState);
         return code;
     }
     public CodeObject visit(UnaryExpr unaryExpr) {
