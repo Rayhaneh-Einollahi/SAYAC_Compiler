@@ -20,10 +20,10 @@ public class RegisterManager {
 
     public RegisterManager(MemoryManager memoryManager) {
         this.memoryManager = memoryManager;
-        this.initialState = saveState();
         for(int i=1; i<=9; i++){
             allOpRegisters.add(new Register(i, Register.Purpose.OP));
         }
+        this.initialState = saveState();
     }
     public Register getRegisterByID(int id){
         if(0<id && id<=allOpRegisters.size()){
