@@ -1,4 +1,4 @@
-// Generated from /Users/mahdis/Me/university/Research/SAYAC_Compiler/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
+// Generated from D:/Ray_Universe/compiler/SAYAC/SAYAC_Compiler/src/main/grammar/SimpleLang.g4 by ANTLR 4.13.2
 package main.grammar;
 
     import java.util.List;
