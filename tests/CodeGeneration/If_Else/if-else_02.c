@@ -6,4 +6,6 @@ int main(){
     else
         b = 3;
     int x = b  + a;
+
+    return x;
 }

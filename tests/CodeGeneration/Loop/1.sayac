@@ -1,0 +1,102 @@
+MSI 5000 SP
+JMP func_main ZR
+func_main:
+STR FP SP
+ADR ZR SP FP
+MSI 1 R1
+ADI -2 FP
+STR R1 FP
+ADI 2 FP
+ADI -2 FP
+LDR FP R1
+ADI 2 FP
+CMI 10 R1
+BRR == If_0
+JMP After_If_2 ZR
+ADI -2 FP
+STR R1 FP
+ADI 2 FP
+If_0:
+MSI 0 R1
+ADI -6 FP
+STR R1 FP
+ADI 6 FP
+JMP After_If_2 ZR
+After_If_2:
+MSI 0 R1
+ADI -4 FP
+STR R1 FP
+ADI 4 FP
+while_condition_3:
+ADI -2 FP
+LDR FP R1
+ADI 2 FP
+CMI 100 R1
+BRR > while_body_4
+JMP while_end_5 ZR
+ADI -2 FP
+STR R1 FP
+ADI 2 FP
+while_body_4:
+ADI -2 FP
+LDR FP R1
+ADI 2 FP
+ADR ZR R1 R2
+ADI 1 R1
+ADI -2 FP
+STR R1 FP
+ADI 2 FP
+ADI -8 FP
+STR R2 FP
+ADI 8 FP
+ADI -2 FP
+LDR FP R1
+ADI 2 FP
+CMI 19 R1
+BRR == If_6
+JMP After_If_8 ZR
+ADI -2 FP
+STR R1 FP
+ADI 2 FP
+If_6:
+JMP while_condition_3 ZR
+JMP After_If_8 ZR
+After_If_8:
+ADI -4 FP
+LDR FP R1
+ADI 4 FP
+ADR ZR R1 R2
+ADI 1 R1
+ADI -4 FP
+STR R1 FP
+ADI 4 FP
+ADI -10 FP
+STR R2 FP
+ADI 10 FP
+ADI -4 FP
+LDR FP R1
+ADI 4 FP
+CMI 70 R1
+BRR < If_9
+JMP After_If_11 ZR
+ADI -4 FP
+STR R1 FP
+ADI 4 FP
+If_9:
+JMP while_end_5 ZR
+JMP After_If_11 ZR
+After_If_11:
+JMP while_condition_3 ZR
+while_end_5:
+ADI -2 FP
+LDR FP R1
+ADI 2 FP
+ADI -4 FP
+LDR FP R2
+ADI 4 FP
+ADR R1 R2 R3
+ADR ZR R3 RT
+JMP func_ret_main ZR
+func_ret_main:
+ADR ZR FP SP
+LDR FP FP

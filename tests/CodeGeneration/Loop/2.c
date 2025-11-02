@@ -1,5 +1,5 @@
 int main() {
-    sum = 0;
+    int sum = 0;
     for (int i = 4; i < 10; i++) {
         if(i == 6) {
             continue;
@@ -9,4 +9,6 @@ int main() {
             break;
         }
     }
+
+    return sum; // 16
 }
