@@ -14,4 +14,5 @@ int main() {
             break;
         }
     }
+    return i + j; //144
 }
