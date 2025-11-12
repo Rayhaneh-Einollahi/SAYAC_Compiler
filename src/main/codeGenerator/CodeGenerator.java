@@ -185,6 +185,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 newState.varToReg.put(var2, reg1);
             }
         }
+        registerManager.restoreState(oldState);
     }
     public CodeObject visit(Program program) {
         CodeObject code = new CodeObject();
@@ -194,6 +195,8 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
 
         code.addCode(emitter.MSI(memoryManager.getSTACK_POINTER_BEGIN(), SP));
+
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(labelManager.generateFunctionLabel("main"), ZR));
 
         for (ExternalDeclaration ed : program.getExternalDeclarations()){
@@ -247,9 +250,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
                 }
             }
         }
-        //restore
-        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
-        registerManager.restoreState(registerManager.initialState);
         return code;
     }
 
@@ -415,7 +415,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         code.addCode(emitter.emitComment("body's code:", InstructionEmitter.Color.BLUE));
         code.addCode(functionDefinition.getBody().accept(this));
 
-
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(currentFunctionEndLabel));
         code.addCode(emitter.emitComment("return SP to FP", InstructionEmitter.Color.BLUE));
         code.addCode(emitter.ADR(ZR,FP, SP));
@@ -499,7 +499,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
     public CodeObject visit(WhileStatement whileStatement){
         CodeObject code = new CodeObject();
-//        RegisterManager.State state = registerManager.saveState();
         String condLabel = labelManager.generateWhileConditionLabel();
         String bodyLabel = labelManager.generateWhileBodyLabel();
         String endLabel = labelManager.generateWhileEndLabel();
@@ -507,26 +506,24 @@ public class CodeGenerator extends Visitor<CodeObject> {
         loopEndLabels.push(endLabel);
         loopContinueLabels.push(condLabel);
 
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(condLabel));
         if(whileStatement.getCondition() != null) {
             code.addCode(branch(whileStatement.getCondition(), bodyLabel, endLabel));
-            //restore
-            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
-            registerManager.restoreState(registerManager.initialState);
         }
         else {
+            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
             code.addCode(emitter.JMP(bodyLabel, ZR));
         }
 
-
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(bodyLabel));
         if (whileStatement.getBody() != null) {
             code.addCode(whileStatement.getBody().accept(this));
         }
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(condLabel, ZR));
-
-//        rollBackRegState(state, registerManager.saveState(), code);
-//        registerManager.restoreState(state);
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -540,8 +537,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
     @Override
     public CodeObject visit(ForStatement forStatement) {
         CodeObject code = new CodeObject();
-//        RegisterManager.State state = registerManager.saveState();
-
         String condLabel = labelManager.generateForConditionLabel();
         String bodyLabel = labelManager.generateForBodyLabel();
         String endLabel = labelManager.generateForEndLabel();
@@ -555,37 +550,29 @@ public class CodeGenerator extends Visitor<CodeObject> {
         }
         else if (forStatement.getForCondition().getExpr() != null) {
             code.addCode(forStatement.getForCondition().getExpr().accept(this));
-            //restore
-            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
-            registerManager.restoreState(registerManager.initialState);
         }
 
-
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(condLabel));
         code.addCode(branchFromAndList(forStatement.getForCondition().getConditions(), bodyLabel, endLabel));
-        //restore
         rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
-        registerManager.restoreState(registerManager.initialState);
-
         code.addCode(emitter.emitLabel(bodyLabel));
         if (forStatement.getBody() != null) {
             code.addCode(forStatement.getBody().accept(this));
         }
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(stepLabel, ZR));
 
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(stepLabel));
         if (forStatement.getForCondition().getSteps() != null) {
             for (Expr step : forStatement.getForCondition().getSteps()) {
                 code.addCode(step.accept(this));
-                //restore
-                rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
-                registerManager.restoreState(registerManager.initialState);
             }
         }
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(condLabel, ZR));
-
-//        rollBackRegState(state, registerManager.saveState(), code);
-//        registerManager.restoreState(state);
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(endLabel));
 
         loopEndLabels.pop();
@@ -599,6 +586,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
         CodeObject code = new CodeObject();
 
         if (conditions == null || conditions.isEmpty()) {
+            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
             code.addCode(emitter.JMP(trueLabel, ZR));
             return code;
         }
@@ -613,6 +601,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             String nextTrueLabel = (i == conditions.size() - 1) ? trueLabel : intermediateLabels.get(i);
             code.addCode(branch(cond, nextTrueLabel, falseLabel));
             if (i < intermediateLabels.size()) {
+                rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
                 code.addCode(emitter.emitLabel(intermediateLabels.get(i)));
             }
         }
@@ -624,6 +613,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(BreakStatement breakStatement) {
         CodeObject code = new CodeObject();
         String endLabel = loopEndLabels.peek();
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(endLabel, ZR));
         return code;
     }
@@ -631,6 +621,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
     public CodeObject visit(ContinueStatement continueStmt) {
         CodeObject code = new CodeObject();
         String stepLabel = loopContinueLabels.peek();
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(stepLabel, ZR));
         return code;
     }
@@ -648,6 +639,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             if(binaryExpr.getOperator() == BinaryOperator.ANDAND){
                 String nextLabel = labelManager.generateNextLabel();
                 code.addCode(branch(binaryExpr.getFirstOperand(), nextLabel, falseLabel));
+                rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
                 code.addCode(emitter.emitLabel(nextLabel));
                 code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
                 return code;
@@ -655,6 +647,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             else if(binaryExpr.getOperator() == BinaryOperator.OROR) {
                 String nextLabel = labelManager.generateNextLabel();
                 code.addCode(branch(binaryExpr.getFirstOperand(), trueLabel, nextLabel));
+                rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
                 code.addCode(emitter.emitLabel(nextLabel));
                 code.addCode(branch(binaryExpr.getSecondOperand(), trueLabel, falseLabel));
                 return code;
@@ -662,25 +655,31 @@ public class CodeGenerator extends Visitor<CodeObject> {
             else if(binaryExpr.getOperator().isCompare()){
                 if (binaryExpr.getFirstOperand() instanceof IntVal intVal){
                     CodeObject right = binaryExpr.getSecondOperand().accept(this);
+                    code.addCode(right);
                     String resultVar = right.getResultVar();
                     Register rightReg = getRegisterForRead(code, resultVar);
                     code.addCode(emitter.CMI(intVal.getInt(), rightReg));
+                    rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
 
                     if(nameManager.isTmp(resultVar)) registerManager.freeRegister(resultVar);
                 }
                 else if(binaryExpr.getSecondOperand() instanceof IntVal intVal){
                     CodeObject left = binaryExpr.getFirstOperand().accept(this);
+                    code.addCode(left);
                     String resultVar = left.getResultVar();
                     Register leftReg = getRegisterForRead(code, resultVar);
                     code.addCode(emitter.CMI(intVal.getInt(), leftReg));
+                    rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
                     code.addCode(emitter.BRR(binaryExpr.getOperator().flip().getSymbol(), trueLabel));
 
                     if(nameManager.isTmp(resultVar)) registerManager.freeRegister(resultVar);
                 }
                 else{
                     CodeObject left = binaryExpr.getFirstOperand().accept(this);
+                    code.addCode(left);
                     CodeObject right = binaryExpr.getSecondOperand().accept(this);
+                    code.addCode(right);
                     String leftVar = left.getResultVar();
                     String rightVar = right.getResultVar();
                     Register leftReg = getRegisterForRead(code, leftVar);
@@ -688,12 +687,13 @@ public class CodeGenerator extends Visitor<CodeObject> {
                     Register rightReg = getRegisterForRead(code, rightVar);
                     leftReg.unlock();
                     code.addCode(emitter.CMR(leftReg, rightReg));
+                    rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
                     code.addCode(emitter.BRR(binaryExpr.getOperator().getSymbol(), trueLabel));
 
                     if(nameManager.isTmp(leftVar)) registerManager.freeRegister(leftVar);
                     if(nameManager.isTmp(rightVar)) registerManager.freeRegister(rightVar);
                 }
-
+                rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
                 code.addCode(emitter.JMP(falseLabel, ZR));
                 return code;
             }
@@ -704,7 +704,10 @@ public class CodeGenerator extends Visitor<CodeObject> {
         String resultVar = resultCode.getResultVar();
         Register resultReg = getRegisterForRead(code, resultVar);
         code.addCode(emitter.CMI(0,resultReg));
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.BRR("!=", trueLabel));
+
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(falseLabel, ZR));
         return code;
     }
@@ -718,25 +721,20 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
 
         code.addCode(branch(selectionStatement.getCondition(), ifLabel,selectionStatement.getElseStatement() != null? elseLabel: afterIfLabel));
-        //restore
         rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
-        registerManager.restoreState(registerManager.initialState);
-
         code.addCode(emitter.emitLabel(ifLabel));
         code.addCode(selectionStatement.getIfStatement().accept(this));
 
-        rollBackRegState(state, registerManager.saveState(), code);
-        registerManager.restoreState(state);
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.JMP(afterIfLabel, ZR));
 
 
         if (selectionStatement.getElseStatement() != null) {
+            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
             code.addCode(emitter.emitLabel(elseLabel));
             code.addCode(selectionStatement.getElseStatement().accept(this));
-
-            rollBackRegState(state, registerManager.saveState(), code);
-            registerManager.restoreState(state);
         }
+        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
         code.addCode(emitter.emitLabel(afterIfLabel));
         return code;
     }
@@ -744,9 +742,6 @@ public class CodeGenerator extends Visitor<CodeObject> {
 
         CodeObject code = new CodeObject();
         code.addCode(expressionStatement.getExpr().accept(this));
-        //restore
-        rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
-        registerManager.restoreState(registerManager.initialState);
         return code;
     }
     public CodeObject visit(UnaryExpr unaryExpr) {
@@ -924,6 +919,7 @@ public class CodeGenerator extends Visitor<CodeObject> {
             code.setResultVar(destVar);
             code.addCode(emitter.emitLabel(trueLabel));
             code.addCode(emitter.MSI(1, destReg));
+            rollBackRegState(registerManager.initialState, registerManager.saveState(), code);
             code.addCode(emitter.JMP(endLabel, ZR));
             code.addCode(emitter.emitLabel(falseLabel));
             code.addCode(emitter.MSI(0, destReg));
