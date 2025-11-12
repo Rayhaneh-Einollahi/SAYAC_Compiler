@@ -265,9 +265,9 @@ public class InstructionEmitter {
         return code;
     }
 
-    public CodeObject DIV(Register valueReg2, Register valueReg1, Register destReg) {
+    public CodeObject DIV(Register valueReg1, Register valueReg2, Register destReg) {
         CodeObject code = new CodeObject();
-        storeUsedReg(code, valueReg2, valueReg1, destReg);
+        storeUsedReg(code, valueReg1, valueReg2, destReg);
         code.addCode(emit("DIV", valueReg2, valueReg1, destReg));
         return code;
     }
@@ -295,6 +295,7 @@ public class InstructionEmitter {
     }
 
     public CodeObject SUI(int imm, Register destReg) {
+        //destReg -= imm
         CodeObject code = new CodeObject();
         storeUsedReg(code, destReg);
         code.addCode(emit("SUI", String.valueOf(imm), destReg));
