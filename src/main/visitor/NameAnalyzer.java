@@ -164,7 +164,6 @@ public class NameAnalyzer extends Visitor<Void>{
         SymbolTable new_symbol_table = new SymbolTable(SymbolTable.top);
         whileStatement.set_symbol_table(new_symbol_table);
         SymbolTable.push(new_symbol_table);
-        System.out.println(whileStatement.getBody().getStatementCount());
         if (whileStatement.getCondition() != null) {
             whileStatement.getCondition().accept(this);
         }
