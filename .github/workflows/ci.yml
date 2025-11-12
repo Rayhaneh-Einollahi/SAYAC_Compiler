@@ -24,7 +24,13 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
-      # Step 3: Verify ANTLR jar exists
+      # Step 3: Setup Python (for assembler)
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.x'
+
+      # Step 4: Verify ANTLR jar exists
       - name: Check ANTLR jar
         run: |
           if [ ! -f "utilities/antlr-4.13.1-complete.jar" ]; then
@@ -34,20 +40,20 @@ jobs:
             echo "✅ Found ANTLR jar: utilities/antlr-4.13.1-complete.jar"
           fi
 
-      # Step 4: Generate parser/lexer from ANTLR grammar using local jar
+      # Step 5: Generate parser/lexer from ANTLR grammar using local jar
       - name: Generate parser/lexer from ANTLR grammar
         run: |
           mkdir -p out
           java -jar utilities/antlr-4.13.1-complete.jar -Dlanguage=Java -o out src/main/grammar/SimpleLang.g4
 
-      # Step 5: Build the compiler with local ANTLR jar
+      # Step 6: Build the compiler with local ANTLR jar
       - name: Build compiler
         run: |
           mkdir -p build
           shopt -s globstar
           javac -cp "utilities/antlr-4.13.1-complete.jar" -d build $(find src gen -name "*.java")
 
-      # Step 6: Run compiler tests and compare with expected output
+      # Step 7: Run compiler tests and compare with expected output
       - name: Run compiler and verify output
         run: |
           mkdir -p test_output
@@ -90,12 +96,13 @@ jobs:
 
           echo "---"
           if [ $failed_tests -ne 0 ]; then
-            echo "❌ $failed_tests out of $total_tests test(s) failed"
+            echo "❌ $failed_bin_tests out of $total_bin_tests binary test(s) failed"
             exit 1
           else
             echo "✅ All $total_tests compiler tests passed!"
           fi
-      # Step 7: Run assembler on compiler outputs
+
+      # Step 8: Run assembler on compiler outputs
       - name: Run assembler
         run: |
           mkdir -p bin_output
@@ -108,15 +115,25 @@ jobs:
             bin_file="bin_output/${rel_path}.bin"
             mkdir -p "$(dirname "$bin_file")"
           
-            echo "Assembling: $f"
-            ./assembler "$f" > "$bin_file" 2>&1 || echo "Assembler failed for $f"
+            echo "Assembling: $f → $bin_file"
+          
+            # Run assembler and capture stdout to the binary file
+            python3 ./assembler/assembler.py "$f" > "$bin_file"
+          
+            # Check if file was created and has content
+            if [ -f "$bin_file" ] && [ -s "$bin_file" ]; then
+              echo "✅ Assembler succeeded for $f ($(stat -c%s "$bin_file") bytes)"
+            else
+              echo "❌ Assembler failed for $f - no output generated"
+            fi
           done < <(find test_output -name "*.sayac" -print0)
 
-      # Step 8: Verify assembler outputs against expected binaries
+            # Step 9: Verify assembler outputs against expected binaries
       - name: Verify assembler outputs
         run: |
           failed_bin_tests=0
           total_bin_tests=0
+          compared_bin_tests=0
           
           # Process all .bin files recursively
           while IFS= read -r -d '' f; do
@@ -129,27 +146,51 @@ jobs:
             # Expected binary file path
             expected_bin="tests/${rel_path}.bin"
           
-            echo "Verifying binary: $rel_path"
+            echo "Verifying: $rel_path"
           
             # Check if expected binary exists
             if [ ! -f "$expected_bin" ]; then
-              echo "⚠️  No expected binary for $rel_path, generated: $f"
+              echo "⚠️  No expected binary for $rel_path"
               continue
             fi
+
+            compared_bin_tests=$((compared_bin_tests + 1))
           
-            # Compare generated binary with expected binary
-            if cmp "$f" "$expected_bin" > /dev/null; then
+            # Create cleaned versions for comparison
+            temp_expected=$(mktemp)
+            temp_generated=$(mktemp)
+          
+            # Clean expected file: handle UTF-16 and normalize line endings
+            if file "$expected_bin" | grep -q "UTF-16"; then
+              # Remove BOM and convert UTF-16 to ASCII, ignore conversion errors
+              iconv -f UTF-16LE -t ASCII//IGNORE "$expected_bin" 2>/dev/null | tr -d '\r' > "$temp_expected" ||
+              # If iconv fails, try direct processing
+              cat "$expected_bin" | tr -d '\r' | sed 's/\x00//g' > "$temp_expected"
+            else
+              cat "$expected_bin" | tr -d '\r' > "$temp_expected"
+            fi
+          
+            # Clean generated file: normalize line endings
+            cat "$f" | tr -d '\r' > "$temp_generated"
+          
+            # Compare cleaned files
+            if cmp -s "$temp_generated" "$temp_expected"; then
               echo "✅ BINARY PASS: $rel_path"
             else
               echo "❌ BINARY FAIL: $rel_path - Binary differs from expected"
+              echo "  File sizes - Generated: $(stat -c%s "$f") bytes, Expected: $(stat -c%s "$expected_bin") bytes"
+              echo "  Cleaned sizes - Generated: $(stat -c%s "$temp_generated") bytes, Expected: $(stat -c%s "$temp_expected") bytes"
               failed_bin_tests=$((failed_bin_tests + 1))
             fi
+          
+            # Clean up temp files
+            rm -f "$temp_expected" "$temp_generated"
           done < <(find bin_output -name "*.bin" -print0)
           
           echo "---"
           if [ $failed_bin_tests -ne 0 ]; then
-            echo "❌ $failed_bin_tests out of $total_bin_tests binary test(s) failed"
+            echo "❌ $failed_bin_tests out of $compared_bin_tests binary test(s) failed"
             exit 1
           else
-            echo "✅ All $total_bin_tests binary tests passed!"
+            echo "✅ All $compared_bin_tests binary tests passed!"
           fi
