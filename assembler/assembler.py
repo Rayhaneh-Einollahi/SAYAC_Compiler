@@ -99,8 +99,11 @@ def assemble_sayac(line):
         b = '1110' + reg(parts[1]) + reg(parts[2]) + reg(parts[3])
     elif op == 'MEC':
         b = '1111000000000000'
+    # usage: CMR leftReg rightReg ;
+    # meaning: leftReg <(or other operators) rightReg
+    # in assembly code reverses the order: CMR rightReg leftReg
     elif op == 'CMR':
-        b = '11110001' + reg(parts[1]) + reg(parts[2])
+        b = '11110001' + reg(parts[2]) + reg(parts[1])
     elif op == 'CMI':
         b = '1111001' + imm(parts[1], 5) + reg(parts[2])
     elif op == 'BRC':
