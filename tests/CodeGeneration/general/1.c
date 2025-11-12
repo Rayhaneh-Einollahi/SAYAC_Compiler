@@ -1,3 +1,5 @@
+// #include <iostream>
+// using namespace std;
 int main() {
 
     int a = 10;
@@ -12,5 +14,5 @@ int main() {
     for(int i = 0; i < 10; i++) {
         int j = i + 1;
     }
-
+    return a + b + f + i; //52
 }

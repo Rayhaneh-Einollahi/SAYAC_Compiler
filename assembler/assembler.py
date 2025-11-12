@@ -415,5 +415,5 @@ for filename in sys.argv[1:]:
 
 for i, program in enumerate(test_programs):
     asm,binary = assemble_program(program)
-    print_lines(asm)
+    # print_lines(asm)
     print_lines(binary)

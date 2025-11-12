@@ -25,4 +25,5 @@ int main() {
     f1(x);
     int y = f2();
     int a = f3(y);
+    return y + a; // 3
 }
