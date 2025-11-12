@@ -1,6 +1,6 @@
-int i = 0;
-int sum = 0;
 int main(){
+    int i = 0;
+    int sum = 0;
     while (i < 20) {
         if (i % 3 == 0) {
             i++;
@@ -12,4 +12,5 @@ int main(){
         sum += i;
         i++;
     }
+    return sum; //61 //the output was 0
 }
